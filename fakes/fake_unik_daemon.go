@@ -10,7 +10,6 @@ import (
 	"io"
 	"os/exec"
 	"github.com/layer-x/layerx-commons/lxerrors"
-	"github.com/pivotal-golang/archiver/extractor"
 	"path/filepath"
 )
 
@@ -116,7 +115,21 @@ func (d *FakeUnikDaemon) buildUnikernel(res http.ResponseWriter, req *http.Reque
 	res.WriteHeader(http.StatusAccepted)
 }
 
+func (d *FakeUnikDaemon) stageAmi() {
+
+}
+
 func untar(src, dest string) error {
-	tgzExtractor := extractor.NewTgz()
-	return tgzExtractor.Extract(src, dest)
+	tarPath, err := exec.LookPath("tar")
+
+	if err != nil {
+		return lxerrors.New("tar not found in path", nil)
+	}
+
+	err = os.MkdirAll(dest, 0755)
+	if err != nil {
+		return err
+	}
+
+	return exec.Command(tarPath, "pzxf", src, "-C", dest).Run()
 }
