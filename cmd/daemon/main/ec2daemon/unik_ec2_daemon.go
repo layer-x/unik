@@ -1,4 +1,4 @@
-package fakes
+package ec2daemon
 import (
 	"github.com/go-martini/martini"
 	"github.com/layer-x/layerx-commons/lxmartini"
@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"path/filepath"
+	"github.com/layer-x/layerx-commons/lxfileutils"
 )
 
 type app struct {
@@ -18,28 +19,45 @@ type app struct {
 	filepath string
 }
 
-type FakeUnikDaemon struct {
+type UnikEc2Daemon struct {
 	server *martini.ClassicMartini
 	apps map[string]app
+	username string
+	password string
 }
 
-func NewFakeUnikDaemon() *FakeUnikDaemon {
-	return &FakeUnikDaemon{
+func NewUnikEc2Daemon(username, password string) *UnikEc2Daemon {
+	return &UnikEc2Daemon{
 		server: lxmartini.QuietMartini(),
 		apps: make(map[string]app),
+		username: username,
+		password: password,
 	}
 }
 
-func (d *FakeUnikDaemon) registerHandlers() {
+func (d *UnikEc2Daemon) registerHandlers() {
+	d.server.Post("/login", d.login)
 	d.server.Post("/build", d.buildUnikernel)
 }
 
-func (d *FakeUnikDaemon) Start(port int) {
+
+func (d *UnikEc2Daemon) Start(port int) {
 	d.registerHandlers()
 	d.server.RunOnAddr(fmt.Sprintf(":%v", port))
 }
 
-func (d *FakeUnikDaemon) buildUnikernel(res http.ResponseWriter, req *http.Request) {
+func (d *UnikEc2Daemon) login(res http.ResponseWriter, req *http.Request) {
+	query := req.URL.Query()
+	username := query.Get("username")
+	password := query.Get("password")
+	if d.username == username && d.password == password {
+		res.WriteHeader(http.StatusAccepted)
+	}
+	lxmartini.Respond(res, "invalid login credentials")
+}
+
+
+func (d *UnikEc2Daemon) buildUnikernel(res http.ResponseWriter, req *http.Request) {
 	err := req.ParseMultipartForm(0)
 	if err != nil {
 		lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form)}, "could not parse multipart form")
@@ -92,7 +110,7 @@ func (d *FakeUnikDaemon) buildUnikernel(res http.ResponseWriter, req *http.Reque
 		return
 	}
 	lxlog.Infof(logrus.Fields{"bytes": bytesWritten}, "file written to disk")
-	err = untar(savedTar.Name(), appPath)
+	err = lxfileutils.Untar(savedTar.Name(), appPath)
 	if err != nil {
 		lxlog.Errorf(logrus.Fields{"err":err, "app_name": appName}, "untarring saved tar")
 		lxmartini.Respond(res, err)
@@ -113,23 +131,4 @@ func (d *FakeUnikDaemon) buildUnikernel(res http.ResponseWriter, req *http.Reque
 		filepath: appPath+"rumprun-program.bin.ec2dir",
 	}
 	res.WriteHeader(http.StatusAccepted)
-}
-
-func (d *FakeUnikDaemon) stageAmi() {
-
-}
-
-func untar(src, dest string) error {
-	tarPath, err := exec.LookPath("tar")
-
-	if err != nil {
-		return lxerrors.New("tar not found in path", nil)
-	}
-
-	err = os.MkdirAll(dest, 0755)
-	if err != nil {
-		return err
-	}
-
-	return exec.Command(tarPath, "pzxf", src, "-C", dest).Run()
 }

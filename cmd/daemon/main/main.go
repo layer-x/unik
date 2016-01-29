@@ -1,13 +1,17 @@
 package main
 import (
-	"github.com/layer-x/unik/fakes"
+	"os/exec"
+	"github.com/Sirupsen/logrus"
 	"github.com/layer-x/layerx-commons/lxlog"
-"github.com/Sirupsen/logrus"
-"os/exec"
 	"os"
+	"flag"
+"github.com/layer-x/unik/cmd/daemon/main/ec2daemon"
 )
 
 func main() {
+	username := flag.String("u", "", "username to accept")
+	password := flag.String("p", "", "password to accept")
+	flag.Parse()
 	lxlog.ActiveDebugMode()
 	buildCommand := exec.Command("docker", "build", "-t", "golang_unikernel_builder", ".")
 	buildCommand.Dir = "./golang_unikernel_builder"
@@ -18,7 +22,7 @@ func main() {
 		lxlog.Errorf(logrus.Fields{"err":err}, "building golang unikernel builder")
 		return
 	}
-//	lxlog.Infof(logrus.Fields{"out":string(out)}, "built golang_unikernel_builder image")
-	fakeDaemon := fakes.NewFakeUnikDaemon()
-	fakeDaemon.Start(3000)
+	//	lxlog.Infof(logrus.Fields{"out":string(out)}, "built golang_unikernel_builder image")
+	unikDaemon := ec2daemon.NewUnikEc2Daemon(*username, *password)
+	unikDaemon.Start(3000)
 }
