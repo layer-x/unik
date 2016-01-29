@@ -3,9 +3,9 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/layer-x/layerx-commons/lxmartini"
 	"fmt"
-"net/http"
+	"net/http"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"github.com/docker/docker/vendor/src/github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"os"
 	"io"
 	"archive/tar"
@@ -42,46 +42,64 @@ func (d *FakeUnikDaemon) Start(port int) {
 }
 
 func (d *FakeUnikDaemon) buildUnikernel(res http.ResponseWriter, req *http.Request) {
-	appName := req.Form.Get("app_name")
+	err := req.ParseMultipartForm(0)
+	if err != nil {
+		lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form)}, "could not parse multipart form")
+		lxmartini.Respond(res, err)
+		return
+	}
+	
+	appName := req.FormValue("app_name")
+	if appName == "" {
+		lxlog.Errorf(logrus.Fields{"form": fmt.Sprintf("%v", req.Form)}, "app must be named")
+		lxmartini.Respond(res, lxerrors.New("app must be named", nil))
+		return
+	}
 	if app, hasAlready := d.apps[appName]; hasAlready {
 		lxlog.Errorf(logrus.Fields{"app": app}, "app already exists")
 		lxmartini.Respond(res, lxerrors.New("app "+appName+" already exists", nil))
 		return
 	}
-	req.ParseMultipartForm(30 >> 32)
+
 	uploadedTar, handler, err := req.FormFile("tarfile")
 	if err != nil {
-		lxlog.Errorf(logrus.Fields{"err":err}, "parsing file from multipart form")
+		lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form), "app_name": appName}, "parsing file from multipart form")
 		lxmartini.Respond(res, err)
 		return
 	}
 	defer uploadedTar.Close()
-	savedTar, err := os.OpenFile("./test_outputs/"+appName+"/"+handler.Filename, os.O_CREATE|os.O_RDWR, 0777)
+	appPath := "./test_outputs/"+"apps/"+appName+"/"
+	err = os.Mkdir(appPath, 0666)
 	if err != nil {
-		lxlog.Errorf(logrus.Fields{"err":err}, "creating empty file for copying to")
+		lxlog.Errorf(logrus.Fields{"err":err, "app_name": appName, "app_path": appPath}, "making directory")
 		lxmartini.Respond(res, err)
 		return
 	}
-	req.Form.Get()
+	savedTar, err := os.OpenFile(appPath+handler.Filename, os.O_CREATE|os.O_RDWR, 0777)
+	if err != nil {
+		lxlog.Errorf(logrus.Fields{"err":err, "app_name": appName}, "creating empty file for copying to")
+		lxmartini.Respond(res, err)
+		return
+	}
 	defer savedTar.Close()
 	bytesWritten, err := io.Copy(savedTar, uploadedTar)
 	if err != nil {
-		lxlog.Errorf(logrus.Fields{"err":err}, "copying uploaded file to disk")
+		lxlog.Errorf(logrus.Fields{"err":err, "app_name": appName}, "copying uploaded file to disk")
 		lxmartini.Respond(res, err)
 		return
 	}
 	lxlog.Infof(logrus.Fields{"bytes": bytesWritten}, "file written to disk")
-	appPath := "./test_outputs/"+"apps/"+appName+"/"
+
 	err = untar(savedTar, appPath)
 	if err != nil {
-		lxlog.Errorf(logrus.Fields{"err":err}, "untarring saved tar")
+		lxlog.Errorf(logrus.Fields{"err":err, "app_name": appName}, "untarring saved tar")
 		lxmartini.Respond(res, err)
 		return
 	}
-	lxlog.Infof(logrus.Fields{"path": appPath}, "app tarball untarred")
+	lxlog.Infof(logrus.Fields{"path": appPath, "app_name": appName}, "app tarball untarred")
 	err = lxfileutils.CopyFile("./Dockerfile", appPath+"Dockerfile")
 	if err != nil {
-		lxlog.Errorf(logrus.Fields{"err":err}, "copying dockerfile to app directory")
+		lxlog.Errorf(logrus.Fields{"err":err, "app_name": appName}, "copying dockerfile to app directory")
 		lxmartini.Respond(res, err)
 		return
 	}
