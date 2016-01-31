@@ -37,9 +37,8 @@ def create_iam_role region
   begin
     instance_profile_resp = iam.create_instance_profile(:instance_profile_name => 'UNIK_INSTANCE_PROFILE')
     puts 'created instance profile "UNIK_INSTANCE_PROFILE"'
-    instance_profile = instance_profile_resp[:instance_profile]
   rescue Aws::IAM::Errors::EntityAlreadyExists
-    instance_profile = iam.get_instance_profile({
+    instance_profile_resp = iam.get_instance_profile({
         instance_profile_name: "UNIK_INSTANCE_PROFILE",
     })
     puts 'instance profile "UNIK_INSTANCE_PROFILE" already exists'
@@ -51,9 +50,9 @@ def create_iam_role region
         role_name: "UNIK_BACKEND",
     })
     puts 'attached role "UNIK_BACKEND" to instance profile "UNIK_INSTANCE_PROFILE"'
-  rescue Aws::IAM::Errors::EntityAlreadyExists
+  rescue Aws::IAM::Errors::LimitExceeded
     puts 'instance profile "UNIK_INSTANCE_PROFILE" already has attached role "UNIK_BACKEND"'
   end
 
-  instance_profile[:arn]
+  instance_profile_resp[:instance_profile][:arn]
 end
