@@ -71,5 +71,6 @@ func buildUnikernel(appName, force string, uploadedTar multipart.File, handler *
 	if err != nil {
 		return lxerrors.New("building unikernel failed", err)
 	}
+	lxlog.Infof(logrus.Fields{"app_name": appName}, "app image created")
 	return nil
 }

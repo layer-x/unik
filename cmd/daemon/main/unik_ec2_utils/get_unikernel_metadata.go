@@ -17,5 +17,6 @@ func GetUnikernelMetadata(image *ec2.Image) *types.Unikernel {
 		return nil
 	}
 	unikernel.AMI = *image.ImageId
+	unikernel.CreationDate = *image.CreationDate
 	return unikernel
 }

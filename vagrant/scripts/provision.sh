@@ -27,3 +27,5 @@ echo "STARTING UNIK!"
 echo "(sudo -E unik_daemon -u $USERNAME -p $PASSWORD &) > /home/vagrant/unik.log 2>&1"
 (sudo -E ./unik_daemon &) > /home/vagrant/unik.log 2>&1
 echo "STARTED UNIK!!"
+public_ip_address=`curl -s http://169.254.169.254/latest/meta-data/public-ipv4`
+echo "The public IP for this instance is $public_ip_address"

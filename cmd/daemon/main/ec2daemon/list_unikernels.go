@@ -5,6 +5,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/unik/cmd/types"
 	"github.com/layer-x/unik/cmd/daemon/main/unik_ec2_utils"
+	"github.com/layer-x/layerx-commons/lxlog"
+"github.com/Sirupsen/logrus"
 )
 
 func listUnikernels() ([]*types.Unikernel, error) {
@@ -12,18 +14,20 @@ func listUnikernels() ([]*types.Unikernel, error) {
 	if err != nil {
 		return nil, lxerrors.New("could not start ec2 client session", err)
 	}
+	lxlog.Debugf(logrus.Fields{"client": ec2Client}, "retrieved client")
 	describeImagesOutput, err := ec2Client.DescribeImages(&ec2.DescribeImagesInput{})
 	if err != nil {
 		return nil, lxerrors.New("running 'describe images'", err)
 	}
+	lxlog.Debugf(logrus.Fields{"images": describeImagesOutput.Images}, "retrieved images")
 
 	allUnikernels := []*types.Unikernel{}
 	for _, image := range describeImagesOutput.Images {
 		unikernel := unik_ec2_utils.GetUnikernelMetadata(image)
 		if unikernel != nil {
+			lxlog.Debugf(logrus.Fields{"unikernel": unikernel}, "found unikernel")
 			allUnikernels = append(allUnikernels, unikernel)
 		}
 	}
-
 	return allUnikernels, nil
 }
