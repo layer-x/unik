@@ -11,12 +11,13 @@ case "${THISREGION}" in ap-northeast-1) KERNELID=aki-176bf516; ;; ap-southeast-1
 # Make name unique to avoid registration clashes
 NAME=$NAME-`date +"%d-%b-%Y-%s"`
 
-# echo Name : ${NAME}
-# echo THISREGION: ${THISREGION}
-# echo THISINSTANCEID: ${THISINSTANCEID}
-# echo THISAVAILABILITYZONE: ${THISAVAILABILITYZONE}
-# echo UNIKERNELMOUNTPOINT: ${UNIKERNELMOUNTPOINT}
-# echo UNIKERNELFILE: ${UNIKERNELFILE}
+echo Name : ${NAME}
+echo THISREGION: ${THISREGION}
+echo THISINSTANCEID: ${THISINSTANCEID}
+echo THISAVAILABILITYZONE: ${THISAVAILABILITYZONE}
+echo UNIKERNELMOUNTPOINT: ${UNIKERNELMOUNTPOINT}
+echo UNIKERNELFILE: ${UNIKERNELFILE}
+echo UNIKERNEL_APP_NAME: ${UNIKERNEL_APP_NAME}
 
 ##########################################################################################
 ##########################################################################################
@@ -30,14 +31,14 @@ NAME=$NAME-`date +"%d-%b-%Y-%s"`
 UNIKERNELVOLUMEID=`ec2-create-volume --availability-zone ${THISAVAILABILITYZONE} --region ${THISREGION} -s 1 | awk '{print $2}'`
 
 # wait for EC2 to get its act together
-# echo Waiting for create volume to complete......
+echo Waiting for create volume to complete......
 sleep 10
 
 # attach the EBS volume
 #http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-AttachVolume.html
 ec2-attach-volume ${UNIKERNELVOLUMEID} --region ${THISREGION} --instance ${THISINSTANCEID} --device /dev/xvdf
 
-# echo Waiting for attach volume to complete......
+echo Waiting for attach volume to complete......
 sleep 10
 
 # unmount any existing volume at the UNIKERNELMOUNTPOINT
@@ -84,7 +85,7 @@ UNIKERNELSNAPSHOTID=`ec2-create-snapshot --description 'unikernel boot volume' -
 # Create image/AMI from the snapshot
 #http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-CreateImage.html
 ## HAVING TROUBLE? COULD IT BE [--root-device-name name]
-# echo Waiting for snapshot to complete......
+echo Waiting for snapshot to complete......
 sleep 20
 
 AMIID=`ec2-register --name "${NAME}" \
@@ -96,14 +97,15 @@ AMIID=`ec2-register --name "${NAME}" \
 --virtualization-type paravirtual \
 | awk '{print $2}'`
 
+ec2-create-tags ${UNIKERNELSNAPSHOTID} --tag UNIKERNEL_ID=${AMIID} --region ${THISREGION}
+ec2-create-tags ${AMIID} --tag UNIKERNEL_APP_NAME=${APP_NAME} --region ${THISREGION}
+
 ##########################################################################################
 ###### finish
 ##########################################################################################
 
-# echo You can now start this instance via:
-# echo ec2-run-instances --region ${THISREGION} ${AMIID}
-# echo ""
-# echo Don\'t forget to customise this with a security group, as the
-# echo default one won\'t let any inbound traffic in.
+echo You can now start this instance via:
+echo ec2-run-instances --region ${THISREGION} ${AMIID}
+echo ""
 
 echo ${AMIID} >> ami

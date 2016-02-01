@@ -2,21 +2,20 @@ package unik_ec2_utils
 import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/unik/cmd/types"
-	"github.com/layer-x/docker/vendor/src/github.com/docker/go/canonical/json"
 )
 
-const UNIK_METADATA = "UNIK_METADATA"
+const UNIKERNEL_APP_NAME = "UNIKERNEL_APP_NAME"
 
-func GetUnikernelMetadata(image *ec2.Instance) *types.Unikernel {
+func GetUnikernelMetadata(image *ec2.Image) *types.Unikernel {
+	unikernel := &types.Unikernel{}
 	for _, tag := range image.Tags {
-		if *tag.Key == UNIK_METADATA {
-			unikernelJson := *tag.Value
-			var unikernel types.UnikInstance
-			err := json.Unmarshal(unikernelJson, &unikernel)
-			if err == nil {
-				return &unikernel
-			}
+		if *tag.Key == UNIKERNEL_APP_NAME {
+			unikernel.AppName = *tag.Value
 		}
 	}
-	return nil
+	if unikernel.AppName == "" {
+		return nil
+	}
+	unikernel.AMI = *image.ImageId
+	return unikernel
 }

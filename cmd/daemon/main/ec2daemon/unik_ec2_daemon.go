@@ -4,6 +4,9 @@ import (
 	"github.com/layer-x/layerx-commons/lxmartini"
 	"fmt"
 	"net/http"
+"github.com/Sirupsen/logrus"
+"github.com/layer-x/layerx-commons/lxlog"
+	"github.com/layer-x/layerx-commons/lxerrors"
 )
 
 type app struct {
@@ -14,29 +17,64 @@ type app struct {
 type UnikEc2Daemon struct {
 	server *martini.ClassicMartini
 	apps map[string]app
-	username string
-	password string
 }
 
-func NewUnikEc2Daemon(username, password string) *UnikEc2Daemon {
+func NewUnikEc2Daemon() *UnikEc2Daemon {
 	return &UnikEc2Daemon{
 		server: lxmartini.QuietMartini(),
-		apps: make(map[string]app),
-		username: username,
-		password: password,
 	}
 }
 
 func (d *UnikEc2Daemon) registerHandlers() {
-	d.server.Post("/login", func(res http.ResponseWriter, req *http.Request) {
-		query := req.URL.Query()
-		username := query.Get("username")
-		password := query.Get("password")
-		d.login(res, username, password)
+	d.server.Post("/build", func(res http.ResponseWriter, req *http.Request) {
+		err := req.ParseMultipartForm(0)
+		if err != nil {
+			lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form)}, "could not parse multipart form")
+			lxmartini.Respond(res, err)
+			return
+		}
+		appName := req.FormValue("app_name")
+		if appName == "" {
+			lxlog.Errorf(logrus.Fields{"form": fmt.Sprintf("%v", req.Form)}, "app must be named")
+			lxmartini.Respond(res, lxerrors.New("app must be named", nil))
+			return
+		}
+		uploadedTar, handler, err := req.FormFile("tarfile")
+		if err != nil {
+			lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form), "app_name": appName}, "parsing file from multipart form")
+			lxmartini.Respond(res, err)
+			return
+		}
+		defer uploadedTar.Close()
+		force := req.FormValue("force")
+		err = buildUnikernel(appName, force, uploadedTar, handler)
+		if err != nil {
+			lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form), "app_name": appName}, "building unikernel from app source")
+			lxmartini.Respond(res, err)
+			return
+		}
+		res.WriteHeader(http.StatusAccepted)
 	})
-	d.server.Post("/build", d.buildUnikernel)
-	d.server.Get("/instances", d.listUnikInstances)
-	d.server.Get("/unikernels", d.listUnikernels)
+	d.server.Get("/instances", func(res http.ResponseWriter) {
+		instances, err := listUnikInstances()
+		if err != nil {
+			lxlog.Errorf(logrus.Fields{"err": err}, "could not get unik instance list")
+			lxmartini.Respond(res, lxerrors.New("could not get unik instance list", err))
+			return
+		}
+		lxlog.Debugf(logrus.Fields{"instances": instances}, "Listing all unik instances")
+		lxmartini.Respond(res, instances)
+	})
+	d.server.Get("/unikernels", func(res http.ResponseWriter) {
+		unikernels, err := listUnikernels()
+		if err != nil {
+			lxlog.Errorf(logrus.Fields{"err": err}, "could not get unikernel list")
+			lxmartini.Respond(res, lxerrors.New("could not get unikernel list", err))
+			return
+		}
+		lxlog.Debugf(logrus.Fields{"unikernels": unikernels}, "Listing all unikernels")
+		lxmartini.Respond(res, unikernels)
+	})
 }
 
 

@@ -2,11 +2,11 @@ package ec2_metada_client
 import (
 	"os/exec"
 	"github.com/layer-x/layerx-commons/lxerrors"
-	"github.com/layer-x/docker/vendor/src/github.com/docker/go/canonical/json"
 	"strings"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/aws"
+"encoding/json"
 )
 
 func getKeys() (string, string, error) {
@@ -43,5 +43,5 @@ func NewEC2Client() (*ec2.EC2, error) {
 	}
 	return ec2.New(session.New(), &aws.Config{
 		Region: aws.String(region),
-	})
+	}), nil
 }

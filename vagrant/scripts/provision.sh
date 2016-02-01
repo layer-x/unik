@@ -25,5 +25,5 @@ pushd $GOPATH/src/github.com/layer-x/unik/cmd/daemon/main/
 go build -o unik_daemon .
 echo "STARTING UNIK!"
 echo "(sudo -E unik_daemon -u $USERNAME -p $PASSWORD &) > /home/vagrant/unik.log 2>&1"
-(sudo -E ./unik_daemon -u $USERNAME -p $PASSWORD &) > /home/vagrant/unik.log 2>&1
+(sudo -E ./unik_daemon &) > /home/vagrant/unik.log 2>&1
 echo "STARTED UNIK!!"
