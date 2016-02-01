@@ -59,8 +59,11 @@ func buildUnikernel(appName, force string, uploadedTar multipart.File, handler *
 	lxlog.Infof(logrus.Fields{"path": appPath, "app_name": appName}, "app tarball untarred")
 	buildUnikernelCommand := exec.Command("docker", "run",
 		"--rm",
-		"-v", appPath+":/opt/code",
-		"-E", "UNIKERNEL_APP_NAME"+appName,
+		"--privileged",
+		"-v", appPath+":/opt/code/",
+		"-v", "/dev:/dev",
+		"-e", "UNIKERNEL_APP_NAME="+appName,
+		"-e", "UNIKERNELFILE=/opt/code/rumprun-program_xen.bin.ec2dir",
 		"golang_unikernel_builder")
 	buildUnikernelCommand.Stdout = os.Stdout
 	buildUnikernelCommand.Stderr = os.Stderr

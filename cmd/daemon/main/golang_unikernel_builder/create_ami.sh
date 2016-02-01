@@ -86,7 +86,7 @@ UNIKERNELSNAPSHOTID=`ec2-create-snapshot --description 'unikernel boot volume' -
 #http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-CreateImage.html
 ## HAVING TROUBLE? COULD IT BE [--root-device-name name]
 echo Waiting for snapshot to complete......
-sleep 20
+sleep 40
 
 AMIID=`ec2-register --name "${NAME}" \
 --description "${NAME}" \
