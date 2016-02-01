@@ -35,6 +35,7 @@ func (d *UnikEc2Daemon) registerHandlers() {
 		d.login(res, username, password)
 	})
 	d.server.Post("/build", d.buildUnikernel)
+	d.server.Get("/instances", d.listUnikInstances)
 	d.server.Get("/unikernels", d.listUnikernels)
 }
 

@@ -1,7 +1,6 @@
 package types
 
 type Unikernel struct {
+	AMI string `json:"AMI"`
 	Name string `json:"Name"`
-	ID string `json:"Id"`
-	Image Image `json:"Image"`
 }

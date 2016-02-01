@@ -7,11 +7,11 @@ import (
 
 const UNIK_METADATA = "UNIK_METADATA"
 
-func GetUnikMetadata(instance *ec2.Instance) *types.Unikernel {
-	for _, tag := range instance.Tags {
+func GetUnikernelMetadata(image *ec2.Instance) *types.Unikernel {
+	for _, tag := range image.Tags {
 		if *tag.Key == UNIK_METADATA {
 			unikernelJson := *tag.Value
-			var unikernel types.Unikernel
+			var unikernel types.UnikInstance
 			err := json.Unmarshal(unikernelJson, &unikernel)
 			if err == nil {
 				return &unikernel

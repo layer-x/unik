@@ -74,7 +74,12 @@ func (d *UnikEc2Daemon) buildUnikernel(res http.ResponseWriter, req *http.Reques
 		return
 	}
 	lxlog.Infof(logrus.Fields{"path": appPath, "app_name": appName}, "app tarball untarred")
-	buildUnikernelCommand := exec.Command("docker", "run", "--rm", "-v", appPath+":/opt/code", "golang_unikernel_builder")
+	buildUnikernelCommand := exec.Command("docker", "run",
+		"--rm",
+		"-v", appPath+":/opt/code",
+		"-E", "UNIK_IMAGE_NAME"+appName,
+		"-E", "UNIK_IMAGE_ID"+appName,
+		"golang_unikernel_builder")
 	buildUnikernelCommand.Stdout = os.Stdout
 	buildUnikernelCommand.Stderr = os.Stderr
 	err = buildUnikernelCommand.Run()

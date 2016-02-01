@@ -2,8 +2,8 @@ package ec2daemon
 import (
 	"net/http"
 	"github.com/layer-x/unik/cmd/daemon/main/ec2_metada_client"
-"github.com/layer-x/layerx-commons/lxlog"
-"github.com/Sirupsen/logrus"
+	"github.com/layer-x/layerx-commons/lxlog"
+	"github.com/Sirupsen/logrus"
 	"github.com/layer-x/layerx-commons/lxmartini"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -12,7 +12,7 @@ import (
 )
 
 func (d *UnikEc2Daemon) listUnikernels(res http.ResponseWriter) {
-	unikernels, err := getAllUnikernels()
+	unikernels, err := getAllUnikernals()
 	if err != nil {
 		lxlog.Errorf(logrus.Fields{"err": err}, "could not get unikernel list")
 		lxmartini.Respond(res, lxerrors.New("could not get unikernel list", err))
@@ -22,31 +22,23 @@ func (d *UnikEc2Daemon) listUnikernels(res http.ResponseWriter) {
 	lxmartini.Respond(res, unikernels)
 }
 
-func getAllUnikernels() (error) {
+func getAllUnikernals() ([]*types.Unikernel, error) {
 	ec2Client, err := ec2_metada_client.NewEC2Client()
 	if err != nil {
-		return lxerrors.New("could not start ec2 client session", err)
+		return nil, lxerrors.New("could not start ec2 client session", err)
 	}
-	describeInstancesOutput, err := ec2Client.DescribeInstances(ec2.DescribeInstancesInput{})
+	describeImagesOutput, err := ec2Client.DescribeImages(ec2.DescribeImagesInput{})
 	if err != nil {
-		return lxerrors.New("running 'describe instances'", err)
-	}
-
-	allInstances := []*ec2.Instance{}
-
-	for _, reservation := range describeInstancesOutput.Reservations {
-		for _, instance := range reservation.Instances {
-			allInstances = append(allInstances, instance)
-		}
+		return nil, lxerrors.New("running 'describe images'", err)
 	}
 
 	allUnikernels := []*types.Unikernel{}
-
-	for _, instance := range allInstances {
-		unikernel := unik_ec2_utils.GetUnikMetadata(instance)
+	for _, image := range describeImagesOutput.Images {
+		unikernel := unik_ec2_utils.GetUnikernelMetadata(image)
 		if unikernel != nil {
 			allUnikernels = append(allUnikernels, unikernel)
 		}
 	}
-	return allUnikernels
+
+	return allUnikernels, nil
 }
