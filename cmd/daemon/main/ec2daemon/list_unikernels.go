@@ -7,6 +7,7 @@ import (
 	"github.com/layer-x/unik/cmd/daemon/main/unik_ec2_utils"
 	"github.com/layer-x/layerx-commons/lxlog"
 "github.com/Sirupsen/logrus"
+"github.com/aws/aws-sdk-go/aws"
 )
 
 func listUnikernels() ([]*types.Unikernel, error) {
@@ -15,7 +16,15 @@ func listUnikernels() ([]*types.Unikernel, error) {
 		return nil, lxerrors.New("could not start ec2 client session", err)
 	}
 	lxlog.Debugf(logrus.Fields{"client": ec2Client}, "retrieved client")
-	describeImagesOutput, err := ec2Client.DescribeImages(&ec2.DescribeImagesInput{})
+	describeImagesInput := &ec2.DescribeImagesInput{
+		Filters: []*ec2.Filter{
+			&ec2.Filter{
+				Name: aws.String("tag-key"),
+				Values: []*string{aws.String("UNIKERNEL_APP_NAME")},
+			},
+		},
+	}
+	describeImagesOutput, err := ec2Client.DescribeImages(describeImagesInput)
 	if err != nil {
 		return nil, lxerrors.New("running 'describe images'", err)
 	}

@@ -98,7 +98,7 @@ AMIID=`ec2-register --name "${NAME}" \
 | awk '{print $2}'`
 
 ec2-create-tags ${UNIKERNELSNAPSHOTID} --tag UNIKERNEL_ID=${AMIID} --region ${THISREGION}
-ec2-create-tags ${AMIID} --tag UNIKERNEL_APP_NAME=${APP_NAME} --region ${THISREGION}
+ec2-create-tags ${AMIID} --tag UNIKERNEL_APP_NAME=${UNIKERNEL_APP_NAME} --region ${THISREGION}
 
 ##########################################################################################
 ###### finish

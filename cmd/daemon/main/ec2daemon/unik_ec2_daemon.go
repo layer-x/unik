@@ -8,6 +8,7 @@ import (
 "github.com/layer-x/layerx-commons/lxlog"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"strings"
+	"strconv"
 )
 
 type app struct {
@@ -54,7 +55,7 @@ func (d *UnikEc2Daemon) registerHandlers() {
 			lxmartini.Respond(res, err)
 			return
 		}
-		appName := req.URL.Query().Get("app_name")
+		appName := params["app_name"]
 		if appName == "" {
 			lxlog.Errorf(logrus.Fields{"request": fmt.Sprintf("%v", req)}, "app must be named")
 			lxmartini.Respond(res, lxerrors.New("app must be named", nil))
@@ -74,6 +75,32 @@ func (d *UnikEc2Daemon) registerHandlers() {
 			lxmartini.Respond(res, err)
 			return
 		}
+		res.WriteHeader(http.StatusAccepted)
+	})
+	d.server.Post("/apps/:app_name/run", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		appName := params["app_name"]
+		if appName == "" {
+			lxlog.Errorf(logrus.Fields{"request": fmt.Sprintf("%v", req)}, "app must be named")
+			lxmartini.Respond(res, lxerrors.New("app must be named", nil))
+			return
+		}
+		instancesStr := req.URL.Query().Get("instances")
+		if instancesStr == "" {
+			instancesStr = "1"
+		}
+		instances, err := strconv.Atoi(instancesStr)
+		if err != nil {
+			lxlog.Errorf(logrus.Fields{"err":err, "instancess": instancesStr, "app_name": appName}, "invalid input for field 'instances'")
+			lxmartini.Respond(res, err)
+			return
+		}
+		instanceIds, err := runApp(appName, int64(instances))
+		if err != nil {
+			lxlog.Errorf(logrus.Fields{"err":err, "app_name": appName}, "launching "+instancesStr+" instances of app "+appName)
+			lxmartini.Respond(res, err)
+			return
+		}
+		lxlog.Infof(logrus.Fields{"instance_ids": instanceIds}, instancesStr+" instances started of app "+appName)
 		res.WriteHeader(http.StatusAccepted)
 	})
 	d.server.Delete("/instances/:instance_id", func(res http.ResponseWriter, req *http.Request, params martini.Params) {

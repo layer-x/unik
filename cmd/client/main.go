@@ -20,15 +20,15 @@ func main() {
 	app.Commands = []cli.Command{
 		{
 			Name:      "push",
-			Aliases:   []string{"b"},
-			ArgsUsage: "unik build [OPTIONS] NAME PATH",
-			Usage:     "Push and build a new unikernel from the source code at PATH",
+			Aliases:   []string{"p"},
+			ArgsUsage: "unik push [OPTIONS] NAME PATH",
+			Usage:     "Push and push a new unikernel from the source code at PATH",
 			Action: func(c *cli.Context) {
 				if len(c.Args()) != 2 {
-					println("unik: \"build\" requires exactly 2 arguments")
-					println("See 'unik build -h'")
-					println("\nUSAGE:\n    unik build [OPTIONS] NAME PATH\n")
-					println("Build a new unikernel from the source code at PATH")
+					println("unik: \"push\" requires exactly 2 arguments")
+					println("See 'unik push -h'")
+					println("\nUSAGE:\n    unik push [OPTIONS] NAME PATH\n")
+					println("push a new unikernel from the source code at PATH")
 					os.Exit(-1)
 				}
 				appName := c.Args().Get(0)
@@ -36,7 +36,7 @@ func main() {
 				config, err := getConfig()
 				if err != nil {
 					println("You must be logged in to run this command.")
-					println("Try 'unik login -u USERNAME -p PASSWORD UNIK_URL'")
+					println("Try 'unik login UNIK_URL'")
 					os.Exit(-1)
 				}
 				err = commands.Push(config, appName, path)

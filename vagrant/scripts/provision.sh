@@ -19,7 +19,7 @@ pushd $GOPATH/src/github.com/layer-x/unik
 go get golang.org/x/net/context
 go get github.com/coreos/etcd/client
 go get github.com/gogo/protobuf/proto
-gp get github.com/aws/aws-sdk-go
+go get github.com/aws/aws-sdk-go
 go get ./...
 pushd $GOPATH/src/github.com/layer-x/unik/cmd/daemon/main/
 go build -o unik_daemon .
