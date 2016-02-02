@@ -97,7 +97,7 @@ AMIID=`ec2-register --name "${NAME}" \
 --virtualization-type paravirtual \
 | awk '{print $2}'`
 
-ec2-create-tags ${UNIKERNELSNAPSHOTID} --tag UNIKERNEL_ID=${AMIID} --region ${THISREGION}
+ec2-create-tags ${UNIKERNELSNAPSHOTID} --tag UNIKERNEL_ID=${AMIID} --tag UNIKERNEL_APP_NAME=${UNIKERNEL_APP_NAME} --region ${THISREGION}
 ec2-create-tags ${AMIID} --tag UNIKERNEL_APP_NAME=${UNIKERNEL_APP_NAME} --region ${THISREGION}
 
 ##########################################################################################

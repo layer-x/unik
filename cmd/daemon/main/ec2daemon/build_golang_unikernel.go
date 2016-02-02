@@ -41,6 +41,14 @@ func buildUnikernel(appName, force string, uploadedTar multipart.File, handler *
 	if err != nil {
 		return lxerrors.New("making directory", err)
 	}
+	//clean up artifacts even if we fail
+	defer func(){
+		err = os.RemoveAll(appPath)
+		if err != nil {
+			return lxerrors.New("cleaning up app files", err)
+		}
+		lxlog.Infof(logrus.Fields{"files": appPath}, "cleaned up files")
+	}()
 	lxlog.Infof(logrus.Fields{"path":appPath, "app_name": appName}, "created output directory for app")
 	savedTar, err := os.OpenFile(appPath+handler.Filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {

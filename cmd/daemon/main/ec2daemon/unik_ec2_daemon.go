@@ -72,6 +72,11 @@ func (d *UnikEc2Daemon) registerHandlers() {
 		err = buildUnikernel(appName, force, uploadedTar, handler)
 		if err != nil {
 			lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form), "app_name": appName}, "building unikernel from app source")
+			lxlog.Warnf(logrus.Fields{}, "cleaning up unikernel build artifacts (volumes, snapshots)")
+			err =deleteSnapshotAndVolumeForApp(appName)
+			if err != nil {
+				lxlog.Errorf(logrus.Fields{"err":err, "app_name": appName}, "could not remove volume and/or snapshot for instance")
+			}
 			lxmartini.Respond(res, err)
 			return
 		}

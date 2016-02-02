@@ -78,3 +78,38 @@ func deleteSnapshotAndVolume(unikernelId string) error {
 	}
 	return lxerrors.New("snapshot not found for unikernel "+ unikernelId, err)
 }
+
+func deleteSnapshotAndVolumeForApp(appName string) error {
+	ec2Client, err := ec2_metada_client.NewEC2Client()
+	if err != nil {
+		return lxerrors.New("could not start ec2 client session", err)
+	}
+	describeSnapshotsOutput, err := ec2Client.DescribeSnapshots(&ec2.DescribeSnapshotsInput{})
+	if err != nil {
+		return lxerrors.New("could not get snapshot list from ec2", err)
+	}
+	for _, snapshot := range describeSnapshotsOutput.Snapshots {
+		for _, tag := range snapshot.Tags {
+			if *tag.Key == UNIKERNEL_APP_NAME && *tag.Value == appName {
+				snapshotId := *snapshot.SnapshotId
+				volumeId := *snapshot.VolumeId
+				deleteSnapshotInput := &ec2.DeleteSnapshotInput{
+					SnapshotId: aws.String(snapshotId),
+				}
+				_, err = ec2Client.DeleteSnapshot(deleteSnapshotInput)
+				if err != nil {
+					return lxerrors.New("could not delete snapshot for app "+ appName, err)
+				}
+				deleteVolumeInput := &ec2.DeleteVolumeInput{
+					VolumeId: aws.String(volumeId),
+				}
+				_, err = ec2Client.DeleteVolume(deleteVolumeInput)
+				if err != nil {
+					return lxerrors.New("could not delete volume for unikernel snapshot "+snapshotId, err)
+				}
+				return nil
+			}
+		}
+	}
+	return lxerrors.New("snapshot not found for app "+ appName, err)
+}
