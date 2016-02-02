@@ -1,4 +1,4 @@
-package ec2daemon
+package ec2api
 import "github.com/layer-x/layerx-commons/lxerrors"
 
 func DeleteApp(unikernelName string, force bool) error {
@@ -8,7 +8,7 @@ func DeleteApp(unikernelName string, force bool) error {
 	}
 	for _, unikernel := range unikernels {
 		if unikernel.UnikernelName == unikernelName {
-			err = deleteUnikernel(unikernel.AMI, force)
+			err = DeleteUnikernel(unikernel.AMI, force)
 			if err != nil {
 				return lxerrors.New("could not delete unikernel "+unikernel.AMI, err)
 			}

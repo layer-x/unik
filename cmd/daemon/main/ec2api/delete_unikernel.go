@@ -1,4 +1,4 @@
-package ec2daemon
+package ec2api
 import (
 	"github.com/layer-x/unik/cmd/daemon/main/ec2_metada_client"
 	"github.com/layer-x/layerx-commons/lxerrors"
@@ -9,7 +9,7 @@ import (
 const UNIKERNEL_APP_NAME = "UNIKERNEL_APP_NAME"
 const UNIKERNEL_ID = "UNIKERNEL_ID"
 
-func deleteUnikernel(unikernelId string, force bool) error {
+func DeleteUnikernel(unikernelId string, force bool) error {
 	allUnikInstances, err := ListUnikInstances()
 	if err != nil {
 		return lxerrors.New("could not check to see running unik instances", err)
@@ -37,14 +37,14 @@ func deleteUnikernel(unikernelId string, force bool) error {
 	if err != nil {
 		return lxerrors.New("could not deregister ami for unikernel "+ unikernelId, err)
 	}
-	err = deleteSnapshotAndVolume(unikernelId)
+	err = DeleteSnapshotAndVolume(unikernelId)
 	if err != nil {
 		return lxerrors.New("could not delete snapshot or volume for unikernel "+ unikernelId, err)
 	}
 	return nil
 }
 
-func deleteSnapshotAndVolume(unikernelId string) error {
+func DeleteSnapshotAndVolume(unikernelId string) error {
 	ec2Client, err := ec2_metada_client.NewEC2Client()
 	if err != nil {
 		return lxerrors.New("could not start ec2 client session", err)
@@ -79,7 +79,7 @@ func deleteSnapshotAndVolume(unikernelId string) error {
 	return lxerrors.New("snapshot not found for unikernel "+ unikernelId, err)
 }
 
-func deleteSnapshotAndVolumeForApp(unikernelName string) error {
+func DeleteSnapshotAndVolumeForApp(unikernelName string) error {
 	ec2Client, err := ec2_metada_client.NewEC2Client()
 	if err != nil {
 		return lxerrors.New("could not start ec2 client session", err)

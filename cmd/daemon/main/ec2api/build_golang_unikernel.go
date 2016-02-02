@@ -1,4 +1,4 @@
-package ec2daemon
+package ec2api
 import (
 "io"
 "github.com/Sirupsen/logrus"
@@ -23,7 +23,7 @@ func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, han
 			if strings.ToLower(force) == "true" {
 				lxlog.Warnf(logrus.Fields{"unikernelName": unikernelName, "ami": unikernel.AMI},
 					"deleting unikernel before building new app")
-				err = deleteUnikernel(unikernel.AMI, true)
+				err = DeleteUnikernel(unikernel.AMI, true)
 				if err != nil {
 					return lxerrors.New("could not delete unikernel", err)
 				}
