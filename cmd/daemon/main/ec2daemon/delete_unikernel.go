@@ -17,12 +17,12 @@ func deleteUnikernel(unikernelId string, force bool) error {
 	for _, instance := range allUnikInstances {
 		if instance.UnikernelId == unikernelId {
 			if force == true {
-				err = deleteUnikInstance(instance.ID)
+				err = deleteUnikInstance(instance.UnikInstanceID)
 				if err != nil {
-					return lxerrors.New("could not delete unik instance "+instance.ID, err)
+					return lxerrors.New("could not delete unik instance "+instance.UnikInstanceID, err)
 				}
 			} else {
-				return lxerrors.New("attempted to delete unikernel "+ unikernelId +", however instance "+instance.ID+" is still running. override with force=true", nil)
+				return lxerrors.New("attempted to delete unikernel "+ unikernelId +", however instance "+instance.UnikInstanceID+" is still running. override with force=true", nil)
 			}
 		}
 	}

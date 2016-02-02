@@ -14,7 +14,7 @@ func Rm(config types.UnikConfig, instanceId string) error {
 	if err != nil {
 		return lxerrors.New("failed deleting instance", err)
 	}
-	if resp.StatusCode != http.StatusAccepted {
+	if resp.StatusCode != http.StatusNoContent {
 		return lxerrors.New("failed deleting instance, got message: "+string(body), err)
 	}
 	return nil

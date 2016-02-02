@@ -35,6 +35,7 @@ func listUnikInstances() ([]*types.UnikInstance, error) {
 			unikInstance := unik_ec2_utils.GetUnikInstanceMetadata(instance)
 			if unikInstance != nil {
 				lxlog.Debugf(logrus.Fields{"instance": instance},"read instance from EC2")
+				lxlog.Debugf(logrus.Fields{"UnikInstance": unikInstance},"Unik Instance read")
 				allUnikInstances = append(allUnikInstances, unikInstance)
 			}
 		}

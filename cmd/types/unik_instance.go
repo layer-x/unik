@@ -1,7 +1,8 @@
 package types
 
 type UnikInstance struct {
-	ID string `json:"ID"`
+	UnikInstanceID string `json:"UnikID"`
+	AmazonID string `json:"AmazonID"`
 	UnikernelId string `json:"UnikernelId"`
 	AppName string `json:"AppName"`
 	PublicIp string `json:"PublicIp"`

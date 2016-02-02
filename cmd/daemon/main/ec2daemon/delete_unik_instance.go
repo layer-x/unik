@@ -7,12 +7,26 @@ import (
 )
 
 func deleteUnikInstance(unikInstanceId string) error {
+	unikInstances, err := listUnikInstances()
+	if err != nil {
+		return lxerrors.New("failed to retrieve known instances", err)
+	}
+	var amazonId string
+	for _, unikInstance := range unikInstances {
+		if unikInstance.UnikInstanceID == unikInstanceId {
+			amazonId = unikInstance.AmazonID
+			break
+		}
+	}
+	if amazonId == "" {
+		return lxerrors.New("unik instance "+unikInstanceId+" not found", nil)
+	}
 	ec2Client, err := ec2_metada_client.NewEC2Client()
 	if err != nil {
 		return lxerrors.New("could not start ec2 client session", err)
 	}
 	terminateInstancesInput := &ec2.TerminateInstancesInput{
-		InstanceIds: []*string{aws.String(unikInstanceId)},
+		InstanceIds: []*string{aws.String(amazonId)},
 	}
 	_, err = ec2Client.TerminateInstances(terminateInstancesInput)
 	if err != nil {

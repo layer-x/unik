@@ -22,7 +22,7 @@ func Push(config types.UnikConfig, appName, path string, force bool) error {
 	tarCommand.Stdout = os.Stdout
 	tarCommand.Stderr = os.Stderr
 	tarCommand.Dir = path
-	fmt.Printf("Running: '%s %v'\n", tarCommand.Args)
+	fmt.Printf("Running: %s\n", tarCommand.Args)
 	err := tarCommand.Run()
 	//clean up artifacts even if we fail
 	defer func(){

@@ -191,7 +191,7 @@ func main() {
 			Name:      "delete-unikernel",
 			Aliases:   []string{"rmu"},
 			ArgsUsage: "unik rmu [-f|] UNIKERNEL_NAME_1 [UNIKERNEL_NAME_2...]",
-			Usage:     "delete running instances",
+			Usage:     "delete compiled unikernel",
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name: "force, f",
@@ -204,7 +204,7 @@ func main() {
 					println("unik: \"rmu\" takes at least one argument")
 					println("See 'unik rmu -h'")
 					println("\nUSAGE:\n    unik rmu UNIKERNEL_NAME_1 [UNIKERNEL_NAME_2...]\n")
-					println("delete running instances")
+					println("delete compiled unikernel")
 					os.Exit(-1)
 				}
 				config, err := getConfig()
