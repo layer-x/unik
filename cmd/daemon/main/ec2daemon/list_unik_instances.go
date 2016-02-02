@@ -6,6 +6,8 @@ import (
 	"github.com/layer-x/unik/cmd/types"
 	"github.com/layer-x/unik/cmd/daemon/main/unik_ec2_utils"
 "github.com/aws/aws-sdk-go/aws"
+"github.com/Sirupsen/logrus"
+"github.com/layer-x/layerx-commons/lxlog"
 )
 
 func listUnikInstances() ([]*types.UnikInstance, error) {
@@ -32,6 +34,7 @@ func listUnikInstances() ([]*types.UnikInstance, error) {
 		for _, instance := range reservation.Instances {
 			unikInstance := unik_ec2_utils.GetUnikInstanceMetadata(instance)
 			if unikInstance != nil {
+				lxlog.Debugf(logrus.Fields{"instance": instance},"read instance from EC2")
 				allUnikInstances = append(allUnikInstances, unikInstance)
 			}
 		}

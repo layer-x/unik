@@ -35,7 +35,7 @@ func runApp(appName string, instances int64) ([]string, error) {
 			lxlog.Debugf(logrus.Fields{"reservation": reservation}, "started instance for app "+appName)
 			for _, instance := range reservation.Instances {
 				if unikernel.AMI == *instance.ImageId {
-					instanceId := appName + "/" + uuid.New()
+					instanceId := appName + "_" + uuid.New()
 					createTagsInput := &ec2.CreateTagsInput{
 						Resources: aws.StringSlice([]string{*instance.InstanceId}),
 						Tags: []*ec2.Tag{
@@ -50,6 +50,10 @@ func runApp(appName string, instances int64) ([]string, error) {
 							&ec2.Tag{
 								Key: aws.String(unik_ec2_utils.UNIKERNEL_ID),
 								Value: aws.String(unikernel.AMI),
+							},
+							&ec2.Tag{
+								Key: aws.String(unik_ec2_utils.UNIKERNEL_APP_NAME),
+								Value: aws.String(appName),
 							},
 						},
 					}

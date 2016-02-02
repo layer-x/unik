@@ -45,12 +45,12 @@ func buildUnikernel(appName, force string, uploadedTar multipart.File, handler *
 	defer func(){
 		err = os.RemoveAll(appPath)
 		if err != nil {
-			return lxerrors.New("cleaning up app files", err)
+			panic(lxerrors.New("cleaning up app files", err))
 		}
 		lxlog.Infof(logrus.Fields{"files": appPath}, "cleaned up files")
 	}()
 	lxlog.Infof(logrus.Fields{"path":appPath, "app_name": appName}, "created output directory for app")
-	savedTar, err := os.OpenFile(appPath+handler.Filename, os.O_CREATE|os.O_RDWR, 0666)
+	savedTar, err := os.OpenFile(appPath+filepath.Base(handler.Filename), os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return lxerrors.New("creating empty file for copying to", err)
 	}

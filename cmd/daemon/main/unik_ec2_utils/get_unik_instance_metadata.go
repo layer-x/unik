@@ -16,9 +16,19 @@ func GetUnikInstanceMetadata(instance *ec2.Instance) *types.UnikInstance {
 		if *tag.Key == UNIKERNEL_ID {
 			unikInstance.UnikernelId = *tag.Value
 		}
+		if *tag.Key == UNIKERNEL_APP_NAME {
+			unikInstance.AppName = *tag.Value
+		}
 	}
 	if unikInstance.ID == "" {
 		return nil
+	}
+	unikInstance.PrivateIp = *instance.PrivateIpAddress
+	if instance.PublicIpAddress != nil {
+		unikInstance.PublicIp = *instance.PublicIpAddress
+		}
+	if instance.State != nil {
+		unikInstance.State = *instance.State.Name
 	}
 	return unikInstance
 }

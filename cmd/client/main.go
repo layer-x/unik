@@ -6,10 +6,10 @@ import (
 	"os/user"
 	"path/filepath"
 	"io/ioutil"
-	"github.com/docker/docker/vendor/src/github.com/docker/go/canonical/json"
 	"github.com/layer-x/layerx-commons/lxerrors"
 "github.com/layer-x/unik/cmd/types"
 	"github.com/layer-x/unik/cmd/client/commands"
+"encoding/json"
 )
 
 func main() {
@@ -17,17 +17,28 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "unik"
 	app.Usage = ""
+	var forcePush bool
+	var forceRmu bool
+	var runInstances int
+	var unikernelName string
 	app.Commands = []cli.Command{
 		{
 			Name:      "push",
 			Aliases:   []string{"p"},
 			ArgsUsage: "unik push [OPTIONS] NAME PATH",
 			Usage:     "Push and push a new unikernel from the source code at PATH",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name: "force, f",
+					Usage: "force overwriting previous unikernel",
+					Destination: &forcePush,
+				},
+			},
 			Action: func(c *cli.Context) {
 				if len(c.Args()) != 2 {
 					println("unik: \"push\" requires exactly 2 arguments")
 					println("See 'unik push -h'")
-					println("\nUSAGE:\n    unik push [OPTIONS] NAME PATH\n")
+					println("\nUSAGE:\n    unik push [-f] NAME PATH\n")
 					println("push a new unikernel from the source code at PATH")
 					os.Exit(-1)
 				}
@@ -36,12 +47,199 @@ func main() {
 				config, err := getConfig()
 				if err != nil {
 					println("You must be logged in to run this command.")
-					println("Try 'unik login UNIK_URL'")
+					println("Try 'unik target UNIK_URL'")
 					os.Exit(-1)
 				}
-				err = commands.Push(config, appName, path)
+				err = commands.Push(config, appName, path, forcePush)
 				if err != nil {
 					println("unik push failed!")
+					println("error: "+err.Error())
+					os.Exit(-1)
+				}
+			},
+		},
+		{
+			Name:      "run",
+			Aliases:   []string{"r"},
+			ArgsUsage: "unik run [-i=INSTANCES] NAME",
+			Usage:     "run one or more instances of a unikernel",
+			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name: "instances, i",
+					Usage: "instances=NUM_OF_INSTANCES",
+					Value: 1,
+					Destination: &runInstances,
+				},
+			},
+			Action: func(c *cli.Context) {
+				if len(c.Args()) != 1 {
+					println("unik: \"run\" requires exactly 1 arguments")
+					println("See 'unik run -h'")
+					println("\nUSAGE:\n    unik run [-i=INSTANCES] NAME\n")
+					println("run one or more instances of a unikernel")
+					os.Exit(-1)
+				}
+				appName := c.Args().Get(0)
+				config, err := getConfig()
+				if err != nil {
+					println("You must be logged in to run this command.")
+					println("Try 'unik target UNIK_URL'")
+					os.Exit(-1)
+				}
+				if runInstances < 1 {
+					runInstances = 1
+				}
+				err = commands.Run(config, appName, runInstances)
+				if err != nil {
+					println("unik run failed!")
+					println("error: "+err.Error())
+					os.Exit(-1)
+				}
+			},
+		},
+		{
+			Name:      "ps",
+			ArgsUsage: "unik ps [-u UNIKERNEL]",
+			Usage:     "list running instances",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name: "unikernel, u",
+					Usage: "unikernel=NAME_OF_UNIKERNEL",
+					Value: "",
+					Destination: &unikernelName,
+				},
+			},
+			Action: func(c *cli.Context) {
+				if len(c.Args()) != 0 {
+					println("unik: \"ps\" takes no arguments")
+					println("See 'unik ps -h'")
+					println("\nUSAGE:\n    unik ps [-u UNIKERNEL]\n")
+					println("list running instances")
+					os.Exit(-1)
+				}
+				config, err := getConfig()
+				if err != nil {
+					println("You must be logged in to run this command.")
+					println("Try 'unik target UNIK_URL'")
+					os.Exit(-1)
+				}
+				err = commands.Ps(config, unikernelName)
+				if err != nil {
+					println("unik ps failed!")
+					println("error: "+err.Error())
+					os.Exit(-1)
+				}
+			},
+		},
+		{
+			Name:      "unikernels",
+			Aliases:   []string{"u"},
+			ArgsUsage: "unik unikernels",
+			Usage:     "list compiled unikernels",
+			Action: func(c *cli.Context) {
+				if len(c.Args()) != 0 {
+					println("unik: \"unikernels\" takes no arguments")
+					println("See 'unik unikernels -h'")
+					println("\nUSAGE:\n    unik unikernels\n")
+					println("list running unikernels")
+					os.Exit(-1)
+				}
+				config, err := getConfig()
+				if err != nil {
+					println("You must be logged in to run this command.")
+					println("Try 'unik target UNIK_URL'")
+					os.Exit(-1)
+				}
+				err = commands.Images(config)
+				if err != nil {
+					println("unik unikernels failed!")
+					println("error: "+err.Error())
+					os.Exit(-1)
+				}
+			},
+		},
+		{
+			Name:      "delete",
+			Aliases:   []string{"rm"},
+			ArgsUsage: "unik rm INSTANCE_ID_1 [INSTANCE_ID_2...]",
+			Usage:     "delete running instances",
+			Action: func(c *cli.Context) {
+				if len(c.Args()) < 1 {
+					println("unik: \"rm\" takes at least one argument")
+					println("See 'unik rm -h'")
+					println("\nUSAGE:\n    unik rm INSTANCE_ID_1 [INSTANCE_ID_2...]\n")
+					println("delete running instances")
+					os.Exit(-1)
+				}
+				config, err := getConfig()
+				if err != nil {
+					println("You must be logged in to run this command.")
+					println("Try 'unik target UNIK_URL'")
+					os.Exit(-1)
+				}
+				for _, instanceId := range c.Args() {
+					err = commands.Rm(config, instanceId)
+					if err != nil {
+						println("unik rm failed!")
+						println("error: "+err.Error())
+						os.Exit(-1)
+					}
+				}
+			},
+		},
+		{
+			Name:      "delete-unikernel",
+			Aliases:   []string{"rmu"},
+			ArgsUsage: "unik rmu [-f|] UNIKERNEL_NAME_1 [UNIKERNEL_NAME_2...]",
+			Usage:     "delete running instances",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name: "force, f",
+					Usage: "force delete running instances of this unikernel",
+					Destination: &forceRmu,
+				},
+			},
+			Action: func(c *cli.Context) {
+				if len(c.Args()) < 1 {
+					println("unik: \"rmu\" takes at least one argument")
+					println("See 'unik rmu -h'")
+					println("\nUSAGE:\n    unik rmu UNIKERNEL_NAME_1 [UNIKERNEL_NAME_2...]\n")
+					println("delete running instances")
+					os.Exit(-1)
+				}
+				config, err := getConfig()
+				if err != nil {
+					println("You must be logged in to run this command.")
+					println("Try 'unik target UNIK_URL'")
+					os.Exit(-1)
+				}
+				for _, instanceId := range c.Args() {
+					err = commands.Rmu(config, instanceId, forceRmu)
+					if err != nil {
+						println("unik rmu failed!")
+						println("error: "+err.Error())
+						os.Exit(-1)
+					}
+				}
+			},
+		},
+		{
+			Name:      "target",
+			Aliases:   []string{"t"},
+			ArgsUsage: "unik target URL",
+			Usage:     "set unik cli endpoint",
+			Action: func(c *cli.Context) {
+				if len(c.Args()) != 1 {
+					println("unik: \"target\" requires exactly 1 arguments")
+					println("See 'unik target -h'")
+					println("\nUSAGE:\n    unik target URL\n")
+					println("set unik cli endpoint")
+					os.Exit(-1)
+				}
+				url := c.Args().Get(0)
+				err := commands.Target(url)
+				if err != nil {
+					println("unik target failed!")
 					println("error: "+err.Error())
 					os.Exit(-1)
 				}
