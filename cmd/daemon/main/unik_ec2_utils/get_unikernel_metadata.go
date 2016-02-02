@@ -10,10 +10,10 @@ func GetUnikernelMetadata(image *ec2.Image) *types.Unikernel {
 	unikernel := &types.Unikernel{}
 	for _, tag := range image.Tags {
 		if *tag.Key == UNIKERNEL_APP_NAME {
-			unikernel.AppName = *tag.Value
+			unikernel.UnikernelName = *tag.Value
 		}
 	}
-	if unikernel.AppName == "" {
+	if unikernel.UnikernelName == "" {
 		return nil
 	}
 	unikernel.AMI = *image.ImageId

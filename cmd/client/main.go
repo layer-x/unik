@@ -21,6 +21,7 @@ func main() {
 	var forceRmu bool
 	var runInstances int
 	var unikernelName string
+	var instanceName string
 	app.Commands = []cli.Command{
 		{
 			Name:      "push",
@@ -42,7 +43,7 @@ func main() {
 					println("push a new unikernel from the source code at PATH")
 					os.Exit(-1)
 				}
-				appName := c.Args().Get(0)
+				unikernelName := c.Args().Get(0)
 				path := c.Args().Get(1)
 				config, err := getConfig()
 				if err != nil {
@@ -50,7 +51,7 @@ func main() {
 					println("Try 'unik target UNIK_URL'")
 					os.Exit(-1)
 				}
-				err = commands.Push(config, appName, path, forcePush)
+				err = commands.Push(config, unikernelName, path, forcePush)
 				if err != nil {
 					println("unik push failed!")
 					println("error: "+err.Error())
@@ -70,6 +71,12 @@ func main() {
 					Value: 1,
 					Destination: &runInstances,
 				},
+				cli.StringFlag{
+					Name: "name, n",
+					Usage: "name=CUSTOM_INSTANCE_NAME",
+					Value: "",
+					Destination: &instanceName,
+				},
 			},
 			Action: func(c *cli.Context) {
 				if len(c.Args()) != 1 {
@@ -79,7 +86,7 @@ func main() {
 					println("run one or more instances of a unikernel")
 					os.Exit(-1)
 				}
-				appName := c.Args().Get(0)
+				unikernelName := c.Args().Get(0)
 				config, err := getConfig()
 				if err != nil {
 					println("You must be logged in to run this command.")
@@ -89,7 +96,7 @@ func main() {
 				if runInstances < 1 {
 					runInstances = 1
 				}
-				err = commands.Run(config, appName, runInstances)
+				err = commands.Run(config, unikernelName, instanceName, runInstances)
 				if err != nil {
 					println("unik run failed!")
 					println("error: "+err.Error())

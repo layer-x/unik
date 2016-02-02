@@ -10,7 +10,7 @@ import (
 "github.com/aws/aws-sdk-go/aws"
 )
 
-func listUnikernels() ([]*types.Unikernel, error) {
+func ListUnikernels() ([]*types.Unikernel, error) {
 	ec2Client, err := ec2_metada_client.NewEC2Client()
 	if err != nil {
 		return nil, lxerrors.New("could not start ec2 client session", err)

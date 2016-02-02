@@ -10,7 +10,7 @@ import (
 "github.com/layer-x/layerx-commons/lxlog"
 )
 
-func listUnikInstances() ([]*types.UnikInstance, error) {
+func ListUnikInstances() ([]*types.UnikInstance, error) {
 	ec2Client, err := ec2_metada_client.NewEC2Client()
 	if err != nil {
 		return nil, lxerrors.New("could not start ec2 client session", err)

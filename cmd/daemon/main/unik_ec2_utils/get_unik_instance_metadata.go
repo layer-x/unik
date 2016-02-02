@@ -10,6 +10,9 @@ const UNIKERNEL_ID = "UNIKERNEL_ID"
 func GetUnikInstanceMetadata(instance *ec2.Instance) *types.UnikInstance {
 	unikInstance := &types.UnikInstance{}
 	for _, tag := range instance.Tags {
+		if *tag.Key == "Name" {
+			unikInstance.UnikInstanceName = *tag.Value
+		}
 		if *tag.Key == UNIK_INSTANCE_ID {
 			unikInstance.UnikInstanceID = *tag.Value
 		}
@@ -17,7 +20,7 @@ func GetUnikInstanceMetadata(instance *ec2.Instance) *types.UnikInstance {
 			unikInstance.UnikernelId = *tag.Value
 		}
 		if *tag.Key == UNIKERNEL_APP_NAME {
-			unikInstance.AppName = *tag.Value
+			unikInstance.UnikernelName = *tag.Value
 		}
 	}
 	if unikInstance.UnikInstanceID == "" {
@@ -32,6 +35,9 @@ func GetUnikInstanceMetadata(instance *ec2.Instance) *types.UnikInstance {
 	}
 	if instance.State != nil {
 		unikInstance.State = *instance.State.Name
+	}
+	if instance.LaunchTime != nil {
+		unikInstance.Created = *instance.LaunchTime
 	}
 	return unikInstance
 }

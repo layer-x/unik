@@ -6,8 +6,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 )
 
-func deleteUnikInstance(unikInstanceId string) error {
-	unikInstances, err := listUnikInstances()
+func DeleteUnikInstance(unikInstanceId string) error {
+	unikInstances, err := ListUnikInstances()
 	if err != nil {
 		return lxerrors.New("failed to retrieve known instances", err)
 	}

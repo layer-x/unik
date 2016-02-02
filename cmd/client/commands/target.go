@@ -14,7 +14,7 @@ import (
 
 func Target(url string) error {
 	url = strings.TrimPrefix(url, "http://") + ":3000"
-	_, _, err := lxhttpclient.Get(url, "/apps", nil)
+	_, _, err := lxhttpclient.Get(url, "/unikernels", nil)
 	if err != nil {
 		return lxerrors.New("could not reach endpoint "+url, err)
 	}

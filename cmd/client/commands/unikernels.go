@@ -9,7 +9,7 @@ import (
 
 func Images(config types.UnikConfig) error {
 	url := config.Url
-	_, body, err := lxhttpclient.Get(url, "/apps", nil)
+	_, body, err := lxhttpclient.Get(url, "/unikernels", nil)
 	if err != nil {
 		return lxerrors.New("failed retrieving unikernels", err)
 	}
@@ -21,7 +21,7 @@ func Images(config types.UnikConfig) error {
 	fmt.Printf("UNIKERNEL \t\t\t AMI \t\t\t CREATED\n")
 	for _, unikInstance := range unikernels {
 		fmt.Printf("%s \t\t\t %s \t\t %ss\n",
-			unikInstance.AppName,
+			unikInstance.UnikernelName,
 			unikInstance.AMI,
 			unikInstance.CreationDate)
 	}

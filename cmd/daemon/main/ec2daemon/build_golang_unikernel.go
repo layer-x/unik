@@ -13,15 +13,15 @@ import (
 )
 
 
-func buildUnikernel(appName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
-	unikernels, err := listUnikernels()
+func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
+	unikernels, err := ListUnikernels()
 	if err != nil {
 		return lxerrors.New("could not retrieve list of unikernels", err)
 	}
 	for _, unikernel := range unikernels {
-		if unikernel.AppName == appName {
+		if unikernel.UnikernelName == unikernelName {
 			if strings.ToLower(force) == "true" {
-				lxlog.Warnf(logrus.Fields{"appName": appName, "ami": unikernel.AMI},
+				lxlog.Warnf(logrus.Fields{"unikernelName": unikernelName, "ami": unikernel.AMI},
 					"deleting unikernel before building new app")
 				err = deleteUnikernel(unikernel.AMI, true)
 				if err != nil {
@@ -33,9 +33,9 @@ func buildUnikernel(appName, force string, uploadedTar multipart.File, handler *
 		}
 	}
 
-	appPath, err := filepath.Abs("./test_outputs/"+"apps/"+appName+"/")
+	appPath, err := filepath.Abs("./test_outputs/"+"unikernels/"+unikernelName+"/")
 	if err != nil {
-		return lxerrors.New("getting absolute path for ./test_outputs/"+"apps/"+appName+"/", err)
+		return lxerrors.New("getting absolute path for ./test_outputs/"+"unikernels/"+unikernelName+"/", err)
 	}
 	err = os.MkdirAll(appPath, 0777)
 	if err != nil {
@@ -49,7 +49,7 @@ func buildUnikernel(appName, force string, uploadedTar multipart.File, handler *
 		}
 		lxlog.Infof(logrus.Fields{"files": appPath}, "cleaned up files")
 	}()
-	lxlog.Infof(logrus.Fields{"path":appPath, "app_name": appName}, "created output directory for app")
+	lxlog.Infof(logrus.Fields{"path":appPath, "unikernel_name": unikernelName}, "created output directory for app")
 	savedTar, err := os.OpenFile(appPath+filepath.Base(handler.Filename), os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return lxerrors.New("creating empty file for copying to", err)
@@ -64,13 +64,13 @@ func buildUnikernel(appName, force string, uploadedTar multipart.File, handler *
 	if err != nil {
 		return lxerrors.New("untarring saved tar", err)
 	}
-	lxlog.Infof(logrus.Fields{"path": appPath, "app_name": appName}, "app tarball untarred")
+	lxlog.Infof(logrus.Fields{"path": appPath, "unikernel_name": unikernelName}, "app tarball untarred")
 	buildUnikernelCommand := exec.Command("docker", "run",
 		"--rm",
 		"--privileged",
 		"-v", appPath+":/opt/code/",
 		"-v", "/dev:/dev",
-		"-e", "UNIKERNEL_APP_NAME="+appName,
+		"-e", "UNIKERNEL_APP_NAME="+unikernelName,
 		"-e", "UNIKERNELFILE=/opt/code/rumprun-program_xen.bin.ec2dir",
 		"golang_unikernel_builder")
 	buildUnikernelCommand.Stdout = os.Stdout
@@ -79,6 +79,6 @@ func buildUnikernel(appName, force string, uploadedTar multipart.File, handler *
 	if err != nil {
 		return lxerrors.New("building unikernel failed", err)
 	}
-	lxlog.Infof(logrus.Fields{"app_name": appName}, "app image created")
+	lxlog.Infof(logrus.Fields{"unikernel_name": unikernelName}, "app image created")
 	return nil
 }

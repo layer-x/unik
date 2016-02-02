@@ -7,10 +7,10 @@ import (
 	"net/http"
 )
 
-func Rmu(config types.UnikConfig, appName string, force bool) error {
-	fmt.Printf("Deleting unikernel "+appName+" force=%v\n",force)
+func Rmu(config types.UnikConfig, unikernelName string, force bool) error {
+	fmt.Printf("Deleting unikernel "+unikernelName+" force=%v\n",force)
 	url := config.Url
-	resp, body, err := lxhttpclient.Delete(url, "/apps/"+appName+fmt.Sprintf("?force=%v", force), nil)
+	resp, body, err := lxhttpclient.Delete(url, "/unikernels/"+unikernelName+fmt.Sprintf("?force=%v", force), nil)
 	if err != nil {
 		return lxerrors.New("failed deleting unikernel", err)
 	}

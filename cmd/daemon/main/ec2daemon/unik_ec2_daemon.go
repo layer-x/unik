@@ -18,7 +18,6 @@ type app struct {
 
 type UnikEc2Daemon struct {
 	server *martini.ClassicMartini
-	apps map[string]app
 }
 
 func NewUnikEc2Daemon() *UnikEc2Daemon {
@@ -29,7 +28,7 @@ func NewUnikEc2Daemon() *UnikEc2Daemon {
 
 func (d *UnikEc2Daemon) registerHandlers() {
 	d.server.Get("/instances", func(res http.ResponseWriter) {
-		instances, err := listUnikInstances()
+		instances, err := ListUnikInstances()
 		if err != nil {
 			lxlog.Errorf(logrus.Fields{"err": err}, "could not get unik instance list")
 			lxmartini.Respond(res, lxerrors.New("could not get unik instance list", err))
@@ -38,8 +37,8 @@ func (d *UnikEc2Daemon) registerHandlers() {
 		lxlog.Debugf(logrus.Fields{"instances": instances}, "Listing all unik instances")
 		lxmartini.Respond(res, instances)
 	})
-	d.server.Get("/apps", func(res http.ResponseWriter) {
-		unikernels, err := listUnikernels()
+	d.server.Get("/unikernels", func(res http.ResponseWriter) {
+		unikernels, err := ListUnikernels()
 		if err != nil {
 			lxlog.Errorf(logrus.Fields{"err": err}, "could not get unikernel list")
 			lxmartini.Respond(res, lxerrors.New("could not get unikernel list", err))
@@ -48,43 +47,43 @@ func (d *UnikEc2Daemon) registerHandlers() {
 		lxlog.Debugf(logrus.Fields{"unikernels": unikernels}, "Listing all unikernels")
 		lxmartini.Respond(res, unikernels)
 	})
-	d.server.Post("/apps/:app_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+	d.server.Post("/unikernels/:unikernel_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
 		err := req.ParseMultipartForm(0)
 		if err != nil {
 			lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form)}, "could not parse multipart form")
 			lxmartini.Respond(res, err)
 			return
 		}
-		appName := params["app_name"]
-		if appName == "" {
+		unikernelName := params["unikernel_name"]
+		if unikernelName == "" {
 			lxlog.Errorf(logrus.Fields{"request": fmt.Sprintf("%v", req)}, "app must be named")
 			lxmartini.Respond(res, lxerrors.New("app must be named", nil))
 			return
 		}
 		uploadedTar, handler, err := req.FormFile("tarfile")
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form), "app_name": appName}, "parsing file from multipart form")
+			lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form), "unikernel_name": unikernelName}, "parsing file from multipart form")
 			lxmartini.Respond(res, err)
 			return
 		}
 		defer uploadedTar.Close()
 		force := req.FormValue("force")
-		err = buildUnikernel(appName, force, uploadedTar, handler)
+		err = BuildUnikernel(unikernelName, force, uploadedTar, handler)
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form), "app_name": appName}, "building unikernel from app source")
+			lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form), "unikernel_name": unikernelName}, "building unikernel from app source")
 			lxlog.Warnf(logrus.Fields{}, "cleaning up unikernel build artifacts (volumes, snapshots)")
-			err =deleteSnapshotAndVolumeForApp(appName)
+			err =deleteSnapshotAndVolumeForApp(unikernelName)
 			if err != nil {
-				lxlog.Errorf(logrus.Fields{"err":err, "app_name": appName}, "could not remove volume and/or snapshot for instance")
+				lxlog.Errorf(logrus.Fields{"err":err, "unikernel_name": unikernelName}, "could not remove volume and/or snapshot for instance")
 			}
 			lxmartini.Respond(res, err)
 			return
 		}
 		res.WriteHeader(http.StatusAccepted)
 	})
-	d.server.Post("/apps/:app_name/run", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		appName := params["app_name"]
-		if appName == "" {
+	d.server.Post("/unikernels/:unikernel_name/run", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		unikernelName := params["unikernel_name"]
+		if unikernelName == "" {
 			lxlog.Errorf(logrus.Fields{"request": fmt.Sprintf("%v", req)}, "app must be named")
 			lxmartini.Respond(res, lxerrors.New("app must be named", nil))
 			return
@@ -93,25 +92,26 @@ func (d *UnikEc2Daemon) registerHandlers() {
 		if instancesStr == "" {
 			instancesStr = "1"
 		}
+		instanceName := req.URL.Query().Get("name")
 		instances, err := strconv.Atoi(instancesStr)
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err":err, "instancess": instancesStr, "app_name": appName}, "invalid input for field 'instances'")
+			lxlog.Errorf(logrus.Fields{"err":err, "instancess": instancesStr, "unikernel_name": unikernelName}, "invalid input for field 'instances'")
 			lxmartini.Respond(res, err)
 			return
 		}
-		instanceIds, err := runApp(appName, int64(instances))
+		instanceIds, err := RunApp(unikernelName, instanceName, int64(instances))
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err":err, "app_name": appName}, "launching "+instancesStr+" instances of app "+appName)
+			lxlog.Errorf(logrus.Fields{"err":err, "unikernel_name": unikernelName}, "launching "+instancesStr+" instances of app "+unikernelName)
 			lxmartini.Respond(res, err)
 			return
 		}
-		lxlog.Infof(logrus.Fields{"instance_ids": instanceIds}, instancesStr+" instances started of app "+appName)
+		lxlog.Infof(logrus.Fields{"instance_ids": instanceIds}, instancesStr+" instances started of app "+unikernelName)
 		res.WriteHeader(http.StatusAccepted)
 	})
 	d.server.Delete("/instances/:instance_id", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
 		instanceId := params["instance_id"]
 		lxlog.Infof(logrus.Fields{"request": req},"deleting instance "+instanceId)
-		err := deleteUnikInstance(instanceId)
+		err := DeleteUnikInstance(instanceId)
 		if err != nil {
 			lxlog.Errorf(logrus.Fields{"err":err}, "could not delete instance "+instanceId)
 			lxmartini.Respond(res, err)
@@ -119,22 +119,22 @@ func (d *UnikEc2Daemon) registerHandlers() {
 		}
 		res.WriteHeader(http.StatusNoContent)
 	})
-	d.server.Delete("/apps/:app_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		appName := params["app_name"]
-		if appName == "" {
+	d.server.Delete("/unikernels/:unikernel_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		unikernelName := params["unikernel_name"]
+		if unikernelName == "" {
 			lxlog.Errorf(logrus.Fields{"request": fmt.Sprintf("%v", req)}, "app must be named")
 			lxmartini.Respond(res, lxerrors.New("app must be named", nil))
 			return
 		}
 		forceStr := req.URL.Query().Get("force")
-		lxlog.Infof(logrus.Fields{"request": req},"deleting instance "+ appName)
+		lxlog.Infof(logrus.Fields{"request": req},"deleting instance "+ unikernelName)
 		force := false
 		if strings.ToLower(forceStr) == "true" {
 			force = true
 		}
-		err := deleteApp(appName, force)
+		err := DeleteApp(unikernelName, force)
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err":err}, "could not delete instance "+ appName)
+			lxlog.Errorf(logrus.Fields{"err":err}, "could not delete instance "+ unikernelName)
 			lxmartini.Respond(res, err)
 			return
 		}

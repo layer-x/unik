@@ -10,14 +10,14 @@ const UNIKERNEL_APP_NAME = "UNIKERNEL_APP_NAME"
 const UNIKERNEL_ID = "UNIKERNEL_ID"
 
 func deleteUnikernel(unikernelId string, force bool) error {
-	allUnikInstances, err := listUnikInstances()
+	allUnikInstances, err := ListUnikInstances()
 	if err != nil {
 		return lxerrors.New("could not check to see running unik instances", err)
 	}
 	for _, instance := range allUnikInstances {
 		if instance.UnikernelId == unikernelId {
 			if force == true {
-				err = deleteUnikInstance(instance.UnikInstanceID)
+				err = DeleteUnikInstance(instance.UnikInstanceID)
 				if err != nil {
 					return lxerrors.New("could not delete unik instance "+instance.UnikInstanceID, err)
 				}
@@ -79,7 +79,7 @@ func deleteSnapshotAndVolume(unikernelId string) error {
 	return lxerrors.New("snapshot not found for unikernel "+ unikernelId, err)
 }
 
-func deleteSnapshotAndVolumeForApp(appName string) error {
+func deleteSnapshotAndVolumeForApp(unikernelName string) error {
 	ec2Client, err := ec2_metada_client.NewEC2Client()
 	if err != nil {
 		return lxerrors.New("could not start ec2 client session", err)
@@ -90,7 +90,7 @@ func deleteSnapshotAndVolumeForApp(appName string) error {
 	}
 	for _, snapshot := range describeSnapshotsOutput.Snapshots {
 		for _, tag := range snapshot.Tags {
-			if *tag.Key == UNIKERNEL_APP_NAME && *tag.Value == appName {
+			if *tag.Key == UNIKERNEL_APP_NAME && *tag.Value == unikernelName {
 				snapshotId := *snapshot.SnapshotId
 				volumeId := *snapshot.VolumeId
 				deleteSnapshotInput := &ec2.DeleteSnapshotInput{
@@ -98,7 +98,7 @@ func deleteSnapshotAndVolumeForApp(appName string) error {
 				}
 				_, err = ec2Client.DeleteSnapshot(deleteSnapshotInput)
 				if err != nil {
-					return lxerrors.New("could not delete snapshot for app "+ appName, err)
+					return lxerrors.New("could not delete snapshot for app "+ unikernelName, err)
 				}
 				deleteVolumeInput := &ec2.DeleteVolumeInput{
 					VolumeId: aws.String(volumeId),
@@ -111,5 +111,5 @@ func deleteSnapshotAndVolumeForApp(appName string) error {
 			}
 		}
 	}
-	return lxerrors.New("snapshot not found for app "+ appName, err)
+	return lxerrors.New("snapshot not found for app "+ unikernelName, err)
 }

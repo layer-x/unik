@@ -10,14 +10,14 @@ import (
 	"path/filepath"
 )
 
-func Push(config types.UnikConfig, appName, path string, force bool) error {
-	if strings.Contains(appName, "/") {
+func Push(config types.UnikConfig, unikernelName, path string, force bool) error {
+	if strings.Contains(unikernelName, "/") {
 		return lxerrors.New("app name cannot contain special characters: '/'", nil)
 	}
 	url := config.Url
-	fmt.Printf("Pushing app %s to Unik Backend at %s... force=%v\n", appName, url, force)
+	fmt.Printf("Pushing app %s to Unik Backend at %s... force=%v\n", unikernelName, url, force)
 	path = strings.TrimSuffix(path,"/")
-	tarPath := path+"/"+appName+".tar.gz"
+	tarPath := path+"/"+unikernelName+".tar.gz"
 	tarCommand := exec.Command("tar", "-zvcf", filepath.Base(tarPath), "./")
 	tarCommand.Stdout = os.Stdout
 	tarCommand.Stderr = os.Stderr
@@ -36,17 +36,17 @@ func Push(config types.UnikConfig, appName, path string, force bool) error {
 
 	fmt.Printf("App packaged as tarball: %s\n", tarPath)
 
-	fmt.Printf("Submitting POST file:%s to %s\n", tarPath, url+"/apps/"+appName+fmt.Sprintf("?force=%v",force))
-	resp, body, err := lxhttpclient.PostFile(url, "/apps/"+appName, "tarfile", tarPath)
+	fmt.Printf("Submitting POST file:%s to %s\n", tarPath, url+"/unikernels/"+unikernelName+fmt.Sprintf("?force=%v",force))
+	resp, body, err := lxhttpclient.PostFile(url, "/unikernels/"+unikernelName, "tarfile", tarPath)
 	if err != nil {
-		return lxerrors.New("failed to submit app to "+url+"/apps/"+appName, err)
+		return lxerrors.New("failed to submit app to "+url+"/unikernels/"+unikernelName, err)
 	}
 	if resp.StatusCode != 202 {
 		return lxerrors.New("failed to submit app, got response: "+string(body), nil)
 	}
 
 
-	fmt.Printf("App submitted successfully %s\n", url+"/apps/"+appName+fmt.Sprintf("?force=%v",force))
+	fmt.Printf("App submitted successfully %s\n", url+"/unikernels/"+unikernelName+fmt.Sprintf("?force=%v",force))
 
 	return nil
 }

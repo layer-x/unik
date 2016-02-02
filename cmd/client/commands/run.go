@@ -7,10 +7,10 @@ import (
 	"net/http"
 )
 
-func Run(config types.UnikConfig, appName string, instances int) error {
-	fmt.Printf("Running %v instances of unikernel "+appName+"\n", instances)
+func Run(config types.UnikConfig, unikernelName, instanceName string, instances int) error {
+	fmt.Printf("Running %v instances of unikernel "+unikernelName+"\n", instances)
 	url := config.Url
-	resp, body, err := lxhttpclient.Post(url, "/apps/"+appName+"/run"+fmt.Sprintf("?instances=%v", instances), nil, nil)
+	resp, body, err := lxhttpclient.Post(url, "/unikernels/"+unikernelName+"/run"+fmt.Sprintf("?instances=%v&name=%s", instances, instanceName), nil, nil)
 	if err != nil {
 		return lxerrors.New("failed running app", err)
 	}
