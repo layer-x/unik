@@ -12,10 +12,10 @@ func Run(config types.UnikConfig, unikernelName, instanceName string, instances 
 	url := config.Url
 	resp, body, err := lxhttpclient.Post(url, "/unikernels/"+unikernelName+"/run"+fmt.Sprintf("?instances=%v&name=%s", instances, instanceName), nil, nil)
 	if err != nil {
-		return lxerrors.New("failed running app", err)
+		return lxerrors.New("failed running unikernel", err)
 	}
 	if resp.StatusCode != http.StatusAccepted {
-		return lxerrors.New("failed running app, got message: "+string(body), err)
+		return lxerrors.New("failed running unikernel, got message: "+string(body), err)
 	}
 	return nil
 }

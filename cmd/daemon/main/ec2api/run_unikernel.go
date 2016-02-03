@@ -27,12 +27,12 @@ func RunApp(unikernelName, instanceName string, instances int64) ([]string, erro
 				MaxCount: aws.Int64(instances),
 				MinCount: aws.Int64(instances),
 			}
-			lxlog.Debugf(logrus.Fields{"input": startInstancesInput}, "starting instance for app "+unikernelName)
+			lxlog.Debugf(logrus.Fields{"input": startInstancesInput}, "starting instance for unikernel "+unikernelName)
 			reservation, err := ec2Client.RunInstances(startInstancesInput)
 			if err != nil {
-				return instanceIds, lxerrors.New("failed to run instance for app "+unikernelName, err)
+				return instanceIds, lxerrors.New("failed to run instance for unikernel "+unikernelName, err)
 			}
-			lxlog.Debugf(logrus.Fields{"reservation": reservation}, "started instance for app "+unikernelName)
+			lxlog.Debugf(logrus.Fields{"reservation": reservation}, "started instance for unikernel "+unikernelName)
 			for _, instance := range reservation.Instances {
 				if unikernel.AMI == *instance.ImageId {
 					instanceId := unikernelName + "_" + uuid.New()
@@ -60,12 +60,12 @@ func RunApp(unikernelName, instanceName string, instances int64) ([]string, erro
 							},
 						},
 					}
-					lxlog.Debugf(logrus.Fields{"tags": createTagsInput}, "tagging instance for app "+instanceId)
+					lxlog.Debugf(logrus.Fields{"tags": createTagsInput}, "tagging instance for unikernel "+instanceId)
 					createTagsOutput, err := ec2Client.CreateTags(createTagsInput)
 					if err != nil {
-						return instanceIds, lxerrors.New("failed to tag instance for app "+unikernelName, err)
+						return instanceIds, lxerrors.New("failed to tag instance for unikernel "+unikernelName, err)
 					}
-					lxlog.Debugf(logrus.Fields{"output": createTagsOutput}, "tagged instance for app "+instanceId)
+					lxlog.Debugf(logrus.Fields{"output": createTagsOutput}, "tagged instance for unikernel "+instanceId)
 					instanceIds = append(instanceIds, instanceId)
 				}
 			}

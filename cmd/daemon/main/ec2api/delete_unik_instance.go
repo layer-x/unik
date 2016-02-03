@@ -4,6 +4,7 @@ import (
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/aws"
+	"strings"
 )
 
 func DeleteUnikInstance(unikInstanceId string) error {
@@ -13,7 +14,7 @@ func DeleteUnikInstance(unikInstanceId string) error {
 	}
 	var amazonId string
 	for _, unikInstance := range unikInstances {
-		if unikInstance.UnikInstanceID == unikInstanceId {
+		if strings.HasPrefix(unikInstance.UnikInstanceID, unikInstanceId){
 			amazonId = unikInstance.AmazonID
 			break
 		}

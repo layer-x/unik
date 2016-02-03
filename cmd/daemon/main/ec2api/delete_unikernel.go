@@ -98,7 +98,7 @@ func DeleteSnapshotAndVolumeForApp(unikernelName string) error {
 				}
 				_, err = ec2Client.DeleteSnapshot(deleteSnapshotInput)
 				if err != nil {
-					return lxerrors.New("could not delete snapshot for app "+ unikernelName, err)
+					return lxerrors.New("could not delete snapshot for unikernel "+ unikernelName, err)
 				}
 				deleteVolumeInput := &ec2.DeleteVolumeInput{
 					VolumeId: aws.String(volumeId),
@@ -111,5 +111,5 @@ func DeleteSnapshotAndVolumeForApp(unikernelName string) error {
 			}
 		}
 	}
-	return lxerrors.New("snapshot not found for app "+ unikernelName, err)
+	return lxerrors.New("snapshot not found for unikernel "+ unikernelName, err)
 }

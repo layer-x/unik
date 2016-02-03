@@ -15,5 +15,5 @@ func DeleteApp(unikernelName string, force bool) error {
 			return nil
 		}
 	}
-	return lxerrors.New("could not find unikernel for app "+unikernelName, nil)
+	return lxerrors.New("could not find unikernel "+unikernelName, nil)
 }

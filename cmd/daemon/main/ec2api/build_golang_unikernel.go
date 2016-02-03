@@ -22,35 +22,35 @@ func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, han
 		if unikernel.UnikernelName == unikernelName {
 			if strings.ToLower(force) == "true" {
 				lxlog.Warnf(logrus.Fields{"unikernelName": unikernelName, "ami": unikernel.AMI},
-					"deleting unikernel before building new app")
+					"deleting unikernel before building new unikernel")
 				err = DeleteUnikernel(unikernel.AMI, true)
 				if err != nil {
 					return lxerrors.New("could not delete unikernel", err)
 				}
 			} else {
-				return lxerrors.New("a unikernel already exists for this app. try again with force=true", err)
+				return lxerrors.New("a unikernel already exists for this unikernel. try again with force=true", err)
 			}
 		}
 	}
 
-	appPath, err := filepath.Abs("./test_outputs/"+"unikernels/"+unikernelName+"/")
+	unikernelPath, err := filepath.Abs("./test_outputs/"+"unikernels/"+unikernelName+"/")
 	if err != nil {
 		return lxerrors.New("getting absolute path for ./test_outputs/"+"unikernels/"+unikernelName+"/", err)
 	}
-	err = os.MkdirAll(appPath, 0777)
+	err = os.MkdirAll(unikernelPath, 0777)
 	if err != nil {
 		return lxerrors.New("making directory", err)
 	}
 	//clean up artifacts even if we fail
 	defer func(){
-		err = os.RemoveAll(appPath)
+		err = os.RemoveAll(unikernelPath)
 		if err != nil {
-			panic(lxerrors.New("cleaning up app files", err))
+			panic(lxerrors.New("cleaning up unikernel files", err))
 		}
-		lxlog.Infof(logrus.Fields{"files": appPath}, "cleaned up files")
+		lxlog.Infof(logrus.Fields{"files": unikernelPath}, "cleaned up files")
 	}()
-	lxlog.Infof(logrus.Fields{"path":appPath, "unikernel_name": unikernelName}, "created output directory for app")
-	savedTar, err := os.OpenFile(appPath+filepath.Base(handler.Filename), os.O_CREATE|os.O_RDWR, 0666)
+	lxlog.Infof(logrus.Fields{"path":unikernelPath, "unikernel_name": unikernelName}, "created output directory for unikernel")
+	savedTar, err := os.OpenFile(unikernelPath+filepath.Base(handler.Filename), os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return lxerrors.New("creating empty file for copying to", err)
 	}
@@ -60,15 +60,15 @@ func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, han
 		return lxerrors.New("copying uploaded file to disk", err)
 	}
 	lxlog.Infof(logrus.Fields{"bytes": bytesWritten}, "file written to disk")
-	err = lxfileutils.Untar(savedTar.Name(), appPath)
+	err = lxfileutils.Untar(savedTar.Name(), unikernelPath)
 	if err != nil {
 		return lxerrors.New("untarring saved tar", err)
 	}
-	lxlog.Infof(logrus.Fields{"path": appPath, "unikernel_name": unikernelName}, "app tarball untarred")
+	lxlog.Infof(logrus.Fields{"path": unikernelPath, "unikernel_name": unikernelName}, "unikernel tarball untarred")
 	buildUnikernelCommand := exec.Command("docker", "run",
 		"--rm",
 		"--privileged",
-		"-v", appPath+":/opt/code/",
+		"-v", unikernelPath+":/opt/code/",
 		"-v", "/dev:/dev",
 		"-e", "UNIKERNEL_APP_NAME="+unikernelName,
 		"-e", "UNIKERNELFILE=/opt/code/rumprun-program_xen.bin.ec2dir",
@@ -79,6 +79,6 @@ func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, han
 	if err != nil {
 		return lxerrors.New("building unikernel failed", err)
 	}
-	lxlog.Infof(logrus.Fields{"unikernel_name": unikernelName}, "app image created")
+	lxlog.Infof(logrus.Fields{"unikernel_name": unikernelName}, "unikernel image created")
 	return nil
 }
