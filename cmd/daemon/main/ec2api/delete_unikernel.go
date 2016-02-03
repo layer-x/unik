@@ -10,11 +10,11 @@ const UNIKERNEL_APP_NAME = "UNIKERNEL_APP_NAME"
 const UNIKERNEL_ID = "UNIKERNEL_ID"
 
 func DeleteUnikernel(unikernelId string, force bool) error {
-	allUnikInstances, err := ListUnikInstances()
+	unikInstances, err := ListUnikInstances()
 	if err != nil {
 		return lxerrors.New("could not check to see running unik instances", err)
 	}
-	for _, instance := range allUnikInstances {
+	for _, instance := range unikInstances {
 		if instance.UnikernelId == unikernelId {
 			if force == true {
 				err = DeleteUnikInstance(instance.UnikInstanceID)

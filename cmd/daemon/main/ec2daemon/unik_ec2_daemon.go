@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"github.com/layer-x/unik/cmd/daemon/docker_api"
 	"github.com/layer-x/unik/cmd/daemon/main/ec2api"
+	"github.com/docker/docker/pkg/ioutils"
 )
 
 type UnikEc2Daemon struct {
@@ -25,14 +26,14 @@ func NewUnikEc2Daemon() *UnikEc2Daemon {
 
 func (d *UnikEc2Daemon) registerHandlers() {
 	d.server.Get("/instances", func(res http.ResponseWriter) {
-		instances, err := ec2api.ListUnikInstances()
+		unikInstances, err := ec2api.ListUnikInstances()
 		if err != nil {
 			lxlog.Errorf(logrus.Fields{"err": err}, "could not get unik instance list")
 			lxmartini.Respond(res, lxerrors.New("could not get unik instance list", err))
 			return
 		}
-		lxlog.Debugf(logrus.Fields{"instances": instances}, "Listing all unik instances")
-		lxmartini.Respond(res, instances)
+		lxlog.Debugf(logrus.Fields{"instances": unikInstances}, "Listing all unik instances")
+		lxmartini.Respond(res, unikInstances)
 	})
 	d.server.Get("/unikernels", func(res http.ResponseWriter) {
 		unikernels, err := ec2api.ListUnikernels()
@@ -136,6 +137,36 @@ func (d *UnikEc2Daemon) registerHandlers() {
 			return
 		}
 		res.WriteHeader(http.StatusNoContent)
+	})
+	d.server.Get("/instances/:instance_id/logs", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		unikInstanceId := params["instance_id"]
+		follow := req.URL.Query().Get("follow")
+		res.Write([]byte("getting logs for "+unikInstanceId+"...\n"))
+		if f, ok := res.(http.Flusher); ok {
+			f.Flush()
+		} else {
+			lxlog.Errorf(logrus.Fields{}, "no flush!")
+			lxmartini.Respond(res, "no flush!")
+			return
+		}
+		if strings.ToLower(follow) == "true" {
+			output := ioutils.NewWriteFlusher(res)
+			defer output.Close()
+
+			err := ec2api.StreamLogs(unikInstanceId, output)
+			if err != nil {
+				lxlog.Warnf(logrus.Fields{"err":err, "unikInstanceId": unikInstanceId}, "streaming logs stopped")
+				lxmartini.Respond(res, err)
+				return
+			}
+		}
+		logs, err := ec2api.GetLogs(unikInstanceId)
+		if err != nil {
+			lxlog.Errorf(logrus.Fields{"err":err, "unikInstanceId": unikInstanceId}, "failed to perform get logs request")
+			lxmartini.Respond(res, err)
+			return
+		}
+		lxmartini.Respond(res, logs)
 	})
 }
 

@@ -8,6 +8,7 @@ type DockerUnikernel struct {
 	ID          string `json:"Id"`
 	Size        int `json:"Size"`
 	Virtualsize int `json:"VirtualSize"`
+	Created int64 `json:"Created"`
 }
 
 func convertUnikernel(unikernel *types.Unikernel) *DockerUnikernel {
@@ -16,5 +17,6 @@ func convertUnikernel(unikernel *types.Unikernel) *DockerUnikernel {
 		ID: unikernel.AMI,
 		Size: 1000,
 		Virtualsize: 1000,
+		Created: unikernel.Created,
 	}
 }

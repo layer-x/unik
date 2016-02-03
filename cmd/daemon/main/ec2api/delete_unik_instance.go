@@ -4,30 +4,19 @@ import (
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/aws"
-	"strings"
 )
 
 func DeleteUnikInstance(unikInstanceId string) error {
-	unikInstances, err := ListUnikInstances()
+	unikInstance, err := GetUnikInstanceByPrefix(unikInstanceId)
 	if err != nil {
-		return lxerrors.New("failed to retrieve known instances", err)
-	}
-	var amazonId string
-	for _, unikInstance := range unikInstances {
-		if strings.HasPrefix(unikInstance.UnikInstanceID, unikInstanceId){
-			amazonId = unikInstance.AmazonID
-			break
-		}
-	}
-	if amazonId == "" {
-		return lxerrors.New("unik instance "+unikInstanceId+" not found", nil)
+		return lxerrors.New("failed to retrieve unik instance", err)
 	}
 	ec2Client, err := ec2_metada_client.NewEC2Client()
 	if err != nil {
 		return lxerrors.New("could not start ec2 client session", err)
 	}
 	terminateInstancesInput := &ec2.TerminateInstancesInput{
-		InstanceIds: []*string{aws.String(amazonId)},
+		InstanceIds: []*string{aws.String(unikInstance.AmazonID)},
 	}
 	_, err = ec2Client.TerminateInstances(terminateInstancesInput)
 	if err != nil {
