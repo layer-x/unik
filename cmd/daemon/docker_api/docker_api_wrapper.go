@@ -9,8 +9,7 @@ import (
 	"github.com/layer-x/unik/cmd/daemon/main/ec2api"
 	"encoding/json"
 	"io/ioutil"
-"io"
-	"fmt"
+	"github.com/docker/docker/pkg/ioutils"
 )
 
 
@@ -24,7 +23,7 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 		}
 		dockerInstances := []*DockerUnikInstance{}
 		for _, instance := range unikInstances {
-			dockerInstance := covertUnikInstance(instance)
+			dockerInstance := convertUnikInstance(instance)
 			dockerInstances = append(dockerInstances, dockerInstance)
 		}
 		lxlog.Debugf(logrus.Fields{"dockerInstances": dockerInstances}, "Listing all unik instances for docker")
@@ -76,45 +75,87 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 		lxlog.Infof(logrus.Fields{"instance_ids": instanceIds, "request": runRequest}, "1 instances started of unikernel " + unikernelName + " for docker")
 		lxmartini.Respond(res, DockerRunResponse{Id: instanceIds[0]})
 	})
-	m.Post("/v1.20/containers/:instance_id/attach", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+	m.Get("/v1.20/containers/:instance_id/logs", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
 		unikInstanceId := params["instance_id"]
-
-		hijacker := res.(http.Hijacker)
-		conn, _, err := hijacker.Hijack()
-		if err != nil {
-			panic(err)
+		res.Write([]byte("getting logs for "+unikInstanceId+"...\n"))
+		if f, ok := res.(http.Flusher); ok {
+			f.Flush()
+		} else {
+			lxlog.Errorf(logrus.Fields{}, "no flush!")
+			lxmartini.Respond(res, "no flush!")
+			return
 		}
-		defer conn.Close()
-		// Flush the options to make sure the client sets the raw mode
-		conn.Write([]byte{})
-		//		inStream := conn.(io.ReadCloser)
-		outStream := conn.(io.Writer)
-		outStream.Write([]byte("getting logs for "+unikInstanceId+"...\n"))
+		output := ioutils.NewWriteFlusher(res)
+		defer output.Close()
 
-		//		if c.Upgrade {
-//			fmt.Fprintf(outStream, "HTTP/1.1 101 UPGRADED\r\nContent-Type: application/vnd.docker.raw-stream\r\nConnection: Upgrade\r\nUpgrade: tcp\r\n\r\n")
-//		} else {
-			fmt.Fprintf(outStream, "HTTP/1.1 200 OK\r\nContent-Type: application/vnd.docker.raw-stream\r\n\r\n")
-//		}
-
-
-		outStream.Write([]byte("getting logs for "+unikInstanceId+"...\n"))
-//		if f, ok := res.(http.Flusher); ok {
-//			f.Flush()
-//		} else {
-//			lxlog.Errorf(logrus.Fields{}, "no flush!")
-//			lxmartini.Respond(res, "no flush!")
-//			return
-//		}
-//		output := ioutils.NewWriteFlusher(outStream)
-//		defer output.Close()
-
-		err = ec2api.StreamLogs(unikInstanceId, outStream)
+		var follow bool
+		if follow {
+			err := ec2api.StreamLogs(unikInstanceId, output)
+			if err != nil {
+				lxlog.Warnf(logrus.Fields{"err":err, "unikInstanceId": unikInstanceId}, "streaming logs stopped")
+				lxmartini.Respond(res, err)
+				return
+			}
+		 } else {
+			logs, err := ec2api.GetLogs(unikInstanceId)
+			if err != nil {
+				lxlog.Errorf(logrus.Fields{"err":err, "unikInstanceId": unikInstanceId}, "could not get logs")
+				lxmartini.Respond(res, err)
+				return
+			}
+			lxmartini.Respond(res, logs)
+		}
+	})
+	m.Get("/v1.20/containers/:instance_id/json", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		unikInstanceId := params["instance_id"]
+		unikInstance, err := ec2api.GetUnikInstanceByPrefix(unikInstanceId)
 		if err != nil {
-			lxlog.Warnf(logrus.Fields{"err":err, "unikInstanceId": unikInstanceId}, "streaming logs stopped")
+			lxlog.Errorf(logrus.Fields{"err":err, "unikInstanceId": unikInstanceId}, "could not get unik instance")
 			lxmartini.Respond(res, err)
 			return
 		}
+		lxmartini.Respond(res, convertUnikInstanceVerbose(unikInstance))
 	})
+//
+//	m.Post("/v1.20/containers/:instance_id/attach", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+//		unikInstanceId := params["instance_id"]
+//
+//		hijacker := res.(http.Hijacker)
+//		conn, _, err := hijacker.Hijack()
+//		if err != nil {
+//			panic(err)
+//		}
+//		defer conn.Close()
+//		// Flush the options to make sure the client sets the raw mode
+//		conn.Write([]byte{})
+//		//		inStream := conn.(io.ReadCloser)
+//		outStream := conn.(io.Writer)
+//		outStream.Write([]byte("getting logs for "+unikInstanceId+"...\n"))
+//
+//		//		if c.Upgrade {
+//		//			fmt.Fprintf(outStream, "HTTP/1.1 101 UPGRADED\r\nContent-Type: application/vnd.docker.raw-stream\r\nConnection: Upgrade\r\nUpgrade: tcp\r\n\r\n")
+//		//		} else {
+//		fmt.Fprintf(outStream, "HTTP/1.1 200 OK\r\nContent-Type: application/vnd.docker.raw-stream\r\n\r\n")
+//		//		}
+//
+//
+//		outStream.Write([]byte("getting logs for "+unikInstanceId+"...\n"))
+//		//		if f, ok := res.(http.Flusher); ok {
+//		//			f.Flush()
+//		//		} else {
+//		//			lxlog.Errorf(logrus.Fields{}, "no flush!")
+//		//			lxmartini.Respond(res, "no flush!")
+//		//			return
+//		//		}
+//		//		output := ioutils.NewWriteFlusher(outStream)
+//		//		defer output.Close()
+//
+//		err = ec2api.StreamLogs(unikInstanceId, outStream)
+//		if err != nil {
+//			lxlog.Warnf(logrus.Fields{"err":err, "unikInstanceId": unikInstanceId}, "streaming logs stopped")
+//			lxmartini.Respond(res, err)
+//			return
+//		}
+//	})
 	return m
 }
