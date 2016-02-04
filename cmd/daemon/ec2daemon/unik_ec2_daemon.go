@@ -80,6 +80,7 @@ func (d *UnikEc2Daemon) registerHandlers() {
 		res.WriteHeader(http.StatusAccepted)
 	})
 	d.server.Post("/unikernels/:unikernel_name/run", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		lxlog.Debugf(logrus.Fields{"request": req, "query": req.URL.Query()}, "recieved run request")
 		unikernelName := params["unikernel_name"]
 		if unikernelName == "" {
 			lxlog.Errorf(logrus.Fields{"request": fmt.Sprintf("%v", req)}, "unikernel must be named")
