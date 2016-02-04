@@ -19,6 +19,7 @@ func main() {
 	app.Usage = ""
 	var forcePush bool
 	var forceRmu bool
+	var follow bool
 	var runInstances int
 	var unikernelName string
 	var instanceName string
@@ -80,7 +81,7 @@ func main() {
 			},
 			Action: func(c *cli.Context) {
 				if len(c.Args()) != 1 {
-					println("unik: \"run\" requires exactly 1 arguments")
+					println("unik: \"run\" requires exactly 1 argument")
 					println("See 'unik run -h'")
 					println("\nUSAGE:\n    unik run [-i=INSTANCES] NAME\n")
 					println("run one or more instances of a unikernel")
@@ -99,6 +100,47 @@ func main() {
 				err = commands.Run(config, unikernelName, instanceName, runInstances)
 				if err != nil {
 					println("unik run failed!")
+					println("error: "+err.Error())
+					os.Exit(-1)
+				}
+			},
+		},
+		{
+			Name:      "logs",
+			Aliases:   []string{"l"},
+			ArgsUsage: "unik logs [-f] NAME",
+			Usage:     "get stdout/stderr from a running unikernel",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name: "-follow, f",
+					Usage: "Follow logs",
+					Destination: &follow,
+				},
+				cli.StringFlag{
+					Name: "name, n",
+					Usage: "name=CUSTOM_INSTANCE_NAME",
+					Value: "",
+					Destination: &instanceName,
+				},
+			},
+			Action: func(c *cli.Context) {
+				if len(c.Args()) != 1 {
+					println("unik: \"run\" requires exactly 1 argument")
+					println("See 'unik logs -h'")
+					println("\nUSAGE:\n    unik logs [-f] NAME\n")
+					println("get stdout/stderr from a running unikernel")
+					os.Exit(-1)
+				}
+				unikInstanceId := c.Args().Get(0)
+				config, err := getConfig()
+				if err != nil {
+					println("You must be logged in to run this command.")
+					println("Try 'unik target UNIK_URL'")
+					os.Exit(-1)
+				}
+				err = commands.Logs(config, unikInstanceId, follow)
+				if err != nil {
+					println("unik logs failed!")
 					println("error: "+err.Error())
 					os.Exit(-1)
 				}
@@ -237,7 +279,7 @@ func main() {
 			Usage:     "set unik cli endpoint",
 			Action: func(c *cli.Context) {
 				if len(c.Args()) != 1 {
-					println("unik: \"target\" requires exactly 1 arguments")
+					println("unik: \"target\" requires exactly 1 argument")
 					println("See 'unik target -h'")
 					println("\nUSAGE:\n    unik target URL\n")
 					println("set unik cli endpoint")

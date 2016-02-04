@@ -34,8 +34,7 @@ func ListUnikInstances() ([]*types.UnikInstance, error) {
 		for _, instance := range reservation.Instances {
 			unikInstance := unik_ec2_utils.GetUnikInstanceMetadata(instance)
 			if unikInstance != nil {
-				lxlog.Debugf(logrus.Fields{"instance": instance},"read instance from EC2")
-				lxlog.Debugf(logrus.Fields{"UnikInstance": unikInstance},"Unik Instance read")
+				lxlog.Debugf(logrus.Fields{"UnikInstance": unikInstance.UnikInstanceID},"Unik Instance read")
 				allUnikInstances = append(allUnikInstances, unikInstance)
 			}
 		}
