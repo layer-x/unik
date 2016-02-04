@@ -6,7 +6,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/layer-x/layerx-commons/lxmartini"
 	"github.com/layer-x/layerx-commons/lxerrors"
-	"github.com/layer-x/unik/cmd/daemon/main/ec2api"
+	"github.com/layer-x/unik/cmd/daemon/ec2api"
 	"encoding/json"
 	"io/ioutil"
 	"github.com/docker/docker/pkg/ioutils"

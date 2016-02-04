@@ -1,6 +1,6 @@
 package ec2api
 import (
-	"github.com/layer-x/unik/cmd/daemon/main/ec2_metada_client"
+	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/aws"

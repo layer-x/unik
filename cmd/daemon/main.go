@@ -4,7 +4,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/layer-x/layerx-commons/lxlog"
 	"os"
-	"github.com/layer-x/unik/cmd/daemon/main/ec2daemon"
+	"github.com/layer-x/unik/cmd/daemon/ec2daemon"
 )
 
 func main() {
@@ -18,7 +18,7 @@ func main() {
 		lxlog.Errorf(logrus.Fields{"err":err}, "building golang unikernel builder")
 		return
 	}
-	//	lxlog.Infof(logrus.Fields{"out":string(out)}, "built golang_unikernel_builder image")
+	lxlog.Infof(logrus.Fields{}, "built golang_unikernel_builder image")
 	unikDaemon := ec2daemon.NewUnikEc2Daemon()
 	unikDaemon.Start(3000)
 }

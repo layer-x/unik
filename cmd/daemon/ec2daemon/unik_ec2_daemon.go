@@ -10,7 +10,7 @@ import (
 	"strings"
 	"strconv"
 	"github.com/layer-x/unik/cmd/daemon/docker_api"
-	"github.com/layer-x/unik/cmd/daemon/main/ec2api"
+	"github.com/layer-x/unik/cmd/daemon/ec2api"
 	"github.com/docker/docker/pkg/ioutils"
 )
 
