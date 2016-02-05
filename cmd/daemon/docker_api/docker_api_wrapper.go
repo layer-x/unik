@@ -112,37 +112,7 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 		}
 		for _, logLine := range strings.Split(logs, "\n") {
 			outStream.Write([]byte(logLine+"\n"))
-//			fmt.Println(logLine)
 		}
-
-//
-//		if f, ok := res.(http.Flusher); ok {
-//			f.Flush()
-//		} else {
-//			lxlog.Errorf(logrus.Fields{}, "no flush!")
-//			lxmartini.Respond(res, "no flush!")
-//			return
-//		}
-//		output := ioutils.NewWriteFlusher(res)
-//		defer output.Close()
-//
-//		var follow bool
-//		if follow {
-//			err := ec2api.StreamLogs(unikInstanceId, output)
-//			if err != nil {
-//				lxlog.Warnf(logrus.Fields{"err":err, "unikInstanceId": unikInstanceId}, "streaming logs stopped")
-//				lxmartini.Respond(res, err)
-//				return
-//			}
-//		 } else {
-//			logs, err := ec2api.GetLogs(unikInstanceId)
-//			if err != nil {
-//				lxlog.Errorf(logrus.Fields{"err":err, "unikInstanceId": unikInstanceId}, "could not get logs")
-//				lxmartini.Respond(res, err)
-//				return
-//			}
-//			lxmartini.Respond(res, logs)
-//		}
 	})
 	m.Get("/v1.20/containers/:instance_id/json", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
 		unikInstanceId := params["instance_id"]
@@ -154,7 +124,7 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 		}
 		lxmartini.Respond(res, convertUnikInstanceVerbose(unikInstance))
 	})
-//
+
 //	m.Post("/v1.20/containers/:instance_id/attach", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
 //		unikInstanceId := params["instance_id"]
 //
