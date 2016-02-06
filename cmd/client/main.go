@@ -45,7 +45,7 @@ func main() {
 					os.Exit(-1)
 				}
 				for _, instanceId := range c.Args() {
-					err = commands.Rm(config, instanceId)
+					err = commands.Rm(config, instanceId, verbose)
 					if err != nil {
 						println("unik rm failed!")
 						println("error: "+err.Error())
@@ -81,7 +81,7 @@ func main() {
 					os.Exit(-1)
 				}
 				for _, instanceId := range c.Args() {
-					err = commands.Rmu(config, instanceId, forceRmu)
+					err = commands.Rmu(config, instanceId, forceRmu, verbose)
 					if err != nil {
 						println("unik rmu failed!")
 						println("error: "+err.Error())
@@ -157,7 +157,7 @@ func main() {
 					println("Try 'unik target UNIK_URL'")
 					os.Exit(-1)
 				}
-				err = commands.Ps(config, unikernelName)
+				err = commands.Ps(config, unikernelName, verbose)
 				if err != nil {
 					println("unik ps failed!")
 					println("error: "+err.Error())
@@ -193,7 +193,7 @@ func main() {
 					println("Try 'unik target UNIK_URL'")
 					os.Exit(-1)
 				}
-				err = commands.Push(config, unikernelName, path, forcePush)
+				err = commands.Push(config, unikernelName, path, forcePush, verbose)
 				if err != nil {
 					println("unik push failed!")
 					println("error: "+err.Error())
@@ -238,7 +238,7 @@ func main() {
 				if runInstances < 1 {
 					runInstances = 1
 				}
-				err = commands.Run(config, unikernelName, instanceName, runInstances)
+				err = commands.Run(config, unikernelName, instanceName, runInstances, verbose)
 				if err != nil {
 					println("unik run failed!")
 					println("error: "+err.Error())
