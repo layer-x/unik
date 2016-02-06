@@ -5,16 +5,45 @@ import (
 	"fmt"
 	"github.com/layer-x/layerx-commons/lxerrors"
 "encoding/json"
+	"bufio"
 )
 
-func Ps(config types.UnikConfig, unikernelName string) error {
+func Ps(config types.UnikConfig, unikernelName string, verbose bool) error {
 	url := config.Url
-	_, body, err := lxhttpclient.Get(url, "/instances", nil)
-	if err != nil {
-		return lxerrors.New("failed retrieving instances", err)
+	if !verbose {
+		_, body, err := lxhttpclient.Get(url, fmt.Sprintf("/instances?verbose=%v", verbose), nil)
+		if err != nil {
+			return lxerrors.New("failed retrieving instances", err)
+		}
+		printUnikInstances(unikernelName, body)
+	} else {
+		resp, err := lxhttpclient.GetAsync(url, fmt.Sprintf("/instances?verbose=%v", verbose), nil)
+		if err != nil {
+			return lxerrors.New("error performing GET request", err)
+		}
+		reader := bufio.NewReader(resp.Body)
+		for {
+			line, err := reader.ReadBytes('\n')
+			if err != nil {
+				return lxerrors.New("reading line", err)
+			}
+			if string(line) == TERMINATE_OUTPUT {
+				body, err := reader.ReadBytes('\n')
+				if err != nil {
+					return lxerrors.New("reading final line", err)
+				}
+				return printUnikInstances(unikernelName, body)
+			}
+			fmt.Printf("%s",string(line))
+		}
 	}
+
+	return nil
+}
+
+func printUnikInstances(unikernelName string, body []byte) error {
 	unikInstances := []*types.UnikInstance{}
-	err = json.Unmarshal(body, &unikInstances)
+	err := json.Unmarshal(body, &unikInstances)
 	if err != nil {
 		return lxerrors.New("failed to retrieve instances: "+string(body), err)
 	}
@@ -28,15 +57,7 @@ func Ps(config types.UnikConfig, unikernelName string) error {
 				unikInstance.PrivateIp,
 				unikInstance.State,
 				unikInstance.UnikInstanceName)
-//			fmt.Printf("UnikInstanceID: %s\n", unikInstance.UnikInstanceID)
-//			fmt.Printf("UnikernelId: %s\n", unikInstance.UnikernelId)
-//			fmt.Printf("AmazonID: %s\n", unikInstance.AmazonID)
-//			fmt.Printf("unikernelName: %s\n", unikInstance.UnikernelName)
-//			fmt.Printf("PrivateIp: %s\n", unikInstance.PrivateIp)
-//			fmt.Printf("PublicIp: %s\n", unikInstance.PublicIp)
-//			fmt.Printf("State: %s\n", unikInstance.State)
 		}
 	}
-
 	return nil
 }

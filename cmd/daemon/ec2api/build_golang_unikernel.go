@@ -73,8 +73,7 @@ func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, han
 		"-e", "UNIKERNEL_APP_NAME="+unikernelName,
 		"-e", "UNIKERNELFILE=/opt/code/rumprun-program_xen.bin.ec2dir",
 		"golang_unikernel_builder")
-	buildUnikernelCommand.Stdout = os.Stdout
-	buildUnikernelCommand.Stderr = os.Stderr
+	lxlog.LogCommand(buildUnikernelCommand, true)
 	err = buildUnikernelCommand.Run()
 	if err != nil {
 		return lxerrors.New("building unikernel failed", err)

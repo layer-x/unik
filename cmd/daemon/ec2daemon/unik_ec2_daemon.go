@@ -12,6 +12,9 @@ import (
 	"github.com/layer-x/unik/cmd/daemon/docker_api"
 	"github.com/layer-x/unik/cmd/daemon/ec2api"
 	"github.com/docker/docker/pkg/ioutils"
+"encoding/json"
+	"github.com/pborman/uuid"
+	"github.com/layer-x/unik/cmd/types"
 )
 
 type UnikEc2Daemon struct {
@@ -25,149 +28,222 @@ func NewUnikEc2Daemon() *UnikEc2Daemon {
 }
 
 func (d *UnikEc2Daemon) registerHandlers() {
-	d.server.Get("/instances", func(res http.ResponseWriter) {
-		unikInstances, err := ec2api.ListUnikInstances()
-		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err}, "could not get unik instance list")
-			lxmartini.Respond(res, lxerrors.New("could not get unik instance list", err))
-			return
-		}
-		lxlog.Debugf(logrus.Fields{"instances": unikInstances}, "Listing all unik instances")
-		lxmartini.Respond(res, unikInstances)
-	})
-	d.server.Get("/unikernels", func(res http.ResponseWriter) {
-		unikernels, err := ec2api.ListUnikernels()
-		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err}, "could not get unikernel list")
-			lxmartini.Respond(res, lxerrors.New("could not get unikernel list", err))
-			return
-		}
-		lxlog.Debugf(logrus.Fields{"unikernels": unikernels}, "Listing all unikernels")
-		lxmartini.Respond(res, unikernels)
-	})
-	d.server.Post("/unikernels/:unikernel_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		err := req.ParseMultipartForm(0)
-		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form)}, "could not parse multipart form")
-			lxmartini.Respond(res, err)
-			return
-		}
-		unikernelName := params["unikernel_name"]
-		if unikernelName == "" {
-			lxlog.Errorf(logrus.Fields{"request": fmt.Sprintf("%v", req)}, "unikernel must be named")
-			lxmartini.Respond(res, lxerrors.New("unikernel must be named", nil))
-			return
-		}
-		uploadedTar, handler, err := req.FormFile("tarfile")
-		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form), "unikernel_name": unikernelName}, "parsing file from multipart form")
-			lxmartini.Respond(res, err)
-			return
-		}
-		defer uploadedTar.Close()
-		force := req.FormValue("force")
-		err = ec2api.BuildUnikernel(unikernelName, force, uploadedTar, handler)
-		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form), "unikernel_name": unikernelName}, "building unikernel from unikernel source")
-			lxlog.Warnf(logrus.Fields{}, "cleaning up unikernel build artifacts (volumes, snapshots)")
-			err = ec2api.DeleteSnapshotAndVolumeForApp(unikernelName)
-			if err != nil {
-				lxlog.Errorf(logrus.Fields{"err":err, "unikernel_name": unikernelName}, "could not remove volume and/or snapshot for instance")
-			}
-			lxmartini.Respond(res, err)
-			return
-		}
-		res.WriteHeader(http.StatusAccepted)
-	})
-	d.server.Post("/unikernels/:unikernel_name/run", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		lxlog.Debugf(logrus.Fields{"request": req, "query": req.URL.Query()}, "recieved run request")
-		unikernelName := params["unikernel_name"]
-		if unikernelName == "" {
-			lxlog.Errorf(logrus.Fields{"request": fmt.Sprintf("%v", req)}, "unikernel must be named")
-			lxmartini.Respond(res, lxerrors.New("unikernel must be named", nil))
-			return
-		}
-		instancesStr := req.URL.Query().Get("instances")
-		if instancesStr == "" {
-			instancesStr = "1"
-		}
-		instanceName := req.URL.Query().Get("name")
-		instances, err := strconv.Atoi(instancesStr)
-		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err":err, "instancess": instancesStr, "unikernel_name": unikernelName}, "invalid input for field 'instances'")
-			lxmartini.Respond(res, err)
-			return
-		}
-		instanceIds, err := ec2api.RunApp(unikernelName, instanceName, int64(instances))
-		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err":err, "unikernel_name": unikernelName}, "launching "+instancesStr+" instances of unikernel "+unikernelName)
-			lxmartini.Respond(res, err)
-			return
-		}
-		lxlog.Infof(logrus.Fields{"instance_ids": instanceIds}, instancesStr+" instances started of unikernel "+unikernelName)
-		res.WriteHeader(http.StatusAccepted)
-	})
-	d.server.Delete("/instances/:instance_id", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		instanceId := params["instance_id"]
-		lxlog.Infof(logrus.Fields{"request": req},"deleting instance "+instanceId)
-		err := ec2api.DeleteUnikInstance(instanceId)
-		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err":err}, "could not delete instance "+instanceId)
-			lxmartini.Respond(res, err)
-			return
-		}
-		res.WriteHeader(http.StatusNoContent)
-	})
-	d.server.Delete("/unikernels/:unikernel_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		unikernelName := params["unikernel_name"]
-		if unikernelName == "" {
-			lxlog.Errorf(logrus.Fields{"request": fmt.Sprintf("%v", req)}, "unikernel must be named")
-			lxmartini.Respond(res, lxerrors.New("unikernel must be named", nil))
-			return
-		}
-		forceStr := req.URL.Query().Get("force")
-		lxlog.Infof(logrus.Fields{"request": req},"deleting instance "+ unikernelName)
-		force := false
-		if strings.ToLower(forceStr) == "true" {
-			force = true
-		}
-		err := ec2api.DeleteApp(unikernelName, force)
-		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err":err}, "could not delete unikernel "+ unikernelName)
-			lxmartini.Respond(res, err)
-			return
-		}
-		res.WriteHeader(http.StatusNoContent)
-	})
-	d.server.Get("/instances/:instance_id/logs", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		unikInstanceId := params["instance_id"]
-		follow := req.URL.Query().Get("follow")
-		res.Write([]byte("getting logs for "+unikInstanceId+"...\n"))
-		if f, ok := res.(http.Flusher); ok {
-			f.Flush()
-		} else {
-			lxlog.Errorf(logrus.Fields{}, "no flush!")
-			lxmartini.Respond(res, "no flush!")
-			return
-		}
-		if strings.ToLower(follow) == "true" {
-			output := ioutils.NewWriteFlusher(res)
-			defer output.Close()
+	streamOrRespond := func(res http.ResponseWriter, req *http.Request, action func() (interface{}, error)) {
+		verbose := req.URL.Query().Get("verbose")
+		if strings.ToLower(verbose) == "true" {
+			httpOutStream := ioutils.NewWriteFlusher(res)
+			defer httpOutStream.Close()
+			uuid := uuid.New()
+			lxlog.AddLogger(uuid, logrus.DebugLevel, httpOutStream)
+			defer lxlog.DeleteLogger(uuid)
 
-			err := ec2api.StreamLogs(unikInstanceId, output)
+			jsonObject, err := action()
 			if err != nil {
-				lxlog.Warnf(logrus.Fields{"err":err, "unikInstanceId": unikInstanceId}, "streaming logs stopped")
 				lxmartini.Respond(res, err)
+				lxlog.Errorf(logrus.Fields{"err": err}, "error performing action")
 				return
 			}
+			if text, ok := jsonObject.(string); ok {
+				_, err = httpOutStream.Write([]byte(text+"\n"))
+				return
+			}
+			if jsonObject != nil {
+				httpOutStream.Write([]byte("BEGIN_JSON_DATA\n"))
+				data, err := json.Marshal(jsonObject)
+				if err != nil {
+					lxmartini.Respond(res, lxerrors.New("could not marshal message to json", err))
+					return
+				}
+				data = append(data, byte('\n'))
+				_, err = httpOutStream.Write(data)
+				if err != nil {
+					lxmartini.Respond(res, lxerrors.New("could not write data", err))
+					return
+				}
+				return
+			} else {
+				res.WriteHeader(http.StatusNoContent)
+			}
 		}
-		logs, err := ec2api.GetLogs(unikInstanceId)
+		jsonObject, err := action()
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err":err, "unikInstanceId": unikInstanceId}, "failed to perform get logs request")
 			lxmartini.Respond(res, err)
+			lxlog.Errorf(logrus.Fields{"err": err}, "error performing action")
 			return
 		}
-		lxmartini.Respond(res, logs)
+		if jsonObject != nil {
+			lxmartini.Respond(res, jsonObject)
+		} else {
+			res.WriteHeader(http.StatusNoContent)
+		}
+	}
+
+	d.server.Get("/instances", func(res http.ResponseWriter, req *http.Request) {
+		streamOrRespond(res, req, func() (interface {}, error) {
+			unikInstances, err := ec2api.ListUnikInstances()
+			if err != nil {
+				lxlog.Errorf(logrus.Fields{"err": err}, "could not get unik instance list")
+			} else {
+				lxlog.Debugf(logrus.Fields{"instances": unikInstances}, "Listing all unik instances")
+			}
+			return unikInstances, err
+		})
+	})
+	d.server.Get("/unikernels", func(res http.ResponseWriter, req *http.Request) {
+		streamOrRespond(res, req, func() (interface {}, error) {
+			unikernels, err := ec2api.ListUnikernels()
+			if err != nil {
+				lxlog.Errorf(logrus.Fields{"err": err}, "could not get unikernel list")
+			} else {
+				lxlog.Debugf(logrus.Fields{"unikernels": unikernels}, "Listing all unikernels")
+			}
+			return unikernels, err
+		})
+	})
+	d.server.Post("/unikernels/:unikernel_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		streamOrRespond(res, req, func() (interface {}, error) {
+			lxlog.Debugf(logrus.Fields{"req": req}, "parsing multipart form")
+			err := req.ParseMultipartForm(0)
+			if err != nil {
+				return nil, err
+			}
+			unikernelName := params["unikernel_name"]
+			if unikernelName == "" {
+				return nil, lxerrors.New("unikernel must be named", nil)
+			}
+			lxlog.Debugf(logrus.Fields{"form": req.Form}, "parsing form file marked 'tarfile'")
+			uploadedTar, handler, err := req.FormFile("tarfile")
+			if err != nil {
+				return nil, err
+			}
+			defer uploadedTar.Close()
+			force := req.FormValue("force")
+			lxlog.Debugf(logrus.Fields{"unikernelName": unikernelName, "force": force, "uploadedTar": uploadedTar}, "building unikernel")
+			err = ec2api.BuildUnikernel(unikernelName, force, uploadedTar, handler)
+			if err != nil {
+				lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form), "unikernel_name": unikernelName}, "building unikernel from unikernel source")
+				lxlog.Warnf(logrus.Fields{}, "cleaning up unikernel build artifacts (volumes, snapshots)")
+				snapshotErr := ec2api.DeleteSnapshotAndVolumeForApp(unikernelName)
+				if snapshotErr != nil {
+					lxlog.Errorf(logrus.Fields{"err": snapshotErr, "unikernel_name": unikernelName}, "could not remove volume and/or snapshot for instance")
+				}
+				return nil, err
+			}
+			lxlog.Debugf(logrus.Fields{}, "verifying unikernel succeeded")
+			unikernels, err := ec2api.ListUnikernels()
+			if err != nil {
+				lxlog.Errorf(logrus.Fields{"err": err}, "could not get unikernel list")
+				return nil, err
+			}
+			for _, unikernel := range unikernels {
+				if unikernel.UnikernelName == unikernelName {
+					return unikernel, nil
+				}
+			}
+			return nil, lxerrors.New("cannot locate uploaded unikernel "+unikernelName, nil)
+		})
+	})
+	d.server.Post("/unikernels/:unikernel_name/run", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		streamOrRespond(res, req, func() (interface {}, error) {
+			lxlog.Debugf(logrus.Fields{"request": req, "query": req.URL.Query()}, "recieved run request")
+			unikernelName := params["unikernel_name"]
+			if unikernelName == "" {
+				lxlog.Errorf(logrus.Fields{"request": fmt.Sprintf("%v", req)}, "unikernel must be named")
+				return nil, lxerrors.New("unikernel must be named", nil)
+			}
+			instancesStr := req.URL.Query().Get("instances")
+			if instancesStr == "" {
+				instancesStr = "1"
+			}
+			instanceName := req.URL.Query().Get("name")
+			instances, err := strconv.Atoi(instancesStr)
+			if err != nil {
+				return nil, err
+			}
+			instanceIds, err := ec2api.RunApp(unikernelName, instanceName, int64(instances))
+			if err != nil {
+				return nil, err
+			}
+			lxlog.Debugf(logrus.Fields{}, "verifying instances started")
+			successfulInstances := []*types.UnikInstance{}
+			unikInstances, err := ec2api.ListUnikInstances()
+			if err != nil {
+				lxlog.Errorf(logrus.Fields{"err": err}, "could not get unik instance list")
+			}
+			for _, unikInstance := range unikInstances {
+				CheckIds:
+				for _, instanceId := range instanceIds {
+					if unikInstance.UnikInstanceID == instanceId {
+						successfulInstances = append(successfulInstances, unikInstance)
+						break CheckIds
+					}
+				}
+			}
+			lxlog.Infof(logrus.Fields{"instance_ids": instanceIds}, instancesStr+" instances started of unikernel "+unikernelName)
+			return successfulInstances, nil
+		})
+	})
+	d.server.Delete("/instances/:instance_id", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		streamOrRespond(res, req, func() (interface {}, error) {
+			instanceId := params["instance_id"]
+			lxlog.Infof(logrus.Fields{"request": req},"deleting instance "+instanceId)
+			err := ec2api.DeleteUnikInstance(instanceId)
+			if err != nil {
+				lxlog.Errorf(logrus.Fields{"err":err}, "could not delete instance "+instanceId)
+				return nil, err
+			}
+			return nil, err
+		})
+	})
+	d.server.Delete("/unikernels/:unikernel_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		streamOrRespond(res, req, func() (interface {}, error) {
+			unikernelName := params["unikernel_name"]
+			if unikernelName == "" {
+				lxlog.Errorf(logrus.Fields{"request": fmt.Sprintf("%v", req)}, "unikernel must be named")
+				return nil, lxerrors.New("unikernel must be named", nil)
+			}
+			forceStr := req.URL.Query().Get("force")
+			lxlog.Infof(logrus.Fields{"request": req},"deleting instance "+ unikernelName)
+			force := false
+			if strings.ToLower(forceStr) == "true" {
+				force = true
+			}
+			err := ec2api.DeleteApp(unikernelName, force)
+			if err != nil {
+				lxlog.Errorf(logrus.Fields{"err":err}, "could not delete unikernel "+ unikernelName)
+				return nil, err
+			}
+			return nil, nil
+		})
+	})
+	d.server.Get("/instances/:instance_id/logs", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		streamOrRespond(res, req, func() (interface {}, error) {
+			unikInstanceId := params["instance_id"]
+			follow := req.URL.Query().Get("follow")
+			res.Write([]byte("getting logs for "+unikInstanceId+"...\n"))
+			if f, ok := res.(http.Flusher); ok {
+				f.Flush()
+			} else {
+				lxlog.Errorf(logrus.Fields{}, "no flush!")
+				return nil, lxerrors.New("not a flusher", nil)
+			}
+			if strings.ToLower(follow) == "true" {
+				output := ioutils.NewWriteFlusher(res)
+				defer output.Close()
+
+				err := ec2api.StreamLogs(unikInstanceId, output)
+				if err != nil {
+					lxlog.Warnf(logrus.Fields{"err":err, "unikInstanceId": unikInstanceId}, "streaming logs stopped")
+					return nil, err
+				}
+			}
+			logs, err := ec2api.GetLogs(unikInstanceId)
+			if err != nil {
+				lxlog.Errorf(logrus.Fields{"err":err, "unikInstanceId": unikInstanceId}, "failed to perform get logs request")
+				return nil, err
+			}
+			return logs, nil
+		})
 	})
 }
 

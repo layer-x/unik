@@ -20,6 +20,7 @@ func main() {
 	var forcePush bool
 	var forceRmu bool
 	var follow bool
+	var verbose bool
 	var runInstances int
 	var unikernelName string
 	var instanceName string
@@ -96,7 +97,7 @@ func main() {
 			Usage:     "get stdout/stderr from a running unikernel",
 			Flags: []cli.Flag{
 				cli.BoolFlag{
-					Name: "-follow, f",
+					Name: "follow, f",
 					Usage: "Follow logs",
 					Destination: &follow,
 				},
@@ -137,7 +138,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name: "unikernel, u",
-					Usage: "unikernel=NAME_OF_UNIKERNEL",
+					Usage: "--unikernel=NAME_OF_UNIKERNEL",
 					Value: "",
 					Destination: &unikernelName,
 				},
@@ -276,7 +277,7 @@ func main() {
 				if len(c.Args()) != 0 {
 					println("unik: \"unikernels\" takes no arguments")
 					println("See 'unik unikernels -h'")
-					println("\nUSAGE:\n    unik unikernels\n")
+					println("\nUSAGE:\n    unik unikernels [-v]\n")
 					println("list running unikernels")
 					os.Exit(-1)
 				}
@@ -286,7 +287,7 @@ func main() {
 					println("Try 'unik target UNIK_URL'")
 					os.Exit(-1)
 				}
-				err = commands.Images(config)
+				err = commands.Unikernels(config, verbose)
 				if err != nil {
 					println("unik unikernels failed!")
 					println("error: "+err.Error())
@@ -296,6 +297,13 @@ func main() {
 		},
 	}
 
+	app.Flags = []cli.Flag{
+		cli.BoolFlag{
+			Name: "verbose, V",
+			Usage: "stream logs from the unik backend",
+			Destination: &verbose,
+		},
+	}
 	app.Run(os.Args)
 }
 

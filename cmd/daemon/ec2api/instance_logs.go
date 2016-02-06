@@ -50,7 +50,7 @@ func GetLogs(unikInstanceId string) (string, error) {
 							output), nil
 }
 
-func StreamLogs(unikInstanceId string,w io.Writer) error {
+func StreamLogs(unikInstanceId string, w io.Writer) error {
 	linesCounted := -1
 	for {
 		currentLogs, err := GetLogs(unikInstanceId)
