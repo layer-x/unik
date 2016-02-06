@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -x
 USERNAME=$1
 PASSWORD=$2
@@ -12,17 +13,12 @@ sudo tar -C /usr/local -xzf go1.5.1.linux-amd64.tar.gz
 rm go1.5.1.linux-amd64.tar.gz
 echo "export PATH=$PATH:/usr/local/go/bin" | tee --append /home/vagrant/.bashrc
 echo "export GOPATH=/home/vagrant/go" | tee --append /home/vagrant/.bashrc
-export PATH=$PATH:/usr/local/go/bin
 export GOPATH=/home/vagrant/go
-mkdir -p $GOPATH/src/github.com/layer-x
-pushd $GOPATH/src/github.com/layer-x/unik
-go get golang.org/x/net/context
-go get github.com/coreos/etcd/client
-go get github.com/gogo/protobuf/proto
-go get github.com/aws/aws-sdk-go
-go get ./...
+export GOBIN=$GOPATH/bin
+export PATH=$GOBIN:/usr/local/go/bin:$PATH
+go get github.com/tools/godep
 pushd $GOPATH/src/github.com/layer-x/unik/cmd/daemon/
-go build -o unikd .
+godep go build -o unikd .
 echo "STARTING UNIK!"
 echo "(sudo -E unikd -u $USERNAME -p $PASSWORD &) > /home/vagrant/unik.log 2>&1"
 (sudo -E ./unikd &) > /home/vagrant/unik.log 2>&1

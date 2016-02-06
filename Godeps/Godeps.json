@@ -1,0 +1,108 @@
+{
+	"ImportPath": "github.com/layer-x/unik",
+	"GoVersion": "go1.4.2",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.8.7-37-g6f383a9",
+			"Rev": "6f383a9b2998dd6f401704269c3e6e192f6175ad"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/aws",
+			"Comment": "v1.1.0-20-g371c1c6",
+			"Rev": "371c1c6ff7101d2e4a11e9962075c86a6733d65a"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/endpoints",
+			"Comment": "v1.1.0-20-g371c1c6",
+			"Rev": "371c1c6ff7101d2e4a11e9962075c86a6733d65a"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol",
+			"Comment": "v1.1.0-20-g371c1c6",
+			"Rev": "371c1c6ff7101d2e4a11e9962075c86a6733d65a"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/signer/v4",
+			"Comment": "v1.1.0-20-g371c1c6",
+			"Rev": "371c1c6ff7101d2e4a11e9962075c86a6733d65a"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/waiter",
+			"Comment": "v1.1.0-20-g371c1c6",
+			"Rev": "371c1c6ff7101d2e4a11e9962075c86a6733d65a"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/service/ec2",
+			"Comment": "v1.1.0-20-g371c1c6",
+			"Rev": "371c1c6ff7101d2e4a11e9962075c86a6733d65a"
+		},
+		{
+			"ImportPath": "github.com/codegangsta/cli",
+			"Comment": "1.2.0-197-gcf1f63a",
+			"Rev": "cf1f63a7274872768d4037305d572b70b1199397"
+		},
+		{
+			"ImportPath": "github.com/codegangsta/inject",
+			"Comment": "v1.0-rc1-10-g33e0aa1",
+			"Rev": "33e0aa1cb7c019ccc3fbe049a8262a6403d30504"
+		},
+		{
+			"ImportPath": "github.com/docker/docker/pkg/ioutils",
+			"Comment": "v1.2.0-9691-ga6a4511",
+			"Rev": "a6a45115fc15f6cf373d19ac21b6ac1f41b88cd7"
+		},
+		{
+			"ImportPath": "github.com/docker/docker/pkg/stdcopy",
+			"Comment": "v1.2.0-9691-ga6a4511",
+			"Rev": "a6a45115fc15f6cf373d19ac21b6ac1f41b88cd7"
+		},
+		{
+			"ImportPath": "github.com/go-ini/ini",
+			"Comment": "v0-48-g060d7da",
+			"Rev": "060d7da055ba6ec5ea7a31f116332fe5efa04ce0"
+		},
+		{
+			"ImportPath": "github.com/go-martini/martini",
+			"Comment": "v1.0-168-g1766d4b",
+			"Rev": "1766d4b551f29d93db1e721e19b15580699e26cc"
+		},
+		{
+			"ImportPath": "github.com/gogo/protobuf/proto",
+			"Comment": "v0.1-59-g0414533",
+			"Rev": "04145330265d088c218da8916c50eab3814c76a0"
+		},
+		{
+			"ImportPath": "github.com/jmespath/go-jmespath",
+			"Comment": "0.2.1",
+			"Rev": "53d419364047eb08a64c29471db23c60ea585b85"
+		},
+		{
+			"ImportPath": "github.com/layer-x/layerx-commons/lxerrors",
+			"Rev": "1b54e5d7362067ed0827030465314073dc16fbf3"
+		},
+		{
+			"ImportPath": "github.com/layer-x/layerx-commons/lxfileutils",
+			"Rev": "1b54e5d7362067ed0827030465314073dc16fbf3"
+		},
+		{
+			"ImportPath": "github.com/layer-x/layerx-commons/lxhttpclient",
+			"Rev": "1b54e5d7362067ed0827030465314073dc16fbf3"
+		},
+		{
+			"ImportPath": "github.com/layer-x/layerx-commons/lxlog",
+			"Rev": "1b54e5d7362067ed0827030465314073dc16fbf3"
+		},
+		{
+			"ImportPath": "github.com/layer-x/layerx-commons/lxmartini",
+			"Rev": "1b54e5d7362067ed0827030465314073dc16fbf3"
+		},
+		{
+			"ImportPath": "github.com/pborman/uuid",
+			"Rev": "cccd189d45f7ac3368a0d127efb7f4d08ae0b655"
+		}
+	]
+}
