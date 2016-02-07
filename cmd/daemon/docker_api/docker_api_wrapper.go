@@ -79,10 +79,8 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 		lxmartini.Respond(res, DockerRunResponse{Id: instanceIds[0]})
 	})
 	m.Get("/v1.20/containers/:instance_id/logs", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		unikInstanceId := params["instance_id"]
-
 		lxlog.Infof(logrus.Fields{"req": req},"received docker logs request")
-
+		unikInstanceId := params["instance_id"]
 		hijacker := res.(http.Hijacker)
 		conn, _, err := hijacker.Hijack()
 		if err != nil {

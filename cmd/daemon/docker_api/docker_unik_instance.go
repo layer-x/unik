@@ -11,16 +11,6 @@ type DockerUnikInstance struct {
 	Command    string `json:"Command"`
 	Created    int64 `json:"Created"`
 	Status     string `json:"Status"`
-	//	Ports      []struct {
-	//		Privateport int `json:"PrivatePort"`
-	//		Publicport  int `json:"PublicPort"`
-	//		Type        string `json:"Type"`
-	//	} `json:"Ports"`
-	//	Labels     struct {
-	//				   ComExampleVendor  string `json:"com.example.vendor"`
-	//				   ComExampleLicense string `json:"com.example.license"`
-	//				   ComExampleVersion string `json:"com.example.version"`
-	//			   } `json:"Labels"`
 	Sizerw     int `json:"SizeRw"`
 	Sizerootfs int `json:"SizeRootFs"`
 }
@@ -33,24 +23,37 @@ func convertUnikInstance(unikInstance *types.UnikInstance) *DockerUnikInstance {
 		Command: "N/A",
 		Created: unikInstance.Created.Unix(),
 		Status: unikInstance.State,
-		//		Ports: []struct {
-		//			Privateport int `json:"PrivatePort"`
-		//			Publicport  int `json:"PublicPort"`
-		//			Type        string `json:"Type"`
-		//		}{},
-		//		Labels: struct {
-		//			ComExampleVendor  string `json:"com.example.vendor"`
-		//			ComExampleLicense string `json:"com.example.license"`
-		//			ComExampleVersion string `json:"com.example.version"`
-		//		}{
-		//			ComExampleVendor: "UnikVendor",
-		//			ComExampleLicense: "UnikLicense",
-		//			ComExampleVersion: "UnikVersion0.0.0",
-		//		},
 		Sizerw: 1000,
 		Sizerootfs: 1000,
 	}
 }
+
+//func convertUnikInstanceInspect(unikInstance *types.UnikInstance) *dockertypes.ContainerJSON {
+//	size := 100000
+//	var running bool
+//	var removalInProgress bool
+//	if unikInstance.State == "running" {
+//		running = true
+//	}
+//	if unikInstance.State == "shutting-down" {
+//		removalInProgress = true
+//	}
+//	return &dockertypes.ContainerJSON{
+//		ContainerJSONBase: dockertypes.ContainerJSONBase{
+//			ID: unikInstance.UnikInstanceID,
+//			Name: unikInstance.UnikInstanceName,
+//			Image: unikInstance.UnikernelName,
+//			Created: unikInstance.Created.Unix(),
+//			Args: []string{"N/A"},
+//			State: &container.State{
+//				Running: running,
+//				RemovalInProgress: removalInProgress,
+//			},
+//			SizeRw: &size,
+//			SizeRootFs: &size,
+//		},
+//	}
+//}
 
 type DockerUnikInstanceVerbose struct {
 	Apparmorprofile string `json:"AppArmorProfile"`
