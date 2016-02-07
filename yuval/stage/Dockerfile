@@ -35,8 +35,6 @@ RUN git clone https://github.com/DanielO/fuse-ufs2 && \
 
 # stager takes a xen binary and volums, and creates a AWS ami
 COPY stage.sh    /stager/stage.sh
-COPY disk.layout /stager/disk.layout
-COPY disk0.layout /stager/disk0.layout
 
 VOLUME /unikernel
 

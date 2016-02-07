@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#TODO
+# add meta data file to specify args, and volume mount points
+
 # Assume we are running from AWS instance with IAM role
 set -x
 SUDO=sudo
@@ -18,9 +21,6 @@ UNIKERNELFILE_ROOT="$UNIKERNELFILE/root"
 VOL1FILE_ROOT="$UNIKERNELFILE/vol1"
 VOL2FILE_ROOT="$UNIKERNELFILE/vol2"
 
-# take name from command line or use default unique name to avoid registration clashes
-NAME=${1:-unikernel-`date +"%d-%b-%Y-%s"`}
-
 GRUB_FILE=/tmp/grub.img
 IMAGE_FILE=/tmp/disk.img
 
@@ -37,12 +37,6 @@ DEVICE=$(losetup -f --show $IMAGE_FILE)
 dd if=/dev/zero of=$GRUB_FILE bs=1 count=0 seek=${SIZE}G
 GRUB_DEVICE=$(losetup -f --show $GRUB_FILE)
 
-
-echo Name : ${NAME}
-echo THISINSTANCEID: ${THISINSTANCEID}
-echo THISAVAILABILITYZONE: ${THISAVAILABILITYZONE}
-echo UNIKERNELMOUNTPOINT: ${UNIKERNELMOUNTPOINT}
-echo UNIKERNELFILE: ${UNIKERNELFILE}
 
 ##########################################################################################
 ##########################################################################################
@@ -180,7 +174,7 @@ EOF
 # install grub!
 echo GRUB_DEVICE = $GRUB_DEVICE
 echo DEVICE = $DEVICE
-${SUDO} grub-install --no-floppy --modules="part_bsd part_msdos" --verbose --root-directory=${BOOTMOUNTPOINT} ${GRUB_DEVICE}
+${SUDO} grub-install --no-floppy --modules="part_bsd part_msdos" --root-directory=${BOOTMOUNTPOINT} ${GRUB_DEVICE}
 
 # show what is in the target
 # ${SUDO} find ${UNIKERNELMOUNTPOINT}
@@ -199,15 +193,16 @@ ${SUDO} losetup -d $GRUB_DEVICE
 ${SUDO} losetup -d $DEVICE
 set -e
 
+echo Image ready!
+${SUDO} cp $GRUB_FILE $UNIKERNELFILE
+${SUDO} cp $IMAGE_FILE $UNIKERNELFILE
 
-if [ "$AWS" != true ]; then
-  echo Image ready!
-  ${SUDO} cp $GRUB_FILE $UNIKERNELFILE
-  ${SUDO} cp $IMAGE_FILE $UNIKERNELFILE
-exit 0
+
+if [ "$AWS" = false ]; then
+  echo "Done, rune with:"
+  echo 'qemu-system-x86_64 -drive file=/path/to/grub.img,format=raw,if=virtio -drive file=/path/to/disk.img,format=raw,if=virtio'
+  exit 0
 fi
-
-
 
 # create aws imagese on iam ec2 instance
 # if AWS is not explictly off, auto detect
@@ -218,7 +213,7 @@ if [ "$AWS" = "true" ]; then
     exit 1
   fi
 elif [ "$AWS" = "" ]; then
-  if [ "$THISREGION" != ""]; then
+  if [ "$THISREGION" != "" ]; then
     AWS=true
   else
     AWS=false
@@ -245,8 +240,8 @@ done
 
 BOOT_DEVICE=/dev/xvdg
 DATA_DEVICE=/dev/xvdf
-ec2-attach-volume ${DATAVOLID} --instance ${THISINSTANCEID} --device $BOOT_DEVICE
-ec2-attach-volume ${BOOTVOLID} --instance ${THISINSTANCEID} --device $DATA_DEVICE
+ec2-attach-volume ${DATAVOLID} --instance ${THISINSTANCEID} --device $DATA_DEVICE
+ec2-attach-volume ${BOOTVOLID} --instance ${THISINSTANCEID} --device $BOOT_DEVICE
 
 while [ ! -e $BOOT_DEVICE ]; do
   sleep 1
@@ -261,8 +256,8 @@ dd if=$GRUB_FILE of=$BOOT_DEVICE
 dd if=$IMAGE_FILE of=$DATA_DEVICE
 
 # detach!
-ec2-detach-volume  ${BOOT_DEVICE}
-ec2-detach-volume  ${DATA_DEVICE}
+ec2-detach-volume  ${BOOTVOLID}
+ec2-detach-volume  ${DATAVOLID}
 
 while [ -e $BOOT_DEVICE ]; do
   sleep 1
@@ -290,11 +285,14 @@ done
 ## HAVING TROUBLE? COULD IT BE [--root-device-name name]
 
 
+# take name from command line or use default unique name to avoid registration clashes
+NAME=${1:-unikernel-`date +"%d-%b-%Y-%s"`}
 AMIID=`ec2-register --name "${NAME}" \
 --description "${NAME}" \
 -a x86_64 \
 -s ${BOOT_SNAPSHOTID} \
--b "/dev/sdb=${DATA_SNAPSHOTID}"
+--root-device-name /dev/xvda \
+-b "/dev/xvdb=${DATA_SNAPSHOTID}" \
 --virtualization-type hvm \
 | awk '{print $2}'`
 
@@ -310,3 +308,5 @@ echo aws ec2 get-console-output --instance-id ... --region=$THISREGION| jq -r .O
 echo ""
 echo Don\'t forget to customise this with a security group, as the
 echo default one won\'t let any inbound traffic in.
+
+# run like this:
