@@ -8,7 +8,7 @@ import (
 	"github.com/layer-x/layerx-commons/lxlog"
 	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
 	"github.com/layer-x/unik/cmd/daemon/unik_ec2_utils"
-	"github.com/layer-x/unik/cmd/types"
+	"github.com/layer-x/unik/types"
 )
 
 func ListUnikInstances() ([]*types.UnikInstance, error) {

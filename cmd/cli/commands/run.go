@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/layerx-commons/lxhttpclient"
-	"github.com/layer-x/unik/cmd/types"
+	"github.com/layer-x/unik/types"
 	"net/http"
 )
 
-func Run(config types.UnikConfig, unikernelName, instanceName string, instances int, verbose bool) error {
+func Run(config types.UnikConfig, unikernelName, instanceName string, instances int, tagString string, verbose bool) error {
 	fmt.Printf("Running %v instances of unikernel "+unikernelName+"\n", instances)
 	url := config.Url
-
+	path := "/unikernels/"+unikernelName+"/run"+fmt.Sprintf("?instances=%v&name=%s&tags=%s&verbose=%v", instances, instanceName, tagString, verbose)
 	if !verbose {
-		resp, body, err := lxhttpclient.Post(url, "/unikernels/"+unikernelName+"/run"+fmt.Sprintf("?instances=%v&name=%s&verbose=%v", instances, instanceName, verbose), nil, nil)
+		resp, body, err := lxhttpclient.Post(url, path, nil, nil)
 		if err != nil {
 			return lxerrors.New("failed running unikernel", err)
 		}
@@ -23,7 +23,7 @@ func Run(config types.UnikConfig, unikernelName, instanceName string, instances 
 		}
 		return nil
 	} else {
-		resp, err := lxhttpclient.PostAsync(url, "/unikernels/"+unikernelName+"/run"+fmt.Sprintf("?instances=%v&name=%s&verbose=%v", instances, instanceName, verbose), nil, nil)
+		resp, err := lxhttpclient.PostAsync(url, path, nil, nil)
 		if err != nil {
 			return lxerrors.New("error performing GET request", err)
 		}

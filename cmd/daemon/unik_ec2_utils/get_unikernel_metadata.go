@@ -4,7 +4,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"github.com/layer-x/unik/cmd/types"
+	"github.com/layer-x/unik/types"
 	"time"
 )
 

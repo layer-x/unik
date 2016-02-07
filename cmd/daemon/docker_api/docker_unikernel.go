@@ -1,7 +1,7 @@
 package docker_api
 
 import (
-	"github.com/layer-x/unik/cmd/types"
+	"github.com/layer-x/unik/types"
 )
 
 type DockerUnikernel struct {

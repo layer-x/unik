@@ -3,7 +3,7 @@ package docker_api
 import (
 	"time"
 
-	"github.com/layer-x/unik/cmd/types"
+	"github.com/layer-x/unik/types"
 )
 
 type DockerUnikInstance struct {

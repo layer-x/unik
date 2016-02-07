@@ -11,7 +11,7 @@ import (
 	"github.com/layer-x/layerx-commons/lxmartini"
 	"github.com/layer-x/unik/cmd/daemon/docker_api"
 	"github.com/layer-x/unik/cmd/daemon/ec2api"
-	"github.com/layer-x/unik/cmd/types"
+	"github.com/layer-x/unik/types"
 	"github.com/pborman/uuid"
 	"net/http"
 	"strconv"
@@ -161,7 +161,27 @@ func (d *UnikEc2Daemon) registerHandlers() {
 			if err != nil {
 				return nil, err
 			}
-			instanceIds, err := ec2api.RunApp(unikernelName, instanceName, int64(instances))
+			fullTagString := req.URL.Query().Get("tags")
+			tagPairs := strings.Split(fullTagString, ",")
+			tags := make(map[string]string)
+			tagCount := 0
+			maxTags := 5
+			for _, tagPair := range tagPairs {
+				splitTag := strings.Split(tagPair, "=")
+				if len(splitTag) != 2 {
+					lxlog.Warnf(logrus.Fields{"tagPair": tagPair}, "was given a tag string with an invalid format, ignoring")
+					continue
+				}
+				if tagCount < maxTags {
+					tagCount += 1
+					tags[splitTag[0]] = splitTag[1]
+				} else {
+					lxlog.Warnf(logrus.Fields{"tag_string": fullTagString}, "given too many tags, only used the first 5")
+					break
+				}
+			}
+
+			instanceIds, err := ec2api.RunApp(unikernelName, instanceName, int64(instances), tags)
 			if err != nil {
 				return nil, err
 			}

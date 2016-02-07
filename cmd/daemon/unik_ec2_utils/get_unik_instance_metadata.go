@@ -2,26 +2,28 @@ package unik_ec2_utils
 
 import (
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/layer-x/unik/cmd/types"
+	"github.com/layer-x/unik/types"
 )
 
 const UNIK_INSTANCE_ID = "UNIK_INSTANCE_ID"
 const UNIKERNEL_ID = "UNIKERNEL_ID"
 
 func GetUnikInstanceMetadata(instance *ec2.Instance) *types.UnikInstance {
-	unikInstance := &types.UnikInstance{}
+	unikInstance := &types.UnikInstance{
+		Tags: make(map[string]string),
+	}
 	for _, tag := range instance.Tags {
-		if *tag.Key == "Name" {
-			unikInstance.UnikInstanceName = *tag.Value
-		}
-		if *tag.Key == UNIK_INSTANCE_ID {
-			unikInstance.UnikInstanceID = *tag.Value
-		}
-		if *tag.Key == UNIKERNEL_ID {
-			unikInstance.UnikernelId = *tag.Value
-		}
-		if *tag.Key == UNIKERNEL_APP_NAME {
-			unikInstance.UnikernelName = *tag.Value
+		switch *tag.Key {
+		case "Name" :
+				unikInstance.UnikInstanceName = *tag.Value
+		case UNIK_INSTANCE_ID:
+				unikInstance.UnikInstanceID = *tag.Value
+		case UNIKERNEL_ID:
+				unikInstance.UnikernelId = *tag.Value
+		case UNIKERNEL_APP_NAME:
+				unikInstance.UnikernelName = *tag.Value
+		default:
+				unikInstance.Tags[*tag.Key] = *tag.Value
 		}
 	}
 	if unikInstance.UnikInstanceID == "" {

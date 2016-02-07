@@ -11,7 +11,7 @@ import (
 	"github.com/pborman/uuid"
 )
 
-func RunApp(unikernelName, instanceName string, instances int64) ([]string, error) {
+func RunApp(unikernelName, instanceName string, instances int64, tags map[string]string) ([]string, error) {
 	unikernels, err := ListUnikernels()
 	instanceIds := []string{}
 	if err != nil {
@@ -60,6 +60,14 @@ func RunApp(unikernelName, instanceName string, instances int64) ([]string, erro
 								Value: aws.String(unikernelName),
 							},
 						},
+					}
+					if tags != nil && len(tags) > 0{
+						for key, value := range tags {
+							createTagsInput.Tags = append(createTagsInput.Tags, &ec2.Tag{
+								Key: aws.String(key),
+								Value: aws.String(value),
+							})
+						}
 					}
 					lxlog.Debugf(logrus.Fields{"tags": createTagsInput}, "tagging instance for unikernel "+instanceId)
 					createTagsOutput, err := ec2Client.CreateTags(createTagsInput)

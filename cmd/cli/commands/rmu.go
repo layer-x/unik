@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/layerx-commons/lxhttpclient"
-	"github.com/layer-x/unik/cmd/types"
+	"github.com/layer-x/unik/types"
 	"net/http"
 )
 

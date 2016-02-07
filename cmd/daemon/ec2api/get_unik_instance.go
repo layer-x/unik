@@ -2,7 +2,7 @@ package ec2api
 
 import (
 	"github.com/layer-x/layerx-commons/lxerrors"
-	"github.com/layer-x/unik/cmd/types"
+	"github.com/layer-x/unik/types"
 	"strings"
 )
 

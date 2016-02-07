@@ -12,4 +12,5 @@ type UnikInstance struct {
 	PublicIp         string    `json:"PublicIp"`
 	PrivateIp        string    `json:"PrivateIp"`
 	State            string    `json:"State"`
+	Tags			 map[string]string `json:"Tags"`
 }

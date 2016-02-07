@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"github.com/codegangsta/cli"
 	"github.com/layer-x/layerx-commons/lxerrors"
-	"github.com/layer-x/unik/cmd/client/commands"
-	"github.com/layer-x/unik/cmd/types"
+	"github.com/layer-x/unik/cmd/cli/commands"
+	"github.com/layer-x/unik/types"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -24,6 +24,7 @@ func main() {
 	var runInstances int
 	var unikernelName string
 	var instanceName string
+	var tags string
 	app.Commands = []cli.Command{
 		{
 			Name:      "delete",
@@ -219,6 +220,12 @@ func main() {
 					Value:       "",
 					Destination: &instanceName,
 				},
+				cli.StringFlag{
+					Name:        "tags, t",
+					Usage:       "-t \"key1=value1,key2=value2...\"",
+					Value:       "",
+					Destination: &tags,
+				},
 			},
 			Action: func(c *cli.Context) {
 				if len(c.Args()) != 1 {
@@ -238,7 +245,7 @@ func main() {
 				if runInstances < 1 {
 					runInstances = 1
 				}
-				err = commands.Run(config, unikernelName, instanceName, runInstances, verbose)
+				err = commands.Run(config, unikernelName, instanceName, runInstances, tags, verbose)
 				if err != nil {
 					println("unik run failed!")
 					println("error: " + err.Error())
