@@ -1,13 +1,14 @@
 package ec2api
+
 import (
-	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
-	"github.com/layer-x/layerx-commons/lxerrors"
+	"github.com/Sirupsen/logrus"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/layer-x/unik/cmd/types"
+	"github.com/layer-x/layerx-commons/lxerrors"
+	"github.com/layer-x/layerx-commons/lxlog"
+	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
 	"github.com/layer-x/unik/cmd/daemon/unik_ec2_utils"
-"github.com/aws/aws-sdk-go/aws"
-"github.com/Sirupsen/logrus"
-"github.com/layer-x/layerx-commons/lxlog"
+	"github.com/layer-x/unik/cmd/types"
 )
 
 func ListUnikInstances() ([]*types.UnikInstance, error) {
@@ -18,7 +19,7 @@ func ListUnikInstances() ([]*types.UnikInstance, error) {
 	describeInstancesInput := &ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
 			&ec2.Filter{
-				Name: aws.String("tag-key"),
+				Name:   aws.String("tag-key"),
 				Values: []*string{aws.String("UNIK_INSTANCE_ID")},
 			},
 		},
@@ -34,7 +35,7 @@ func ListUnikInstances() ([]*types.UnikInstance, error) {
 		for _, instance := range reservation.Instances {
 			unikInstance := unik_ec2_utils.GetUnikInstanceMetadata(instance)
 			if unikInstance != nil {
-				lxlog.Debugf(logrus.Fields{"UnikInstance": unikInstance.UnikInstanceID},"Unik Instance read")
+				lxlog.Debugf(logrus.Fields{"UnikInstance": unikInstance.UnikInstanceID}, "Unik Instance read")
 				allUnikInstances = append(allUnikInstances, unikInstance)
 			}
 		}

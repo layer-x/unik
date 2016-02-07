@@ -1,11 +1,12 @@
 package commands
+
 import (
-	"github.com/layer-x/unik/cmd/types"
-	"github.com/layer-x/layerx-commons/lxhttpclient"
+	"bufio"
+	"encoding/json"
 	"fmt"
 	"github.com/layer-x/layerx-commons/lxerrors"
-"encoding/json"
-	"bufio"
+	"github.com/layer-x/layerx-commons/lxhttpclient"
+	"github.com/layer-x/unik/cmd/types"
 )
 
 func Ps(config types.UnikConfig, unikernelName string, verbose bool) error {
@@ -34,7 +35,7 @@ func Ps(config types.UnikConfig, unikernelName string, verbose bool) error {
 				}
 				return printUnikInstances(unikernelName, body)
 			}
-			fmt.Printf("%s",string(line))
+			fmt.Printf("%s", string(line))
 		}
 	}
 

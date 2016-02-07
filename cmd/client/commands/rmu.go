@@ -1,15 +1,16 @@
 package commands
+
 import (
-	"github.com/layer-x/unik/cmd/types"
-	"github.com/layer-x/layerx-commons/lxhttpclient"
+	"bufio"
 	"fmt"
 	"github.com/layer-x/layerx-commons/lxerrors"
+	"github.com/layer-x/layerx-commons/lxhttpclient"
+	"github.com/layer-x/unik/cmd/types"
 	"net/http"
-	"bufio"
 )
 
 func Rmu(config types.UnikConfig, unikernelName string, force, verbose bool) error {
-	fmt.Printf("Deleting unikernel "+unikernelName+" force=%v\n",force)
+	fmt.Printf("Deleting unikernel "+unikernelName+" force=%v\n", force)
 	url := config.Url
 
 	if !verbose {
@@ -39,7 +40,7 @@ func Rmu(config types.UnikConfig, unikernelName string, force, verbose bool) err
 				}
 				return printUnikernel(body)
 			}
-			fmt.Printf("%s",string(line))
+			fmt.Printf("%s", string(line))
 		}
 	}
 }

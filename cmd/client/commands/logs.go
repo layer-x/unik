@@ -1,11 +1,12 @@
 package commands
+
 import (
-	"github.com/layer-x/unik/cmd/types"
-	"fmt"
-	"github.com/layer-x/layerx-commons/lxhttpclient"
-	"github.com/layer-x/layerx-commons/lxerrors"
-"net/http"
 	"bufio"
+	"fmt"
+	"github.com/layer-x/layerx-commons/lxerrors"
+	"github.com/layer-x/layerx-commons/lxhttpclient"
+	"github.com/layer-x/unik/cmd/types"
+	"net/http"
 )
 
 func Logs(config types.UnikConfig, unikInstanceId string, follow bool) error {
@@ -21,7 +22,7 @@ func Logs(config types.UnikConfig, unikInstanceId string, follow bool) error {
 		fmt.Printf("%s\n", string(body))
 		return nil
 	} else {
-		resp, err := http.Get("http://"+url + "/instances/"+unikInstanceId+"/logs"+fmt.Sprintf("?follow=%v", follow))
+		resp, err := http.Get("http://" + url + "/instances/" + unikInstanceId + "/logs" + fmt.Sprintf("?follow=%v", follow))
 		if err != nil {
 			return lxerrors.New("error performing GET request", err)
 		}
@@ -31,7 +32,7 @@ func Logs(config types.UnikConfig, unikInstanceId string, follow bool) error {
 			if err != nil {
 				return lxerrors.New("reading line", err)
 			}
-			fmt.Printf("%s",string(line))
+			fmt.Printf("%s", string(line))
 		}
 	}
 }

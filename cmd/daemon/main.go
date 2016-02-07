@@ -1,10 +1,11 @@
 package main
+
 import (
-	"os/exec"
 	"github.com/Sirupsen/logrus"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"os"
 	"github.com/layer-x/unik/cmd/daemon/ec2daemon"
+	"os"
+	"os/exec"
 )
 
 func main() {
@@ -15,7 +16,7 @@ func main() {
 	buildCommand.Stderr = os.Stderr
 	err := buildCommand.Run()
 	if err != nil {
-		lxlog.Errorf(logrus.Fields{"err":err}, "building golang unikernel builder")
+		lxlog.Errorf(logrus.Fields{"err": err}, "building golang unikernel builder")
 		return
 	}
 	lxlog.Infof(logrus.Fields{}, "built golang_unikernel_builder image")

@@ -1,10 +1,11 @@
 package unik_ec2_utils
+
 import (
+	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/layer-x/layerx-commons/lxlog"
 	"github.com/layer-x/unik/cmd/types"
 	"time"
-	"github.com/layer-x/layerx-commons/lxlog"
-"github.com/Sirupsen/logrus"
 )
 
 const UNIKERNEL_APP_NAME = "UNIKERNEL_APP_NAME"

@@ -1,10 +1,11 @@
 package lxfileutils
+
 import (
-	"os"
 	"fmt"
-"io"
 	"github.com/layer-x/layerx-commons/lxerrors"
-"os/exec"
+	"io"
+	"os"
+	"os/exec"
 )
 
 func Untar(src, dest string) error {
@@ -24,7 +25,6 @@ func Untar(src, dest string) error {
 	command.Stderr = os.Stderr
 	return command.Run()
 }
-
 
 //from http://stackoverflow.com/questions/21060945/simple-way-to-copy-a-file-in-golang
 

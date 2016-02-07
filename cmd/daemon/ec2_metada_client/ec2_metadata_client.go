@@ -1,12 +1,13 @@
 package ec2_metada_client
+
 import (
-	"os/exec"
-	"github.com/layer-x/layerx-commons/lxerrors"
-	"strings"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"encoding/json"
 	"github.com/aws/aws-sdk-go/aws"
-"encoding/json"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/layer-x/layerx-commons/lxerrors"
+	"os/exec"
+	"strings"
 )
 
 func getKeys() (string, string, error) {

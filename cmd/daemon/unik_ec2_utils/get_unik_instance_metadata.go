@@ -1,4 +1,5 @@
 package unik_ec2_utils
+
 import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/unik/cmd/types"

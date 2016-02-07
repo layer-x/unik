@@ -1,13 +1,14 @@
 package ec2api
+
 import (
-	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
-	"github.com/layer-x/layerx-commons/lxerrors"
+	"github.com/Sirupsen/logrus"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/layer-x/unik/cmd/types"
-	"github.com/layer-x/unik/cmd/daemon/unik_ec2_utils"
+	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/layerx-commons/lxlog"
-"github.com/Sirupsen/logrus"
-"github.com/aws/aws-sdk-go/aws"
+	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
+	"github.com/layer-x/unik/cmd/daemon/unik_ec2_utils"
+	"github.com/layer-x/unik/cmd/types"
 )
 
 func ListUnikernels() ([]*types.Unikernel, error) {
@@ -19,7 +20,7 @@ func ListUnikernels() ([]*types.Unikernel, error) {
 	describeImagesInput := &ec2.DescribeImagesInput{
 		Filters: []*ec2.Filter{
 			&ec2.Filter{
-				Name: aws.String("tag-key"),
+				Name:   aws.String("tag-key"),
 				Values: []*string{aws.String("UNIKERNEL_APP_NAME")},
 			},
 		},

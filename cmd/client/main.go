@@ -1,15 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/codegangsta/cli"
+	"github.com/layer-x/layerx-commons/lxerrors"
+	"github.com/layer-x/unik/cmd/client/commands"
+	"github.com/layer-x/unik/cmd/types"
+	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
-	"io/ioutil"
-	"github.com/layer-x/layerx-commons/lxerrors"
-"github.com/layer-x/unik/cmd/types"
-	"github.com/layer-x/unik/cmd/client/commands"
-"encoding/json"
 )
 
 func main() {
@@ -34,7 +34,7 @@ func main() {
 				if len(c.Args()) < 1 {
 					println("unik: \"rm\" takes at least one argument")
 					println("See 'unik rm -h'")
-					println("\nUSAGE:\n    unik rm INSTANCE_ID_1 [INSTANCE_ID_2...]\n")
+					println("USAGE:    unik rm INSTANCE_ID_1 [INSTANCE_ID_2...]")
 					println("delete running instances")
 					os.Exit(-1)
 				}
@@ -48,7 +48,7 @@ func main() {
 					err = commands.Rm(config, instanceId, verbose)
 					if err != nil {
 						println("unik rm failed!")
-						println("error: "+err.Error())
+						println("error: " + err.Error())
 						os.Exit(-1)
 					}
 				}
@@ -61,8 +61,8 @@ func main() {
 			Usage:     "delete compiled unikernel",
 			Flags: []cli.Flag{
 				cli.BoolFlag{
-					Name: "force, f",
-					Usage: "force delete running instances of this unikernel",
+					Name:        "force, f",
+					Usage:       "force delete running instances of this unikernel",
 					Destination: &forceRmu,
 				},
 			},
@@ -70,7 +70,7 @@ func main() {
 				if len(c.Args()) < 1 {
 					println("unik: \"rmu\" takes at least one argument")
 					println("See 'unik rmu -h'")
-					println("\nUSAGE:\n    unik rmu UNIKERNEL_NAME_1 [UNIKERNEL_NAME_2...]\n")
+					println("USAGE:    unik rmu UNIKERNEL_NAME_1 [UNIKERNEL_NAME_2...]")
 					println("delete compiled unikernel")
 					os.Exit(-1)
 				}
@@ -84,7 +84,7 @@ func main() {
 					err = commands.Rmu(config, instanceId, forceRmu, verbose)
 					if err != nil {
 						println("unik rmu failed!")
-						println("error: "+err.Error())
+						println("error: " + err.Error())
 						os.Exit(-1)
 					}
 				}
@@ -97,14 +97,14 @@ func main() {
 			Usage:     "get stdout/stderr from a running unikernel",
 			Flags: []cli.Flag{
 				cli.BoolFlag{
-					Name: "follow, f",
-					Usage: "Follow logs",
+					Name:        "follow, f",
+					Usage:       "Follow logs",
 					Destination: &follow,
 				},
 				cli.StringFlag{
-					Name: "name, n",
-					Usage: "name=CUSTOM_INSTANCE_NAME",
-					Value: "",
+					Name:        "name, n",
+					Usage:       "name=CUSTOM_INSTANCE_NAME",
+					Value:       "",
 					Destination: &instanceName,
 				},
 			},
@@ -112,7 +112,7 @@ func main() {
 				if len(c.Args()) != 1 {
 					println("unik: \"run\" requires exactly 1 argument")
 					println("See 'unik logs -h'")
-					println("\nUSAGE:\n    unik logs [-f] NAME\n")
+					println("USAGE:    unik logs [-f] NAME")
 					println("get stdout/stderr from a running unikernel")
 					os.Exit(-1)
 				}
@@ -126,7 +126,7 @@ func main() {
 				err = commands.Logs(config, unikInstanceId, follow)
 				if err != nil {
 					println("unik logs failed!")
-					println("error: "+err.Error())
+					println("error: " + err.Error())
 					os.Exit(-1)
 				}
 			},
@@ -137,9 +137,9 @@ func main() {
 			Usage:     "list running instances",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name: "unikernel, u",
-					Usage: "--unikernel=NAME_OF_UNIKERNEL",
-					Value: "",
+					Name:        "unikernel, u",
+					Usage:       "--unikernel=NAME_OF_UNIKERNEL",
+					Value:       "",
 					Destination: &unikernelName,
 				},
 			},
@@ -147,7 +147,7 @@ func main() {
 				if len(c.Args()) != 0 {
 					println("unik: \"ps\" takes no arguments")
 					println("See 'unik ps -h'")
-					println("\nUSAGE:\n    unik ps [-u UNIKERNEL]\n")
+					println("USAGE:    unik ps [-u UNIKERNEL]")
 					println("list running instances")
 					os.Exit(-1)
 				}
@@ -160,7 +160,7 @@ func main() {
 				err = commands.Ps(config, unikernelName, verbose)
 				if err != nil {
 					println("unik ps failed!")
-					println("error: "+err.Error())
+					println("error: " + err.Error())
 					os.Exit(-1)
 				}
 			},
@@ -172,8 +172,8 @@ func main() {
 			Usage:     "Push and push a new unikernel from the source code at PATH",
 			Flags: []cli.Flag{
 				cli.BoolFlag{
-					Name: "force, f",
-					Usage: "force overwriting previous unikernel",
+					Name:        "force, f",
+					Usage:       "force overwriting previous unikernel",
 					Destination: &forcePush,
 				},
 			},
@@ -181,7 +181,7 @@ func main() {
 				if len(c.Args()) != 2 {
 					println("unik: \"push\" requires exactly 2 arguments")
 					println("See 'unik push -h'")
-					println("\nUSAGE:\n    unik push [-f] NAME PATH\n")
+					println("USAGE:    unik push [-f] NAME PATH")
 					println("push a new unikernel from the source code at PATH")
 					os.Exit(-1)
 				}
@@ -196,7 +196,7 @@ func main() {
 				err = commands.Push(config, unikernelName, path, forcePush, verbose)
 				if err != nil {
 					println("unik push failed!")
-					println("error: "+err.Error())
+					println("error: " + err.Error())
 					os.Exit(-1)
 				}
 			},
@@ -208,15 +208,15 @@ func main() {
 			Usage:     "run one or more instances of a unikernel",
 			Flags: []cli.Flag{
 				cli.IntFlag{
-					Name: "instances, i",
-					Usage: "instances=NUM_OF_INSTANCES",
-					Value: 1,
+					Name:        "instances, i",
+					Usage:       "instances=NUM_OF_INSTANCES",
+					Value:       1,
 					Destination: &runInstances,
 				},
 				cli.StringFlag{
-					Name: "name, n",
-					Usage: "name=CUSTOM_INSTANCE_NAME",
-					Value: "",
+					Name:        "name, n",
+					Usage:       "name=CUSTOM_INSTANCE_NAME",
+					Value:       "",
 					Destination: &instanceName,
 				},
 			},
@@ -224,7 +224,7 @@ func main() {
 				if len(c.Args()) != 1 {
 					println("unik: \"run\" requires exactly 1 argument")
 					println("See 'unik run -h'")
-					println("\nUSAGE:\n    unik run [-i=INSTANCES] NAME\n")
+					println("USAGE:    unik run [-i=INSTANCES] NAME")
 					println("run one or more instances of a unikernel")
 					os.Exit(-1)
 				}
@@ -241,7 +241,7 @@ func main() {
 				err = commands.Run(config, unikernelName, instanceName, runInstances, verbose)
 				if err != nil {
 					println("unik run failed!")
-					println("error: "+err.Error())
+					println("error: " + err.Error())
 					os.Exit(-1)
 				}
 			},
@@ -255,7 +255,7 @@ func main() {
 				if len(c.Args()) != 1 {
 					println("unik: \"target\" requires exactly 1 argument")
 					println("See 'unik target -h'")
-					println("\nUSAGE:\n    unik target URL\n")
+					println("USAGE:    unik target URL")
 					println("set unik cli endpoint")
 					os.Exit(-1)
 				}
@@ -263,7 +263,7 @@ func main() {
 				err := commands.Target(url)
 				if err != nil {
 					println("unik target failed!")
-					println("error: "+err.Error())
+					println("error: " + err.Error())
 					os.Exit(-1)
 				}
 			},
@@ -277,7 +277,7 @@ func main() {
 				if len(c.Args()) != 0 {
 					println("unik: \"unikernels\" takes no arguments")
 					println("See 'unik unikernels -h'")
-					println("\nUSAGE:\n    unik unikernels [-v]\n")
+					println("USAGE:    unik unikernels [-v]")
 					println("list running unikernels")
 					os.Exit(-1)
 				}
@@ -290,7 +290,7 @@ func main() {
 				err = commands.Unikernels(config, verbose)
 				if err != nil {
 					println("unik unikernels failed!")
-					println("error: "+err.Error())
+					println("error: " + err.Error())
 					os.Exit(-1)
 				}
 			},
@@ -299,8 +299,8 @@ func main() {
 
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
-			Name: "verbose, V",
-			Usage: "stream logs from the unik backend",
+			Name:        "verbose, V",
+			Usage:       "stream logs from the unik backend",
 			Destination: &verbose,
 		},
 	}

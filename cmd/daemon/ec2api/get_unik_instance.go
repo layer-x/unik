@@ -1,8 +1,9 @@
 package ec2api
+
 import (
-	"github.com/layer-x/unik/cmd/types"
 	"github.com/layer-x/layerx-commons/lxerrors"
-"strings"
+	"github.com/layer-x/unik/cmd/types"
+	"strings"
 )
 
 func GetUnikInstanceByPrefix(unikInstanceIdPrefix string) (*types.UnikInstance, error) {

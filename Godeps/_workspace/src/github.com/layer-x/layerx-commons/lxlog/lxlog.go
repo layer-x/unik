@@ -1,14 +1,14 @@
 package lxlog
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/Sirupsen/logrus"
-	"runtime"
-	"strings"
 	"io"
 	"net/http"
 	"os/exec"
-	"bufio"
+	"runtime"
+	"strings"
 )
 
 var log = logrus.New()

@@ -1,15 +1,16 @@
 package commands
+
 import (
-	"strings"
-	"github.com/layer-x/layerx-commons/lxhttpclient"
-	"github.com/layer-x/layerx-commons/lxerrors"
-	"github.com/layer-x/unik/cmd/types"
-"os/user"
-	"path/filepath"
-"io/ioutil"
-"encoding/json"
+	"encoding/json"
 	"fmt"
+	"github.com/layer-x/layerx-commons/lxerrors"
+	"github.com/layer-x/layerx-commons/lxhttpclient"
+	"github.com/layer-x/unik/cmd/types"
+	"io/ioutil"
 	"os"
+	"os/user"
+	"path/filepath"
+	"strings"
 )
 
 func Target(url string) error {

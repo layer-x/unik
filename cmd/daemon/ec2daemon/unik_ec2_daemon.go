@@ -1,20 +1,21 @@
 package ec2daemon
+
 import (
-	"github.com/go-martini/martini"
-	"github.com/layer-x/layerx-commons/lxmartini"
+	"encoding/json"
 	"fmt"
-	"net/http"
-"github.com/Sirupsen/logrus"
-"github.com/layer-x/layerx-commons/lxlog"
+	"github.com/Sirupsen/logrus"
+	"github.com/docker/docker/pkg/ioutils"
+	"github.com/go-martini/martini"
 	"github.com/layer-x/layerx-commons/lxerrors"
-	"strings"
-	"strconv"
+	"github.com/layer-x/layerx-commons/lxlog"
+	"github.com/layer-x/layerx-commons/lxmartini"
 	"github.com/layer-x/unik/cmd/daemon/docker_api"
 	"github.com/layer-x/unik/cmd/daemon/ec2api"
-	"github.com/docker/docker/pkg/ioutils"
-"encoding/json"
-	"github.com/pborman/uuid"
 	"github.com/layer-x/unik/cmd/types"
+	"github.com/pborman/uuid"
+	"net/http"
+	"strconv"
+	"strings"
 )
 
 type UnikEc2Daemon struct {
@@ -44,7 +45,7 @@ func (d *UnikEc2Daemon) registerHandlers() {
 				return
 			}
 			if text, ok := jsonObject.(string); ok {
-				_, err = httpOutStream.Write([]byte(text+"\n"))
+				_, err = httpOutStream.Write([]byte(text + "\n"))
 				return
 			}
 			if jsonObject != nil {
@@ -79,7 +80,7 @@ func (d *UnikEc2Daemon) registerHandlers() {
 	}
 
 	d.server.Get("/instances", func(res http.ResponseWriter, req *http.Request) {
-		streamOrRespond(res, req, func() (interface {}, error) {
+		streamOrRespond(res, req, func() (interface{}, error) {
 			unikInstances, err := ec2api.ListUnikInstances()
 			if err != nil {
 				lxlog.Errorf(logrus.Fields{"err": err}, "could not get unik instance list")
@@ -90,7 +91,7 @@ func (d *UnikEc2Daemon) registerHandlers() {
 		})
 	})
 	d.server.Get("/unikernels", func(res http.ResponseWriter, req *http.Request) {
-		streamOrRespond(res, req, func() (interface {}, error) {
+		streamOrRespond(res, req, func() (interface{}, error) {
 			unikernels, err := ec2api.ListUnikernels()
 			if err != nil {
 				lxlog.Errorf(logrus.Fields{"err": err}, "could not get unikernel list")
@@ -101,7 +102,7 @@ func (d *UnikEc2Daemon) registerHandlers() {
 		})
 	})
 	d.server.Post("/unikernels/:unikernel_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func() (interface {}, error) {
+		streamOrRespond(res, req, func() (interface{}, error) {
 			lxlog.Debugf(logrus.Fields{"req": req}, "parsing multipart form")
 			err := req.ParseMultipartForm(0)
 			if err != nil {
@@ -121,7 +122,7 @@ func (d *UnikEc2Daemon) registerHandlers() {
 			lxlog.Debugf(logrus.Fields{"unikernelName": unikernelName, "force": force, "uploadedTar": uploadedTar}, "building unikernel")
 			err = ec2api.BuildUnikernel(unikernelName, force, uploadedTar, handler)
 			if err != nil {
-				lxlog.Errorf(logrus.Fields{"err":err, "form": fmt.Sprintf("%v", req.Form), "unikernel_name": unikernelName}, "building unikernel from unikernel source")
+				lxlog.Errorf(logrus.Fields{"err": err, "form": fmt.Sprintf("%v", req.Form), "unikernel_name": unikernelName}, "building unikernel from unikernel source")
 				lxlog.Warnf(logrus.Fields{}, "cleaning up unikernel build artifacts (volumes, snapshots)")
 				snapshotErr := ec2api.DeleteSnapshotAndVolumeForApp(unikernelName)
 				if snapshotErr != nil {
@@ -144,7 +145,7 @@ func (d *UnikEc2Daemon) registerHandlers() {
 		})
 	})
 	d.server.Post("/unikernels/:unikernel_name/run", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func() (interface {}, error) {
+		streamOrRespond(res, req, func() (interface{}, error) {
 			lxlog.Debugf(logrus.Fields{"request": req, "query": req.URL.Query()}, "recieved run request")
 			unikernelName := params["unikernel_name"]
 			if unikernelName == "" {
@@ -171,7 +172,7 @@ func (d *UnikEc2Daemon) registerHandlers() {
 				lxlog.Errorf(logrus.Fields{"err": err}, "could not get unik instance list")
 			}
 			for _, unikInstance := range unikInstances {
-				CheckIds:
+			CheckIds:
 				for _, instanceId := range instanceIds {
 					if unikInstance.UnikInstanceID == instanceId {
 						successfulInstances = append(successfulInstances, unikInstance)
@@ -184,43 +185,43 @@ func (d *UnikEc2Daemon) registerHandlers() {
 		})
 	})
 	d.server.Delete("/instances/:instance_id", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func() (interface {}, error) {
+		streamOrRespond(res, req, func() (interface{}, error) {
 			instanceId := params["instance_id"]
-			lxlog.Infof(logrus.Fields{"request": req},"deleting instance "+instanceId)
+			lxlog.Infof(logrus.Fields{"request": req}, "deleting instance "+instanceId)
 			err := ec2api.DeleteUnikInstance(instanceId)
 			if err != nil {
-				lxlog.Errorf(logrus.Fields{"err":err}, "could not delete instance "+instanceId)
+				lxlog.Errorf(logrus.Fields{"err": err}, "could not delete instance "+instanceId)
 				return nil, err
 			}
 			return nil, err
 		})
 	})
 	d.server.Delete("/unikernels/:unikernel_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func() (interface {}, error) {
+		streamOrRespond(res, req, func() (interface{}, error) {
 			unikernelName := params["unikernel_name"]
 			if unikernelName == "" {
 				lxlog.Errorf(logrus.Fields{"request": fmt.Sprintf("%v", req)}, "unikernel must be named")
 				return nil, lxerrors.New("unikernel must be named", nil)
 			}
 			forceStr := req.URL.Query().Get("force")
-			lxlog.Infof(logrus.Fields{"request": req},"deleting instance "+ unikernelName)
+			lxlog.Infof(logrus.Fields{"request": req}, "deleting instance "+unikernelName)
 			force := false
 			if strings.ToLower(forceStr) == "true" {
 				force = true
 			}
 			err := ec2api.DeleteApp(unikernelName, force)
 			if err != nil {
-				lxlog.Errorf(logrus.Fields{"err":err}, "could not delete unikernel "+ unikernelName)
+				lxlog.Errorf(logrus.Fields{"err": err}, "could not delete unikernel "+unikernelName)
 				return nil, err
 			}
 			return nil, nil
 		})
 	})
 	d.server.Get("/instances/:instance_id/logs", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func() (interface {}, error) {
+		streamOrRespond(res, req, func() (interface{}, error) {
 			unikInstanceId := params["instance_id"]
 			follow := req.URL.Query().Get("follow")
-			res.Write([]byte("getting logs for "+unikInstanceId+"...\n"))
+			res.Write([]byte("getting logs for " + unikInstanceId + "...\n"))
 			if f, ok := res.(http.Flusher); ok {
 				f.Flush()
 			} else {
@@ -233,13 +234,13 @@ func (d *UnikEc2Daemon) registerHandlers() {
 
 				err := ec2api.StreamLogs(unikInstanceId, output)
 				if err != nil {
-					lxlog.Warnf(logrus.Fields{"err":err, "unikInstanceId": unikInstanceId}, "streaming logs stopped")
+					lxlog.Warnf(logrus.Fields{"err": err, "unikInstanceId": unikInstanceId}, "streaming logs stopped")
 					return nil, err
 				}
 			}
 			logs, err := ec2api.GetLogs(unikInstanceId)
 			if err != nil {
-				lxlog.Errorf(logrus.Fields{"err":err, "unikInstanceId": unikInstanceId}, "failed to perform get logs request")
+				lxlog.Errorf(logrus.Fields{"err": err, "unikInstanceId": unikInstanceId}, "failed to perform get logs request")
 				return nil, err
 			}
 			return logs, nil
@@ -250,7 +251,6 @@ func (d *UnikEc2Daemon) registerHandlers() {
 func (d *UnikEc2Daemon) addDockerHandlers() {
 	d.server = docker_api.AddDockerApi(d.server)
 }
-
 
 func (d *UnikEc2Daemon) Start(port int) {
 	d.registerHandlers()

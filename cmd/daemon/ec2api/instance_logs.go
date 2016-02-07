@@ -1,16 +1,17 @@
 package ec2api
+
 import (
-	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
-	"github.com/layer-x/layerx-commons/lxerrors"
-"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/aws"
-	"fmt"
-"github.com/layer-x/layerx-commons/lxlog"
-"github.com/Sirupsen/logrus"
 	"encoding/base64"
+	"fmt"
+	"github.com/Sirupsen/logrus"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/layer-x/layerx-commons/lxerrors"
+	"github.com/layer-x/layerx-commons/lxlog"
+	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
 	"io"
+	"net/http"
 	"strings"
-"net/http"
 	"time"
 )
 
@@ -42,12 +43,12 @@ func GetLogs(unikInstanceId string) (string, error) {
 	}
 
 	lxlog.Debugf(logrus.Fields{"response length": len(output)}, "received console output reply from aws")
-	return fmt.Sprintf("begin logs for unik instance: %s\n" +
-							"time: %s\n" +
-							"%s",
-							*consoleOutputOutput.InstanceId,
-							timeStamp,
-							output), nil
+	return fmt.Sprintf("begin logs for unik instance: %s\n"+
+		"time: %s\n"+
+		"%s",
+		*consoleOutputOutput.InstanceId,
+		timeStamp,
+		output), nil
 }
 
 func StreamLogs(unikInstanceId string, w io.Writer) error {
@@ -59,7 +60,7 @@ func StreamLogs(unikInstanceId string, w io.Writer) error {
 		}
 		logLines := strings.Split(currentLogs, "\n")
 		for i, _ := range logLines {
-			if linesCounted < len(logLines) && linesCounted < i{
+			if linesCounted < len(logLines) && linesCounted < i {
 				linesCounted = i
 
 				if f, ok := w.(http.Flusher); ok {
@@ -69,7 +70,7 @@ func StreamLogs(unikInstanceId string, w io.Writer) error {
 					return lxerrors.New("w is not a flusher", nil)
 				}
 
-				_, err = w.Write([]byte(logLines[linesCounted]+"\n")) //ignore errors; close comes from external
+				_, err = w.Write([]byte(logLines[linesCounted] + "\n")) //ignore errors; close comes from external
 				if err != nil {
 					lxlog.Warnf(logrus.Fields{"lines_written": linesCounted}, "writer closed by external source")
 					return nil
@@ -81,9 +82,9 @@ func StreamLogs(unikInstanceId string, w io.Writer) error {
 			lxlog.Warnf(logrus.Fields{"lines_written": linesCounted, "err": err}, "writer closed by external source")
 			return nil
 		}
-		if len(logLines) - 1 == linesCounted {
+		if len(logLines)-1 == linesCounted {
 			time.Sleep(1000 * time.Millisecond)
-			lxlog.Warnf(logrus.Fields{"unik_instance_id": unikInstanceId},"no new logs since last poll, sleeping")
+			lxlog.Warnf(logrus.Fields{"unik_instance_id": unikInstanceId}, "no new logs since last poll, sleeping")
 			continue
 		}
 	}

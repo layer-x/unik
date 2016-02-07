@@ -1,11 +1,12 @@
 package commands
+
 import (
-	"github.com/layer-x/unik/cmd/types"
-	"github.com/layer-x/layerx-commons/lxhttpclient"
+	"bufio"
 	"fmt"
 	"github.com/layer-x/layerx-commons/lxerrors"
+	"github.com/layer-x/layerx-commons/lxhttpclient"
+	"github.com/layer-x/unik/cmd/types"
 	"net/http"
-	"bufio"
 )
 
 func Run(config types.UnikConfig, unikernelName, instanceName string, instances int, verbose bool) error {
@@ -39,7 +40,7 @@ func Run(config types.UnikConfig, unikernelName, instanceName string, instances 
 				}
 				return printUnikInstances(unikernelName, body)
 			}
-			fmt.Printf("%s",string(line))
+			fmt.Printf("%s", string(line))
 		}
 	}
 }

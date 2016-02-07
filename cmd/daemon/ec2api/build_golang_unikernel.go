@@ -1,17 +1,17 @@
 package ec2api
-import (
-"io"
-"github.com/Sirupsen/logrus"
-"github.com/layer-x/layerx-commons/lxlog"
-	"os"
-"os/exec"
-	"github.com/layer-x/layerx-commons/lxfileutils"
-	"path/filepath"
-	"github.com/layer-x/layerx-commons/lxerrors"
-	"strings"
-	"mime/multipart"
-)
 
+import (
+	"github.com/Sirupsen/logrus"
+	"github.com/layer-x/layerx-commons/lxerrors"
+	"github.com/layer-x/layerx-commons/lxfileutils"
+	"github.com/layer-x/layerx-commons/lxlog"
+	"io"
+	"mime/multipart"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+)
 
 func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
 	unikernels, err := ListUnikernels()
@@ -33,7 +33,7 @@ func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, han
 		}
 	}
 
-	unikernelPath, err := filepath.Abs("./test_outputs/"+"unikernels/"+unikernelName+"/")
+	unikernelPath, err := filepath.Abs("./test_outputs/" + "unikernels/" + unikernelName + "/")
 	if err != nil {
 		return lxerrors.New("getting absolute path for ./test_outputs/"+"unikernels/"+unikernelName+"/", err)
 	}
@@ -42,14 +42,14 @@ func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, han
 		return lxerrors.New("making directory", err)
 	}
 	//clean up artifacts even if we fail
-	defer func(){
+	defer func() {
 		err = os.RemoveAll(unikernelPath)
 		if err != nil {
 			panic(lxerrors.New("cleaning up unikernel files", err))
 		}
 		lxlog.Infof(logrus.Fields{"files": unikernelPath}, "cleaned up files")
 	}()
-	lxlog.Infof(logrus.Fields{"path":unikernelPath, "unikernel_name": unikernelName}, "created output directory for unikernel")
+	lxlog.Infof(logrus.Fields{"path": unikernelPath, "unikernel_name": unikernelName}, "created output directory for unikernel")
 	savedTar, err := os.OpenFile(unikernelPath+filepath.Base(handler.Filename), os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return lxerrors.New("creating empty file for copying to", err)

@@ -1,13 +1,14 @@
 package ec2api
+
 import (
-	"github.com/layer-x/layerx-commons/lxerrors"
-	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/layer-x/layerx-commons/lxerrors"
+	"github.com/layer-x/layerx-commons/lxlog"
+	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
 	"github.com/layer-x/unik/cmd/daemon/unik_ec2_utils"
 	"github.com/pborman/uuid"
-"github.com/Sirupsen/logrus"
-"github.com/layer-x/layerx-commons/lxlog"
 )
 
 func RunApp(unikernelName, instanceName string, instances int64) ([]string, error) {
@@ -23,7 +24,7 @@ func RunApp(unikernelName, instanceName string, instances int64) ([]string, erro
 				return instanceIds, lxerrors.New("could not start ec2 client session", err)
 			}
 			startInstancesInput := &ec2.RunInstancesInput{
-				ImageId: aws.String(unikernel.AMI),
+				ImageId:  aws.String(unikernel.AMI),
 				MaxCount: aws.Int64(instances),
 				MinCount: aws.Int64(instances),
 			}
@@ -43,19 +44,19 @@ func RunApp(unikernelName, instanceName string, instances int64) ([]string, erro
 						Resources: aws.StringSlice([]string{*instance.InstanceId}),
 						Tags: []*ec2.Tag{
 							&ec2.Tag{
-								Key: aws.String("Name"),
+								Key:   aws.String("Name"),
 								Value: aws.String(instanceName),
 							},
 							&ec2.Tag{
-								Key: aws.String(unik_ec2_utils.UNIK_INSTANCE_ID),
+								Key:   aws.String(unik_ec2_utils.UNIK_INSTANCE_ID),
 								Value: aws.String(instanceId),
 							},
 							&ec2.Tag{
-								Key: aws.String(unik_ec2_utils.UNIKERNEL_ID),
+								Key:   aws.String(unik_ec2_utils.UNIKERNEL_ID),
 								Value: aws.String(unikernel.AMI),
 							},
 							&ec2.Tag{
-								Key: aws.String(unik_ec2_utils.UNIKERNEL_APP_NAME),
+								Key:   aws.String(unik_ec2_utils.UNIKERNEL_APP_NAME),
 								Value: aws.String(unikernelName),
 							},
 						},

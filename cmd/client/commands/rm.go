@@ -1,29 +1,30 @@
 package commands
+
 import (
-	"github.com/layer-x/unik/cmd/types"
-	"github.com/layer-x/layerx-commons/lxhttpclient"
-	"github.com/layer-x/layerx-commons/lxerrors"
-	"net/http"
-	"fmt"
 	"bufio"
 	"encoding/json"
+	"fmt"
+	"github.com/layer-x/layerx-commons/lxerrors"
+	"github.com/layer-x/layerx-commons/lxhttpclient"
+	"github.com/layer-x/unik/cmd/types"
+	"net/http"
 )
 
 func Rm(config types.UnikConfig, instanceId string, verbose bool) error {
 	url := config.Url
 	if !verbose {
 		fmt.Printf("Deleting instance " + instanceId + "\n")
-		resp, body, err := lxhttpclient.Delete(url, "/instances/" + instanceId, nil)
+		resp, body, err := lxhttpclient.Delete(url, "/instances/"+instanceId, nil)
 		if err != nil {
 			return lxerrors.New("failed deleting instance", err)
 		}
 		if resp.StatusCode != http.StatusNoContent {
-			return lxerrors.New("failed deleting instance, got message: " + string(body), err)
+			return lxerrors.New("failed deleting instance, got message: "+string(body), err)
 		}
 		return nil
 
 	} else {
-		resp, err := lxhttpclient.DeleteAsync(url, "/instances/" + instanceId + "?verbose=true", nil)
+		resp, err := lxhttpclient.DeleteAsync(url, "/instances/"+instanceId+"?verbose=true", nil)
 		if err != nil {
 			return lxerrors.New("error performing GET request", err)
 		}
@@ -49,7 +50,7 @@ func printUnikInstance(body []byte) error {
 	unikInstance := types.UnikInstance{}
 	err := json.Unmarshal(body, &unikInstance)
 	if err != nil {
-		return lxerrors.New("failed to retrieve instances: " + string(body), err)
+		return lxerrors.New("failed to retrieve instances: "+string(body), err)
 	}
 	fmt.Printf("INSTANCE ID \t\t\t\t\t UNIKERNEL \t PUBLIC IP \t PRIVATE IP \t STATE \t NAME \n")
 	fmt.Printf("%s \t %s \t %s \t %s \t %s \t %s\n",

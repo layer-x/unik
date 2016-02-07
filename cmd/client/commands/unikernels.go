@@ -1,11 +1,12 @@
 package commands
+
 import (
-	"github.com/layer-x/unik/cmd/types"
-	"github.com/layer-x/layerx-commons/lxhttpclient"
+	"bufio"
+	"encoding/json"
 	"fmt"
 	"github.com/layer-x/layerx-commons/lxerrors"
-	"encoding/json"
-	"bufio"
+	"github.com/layer-x/layerx-commons/lxhttpclient"
+	"github.com/layer-x/unik/cmd/types"
 )
 
 const TERMINATE_OUTPUT = "BEGIN_JSON_DATA\n"
@@ -37,7 +38,7 @@ func Unikernels(config types.UnikConfig, verbose bool) error {
 				}
 				return printUnikernels(body)
 			}
-			fmt.Printf("%s",string(line))
+			fmt.Printf("%s", string(line))
 		}
 	}
 }
@@ -46,7 +47,7 @@ func printUnikernels(body []byte) error {
 	var unikernels []*types.Unikernel
 	err := json.Unmarshal(body, &unikernels)
 	if err != nil {
-		return lxerrors.New("failed to retrieve unikernels: " + string(body), err)
+		return lxerrors.New("failed to retrieve unikernels: "+string(body), err)
 	}
 	fmt.Printf("UNIKERNEL \t\t\t AMI \t\t\t CREATED\n")
 	for _, unikInstance := range unikernels {

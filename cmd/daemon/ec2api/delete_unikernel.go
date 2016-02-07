@@ -1,9 +1,10 @@
 package ec2api
+
 import (
-	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
-	"github.com/layer-x/layerx-commons/lxerrors"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/layer-x/layerx-commons/lxerrors"
+	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
 )
 
 const UNIKERNEL_APP_NAME = "UNIKERNEL_APP_NAME"
@@ -22,7 +23,7 @@ func DeleteUnikernel(unikernelId string, force bool) error {
 					return lxerrors.New("could not delete unik instance "+instance.UnikInstanceID, err)
 				}
 			} else {
-				return lxerrors.New("attempted to delete unikernel "+ unikernelId +", however instance "+instance.UnikInstanceID+" is still running. override with force=true", nil)
+				return lxerrors.New("attempted to delete unikernel "+unikernelId+", however instance "+instance.UnikInstanceID+" is still running. override with force=true", nil)
 			}
 		}
 	}
@@ -35,11 +36,11 @@ func DeleteUnikernel(unikernelId string, force bool) error {
 	}
 	_, err = ec2Client.DeregisterImage(deregisterImageInput)
 	if err != nil {
-		return lxerrors.New("could not deregister ami for unikernel "+ unikernelId, err)
+		return lxerrors.New("could not deregister ami for unikernel "+unikernelId, err)
 	}
 	err = DeleteSnapshotAndVolume(unikernelId)
 	if err != nil {
-		return lxerrors.New("could not delete snapshot or volume for unikernel "+ unikernelId, err)
+		return lxerrors.New("could not delete snapshot or volume for unikernel "+unikernelId, err)
 	}
 	return nil
 }
@@ -63,7 +64,7 @@ func DeleteSnapshotAndVolume(unikernelId string) error {
 				}
 				_, err = ec2Client.DeleteSnapshot(deleteSnapshotInput)
 				if err != nil {
-					return lxerrors.New("could not delete snapshot for unikernel "+ unikernelId, err)
+					return lxerrors.New("could not delete snapshot for unikernel "+unikernelId, err)
 				}
 				deleteVolumeInput := &ec2.DeleteVolumeInput{
 					VolumeId: aws.String(volumeId),
@@ -76,7 +77,7 @@ func DeleteSnapshotAndVolume(unikernelId string) error {
 			}
 		}
 	}
-	return lxerrors.New("snapshot not found for unikernel "+ unikernelId, err)
+	return lxerrors.New("snapshot not found for unikernel "+unikernelId, err)
 }
 
 func DeleteSnapshotAndVolumeForApp(unikernelName string) error {
@@ -98,7 +99,7 @@ func DeleteSnapshotAndVolumeForApp(unikernelName string) error {
 				}
 				_, err = ec2Client.DeleteSnapshot(deleteSnapshotInput)
 				if err != nil {
-					return lxerrors.New("could not delete snapshot for unikernel "+ unikernelName, err)
+					return lxerrors.New("could not delete snapshot for unikernel "+unikernelName, err)
 				}
 				deleteVolumeInput := &ec2.DeleteVolumeInput{
 					VolumeId: aws.String(volumeId),
@@ -111,5 +112,5 @@ func DeleteSnapshotAndVolumeForApp(unikernelName string) error {
 			}
 		}
 	}
-	return lxerrors.New("snapshot not found for unikernel "+ unikernelName, err)
+	return lxerrors.New("snapshot not found for unikernel "+unikernelName, err)
 }
