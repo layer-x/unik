@@ -1,0 +1,28 @@
+FROM ubuntu
+
+RUN sudo sudo apt-get update -y  && sudo apt-get install libxen-dev curl git build-essential -y && sudo apt-get clean -y && sudo rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+ENV PLATFORM=hw
+
+RUN DESTDIR=/usr/local && \
+    BUILDRUMP_EXTRA= && \
+    PLATFORMS=$PLATFORM  && \
+    cd /opt && \
+    git clone https://github.com/rumpkernel/rumprun && \
+    cd rumprun && \
+    git submodule update --init && \
+    for PLATFORM in $PLATFORMS; do \
+    ./build-rr.sh -d $DESTDIR -o ./obj $PLATFORM build -- $BUILDRUMP_EXTRA && \
+    ./build-rr.sh -d $DESTDIR -o ./obj $PLATFORM install ;\
+    done
+
+
+COPY config.c  /opt/rumprun/lib/librumprun_base/config.c
+COPY fixrump.sh  /tmp/
+RUN /bin/bash /tmp/fixrump.sh
+
+VOLUME /opt/code
+WORKDIR /opt/code
+
+
+# RUN LIKE THIS: docker run --rm -v -ti /path/to/code:/opt/code uvgroovy/rump-hw-base
