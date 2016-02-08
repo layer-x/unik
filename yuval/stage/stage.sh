@@ -57,10 +57,12 @@ ${SUDO} mkdir -p ${VOL2MOUNTPOINT}
 
 
 # partition
-${SUDO} parted --script $GRUB_DEVICE mklabel msdos
-${SUDO} parted --script $GRUB_DEVICE mkpart primary ext2   2 100
-
-BOOT_DEVICE=/dev/mapper/$(kpartx -avs $GRUB_DEVICE | head -1 | tail -1 | cut -d' ' -f3)
+${SUDO} parted --script $GRUB_DEVICE mklabel gpt
+${SUDO} parted --script $GRUB_DEVICE mkpart "grub_boot" 1  4
+${SUDO} parted --script $GRUB_DEVICE set  1 bios_grub on
+${SUDO} parted --script $GRUB_DEVICE mkpart "rootfs" ext2 4 100
+# get second partition..
+BOOT_DEVICE=/dev/mapper/$(kpartx -avs $GRUB_DEVICE | head -2 | tail -1 | cut -d' ' -f3)
 
 
 ${SUDO} parted --script $DEVICE mklabel bsd
@@ -159,11 +161,12 @@ ${SUDO} cat  > ${BOOTMOUNTPOINT}/boot/grub/grub.cfg <<EOF
 timeout=0
 
 insmod part_msdos
+insmod part_gpt
 insmod part_bsd
 insmod ext2
 
 menuentry "NetBSD Unikernel" {
-search --set=root --label $BOOTLABEL --hint hd0,msdos1
+search --set=root --label $BOOTLABEL --hint hd0,gpt2
 multiboot /boot/program.bin $JSONCONFIG
 boot
 }
@@ -172,7 +175,7 @@ EOF
 # install grub!
 echo GRUB_DEVICE = $GRUB_DEVICE
 echo DEVICE = $DEVICE
-${SUDO} grub-install --no-floppy --modules="part_bsd part_msdos ext2" --root-directory=${BOOTMOUNTPOINT} ${GRUB_DEVICE}
+${SUDO} grub-install --no-floppy --modules="part_bsd part_msdos part_gpt ext2" --root-directory=${BOOTMOUNTPOINT} ${GRUB_DEVICE}
 
 # show what is in the target
 # ${SUDO} find ${UNIKERNELMOUNTPOINT}
