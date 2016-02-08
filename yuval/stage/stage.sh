@@ -89,27 +89,25 @@ DEVICE3=/dev/mapper/partition3
 
 # format the EBS volume as ext2
 BOOTLABEL=bootfs
-ROOTLABEL=rootfs
 ${SUDO} mkfs -L $BOOTLABEL -I 128 -t ext2 ${BOOT_DEVICE}
 #Label the disk. AWS has an unofficial tutorial that does not include this step.
 ${SUDO} tune2fs -L $BOOTLABEL ${BOOT_DEVICE}
 
+ROOTLABEL=rootfs
 ${SUDO} mkfs.ufs -O 2 ${DEVICE1}
 ${SUDO} mkfs.ufs -O 2 ${DEVICE2}
 
-
 # mount the device
+${SUDO} mount ${BOOT_DEVICE} ${BOOTMOUNTPOINT}
 ${SUDO} fuse-ufs ${DEVICE1} ${VOL1MOUNTPOINT} -o rw
 ${SUDO} fuse-ufs ${DEVICE2} ${VOL2MOUNTPOINT} -o rw
-${SUDO} mount ${BOOT_DEVICE} ${BOOTMOUNTPOINT}
-
 
 # set permissions
-# ${SUDO} chmod -R ug+rwx ${UNIKERNELMOUNTPOINT}
+# ${SUDO} chmod -R ug+rwx ${VOL1MOUNTPOINT} ${VOL2MOUNTPOINT}
 ${SUDO} chmod -R ug+rwx ${BOOT_DEVICE}
 
-${SUDO} mkdir -p ${BOOTMOUNTPOINT}/boot/program.bin
-${SUDO} cp -r ${UNIKERNELFILE_ROOT}/program.bin ${BOOTMOUNTPOINT}
+${SUDO} mkdir -p ${BOOTMOUNTPOINT}/boot/
+${SUDO} cp -r ${UNIKERNELFILE_ROOT}/program.bin ${BOOTMOUNTPOINT}/boot/
 ${SUDO} cp -r ${VOL1FILE_ROOT}/* ${VOL1MOUNTPOINT}
 ${SUDO} cp -r ${VOL2FILE_ROOT}/* ${VOL2MOUNTPOINT}
 
@@ -151,6 +149,10 @@ JSONCONFIG='{"cmdline":"program.bin",
   "mountpoint":	"/data",
 },'$NETCFG'
 }'
+
+
+JSONCONFIG='{"cmdline":"program.bin",'$NETCFG'
+}'
 JSONCONFIG=$(echo $JSONCONFIG |tr -d '\n'| sed 's,\",\\",g'| sed -e 's,{,\\{,g' -e 's,},\\},g')
 
 ${SUDO} cat  > ${BOOTMOUNTPOINT}/boot/grub/grub.cfg <<EOF
@@ -158,6 +160,7 @@ timeout=0
 
 insmod part_msdos
 insmod part_bsd
+insmod ext2
 
 menuentry "NetBSD Unikernel" {
 search --set=root --label $BOOTLABEL --hint hd0,msdos1
@@ -166,15 +169,10 @@ boot
 }
 EOF
 
-cat > ${BOOTMOUNTPOINT}/boot/grub/device.map <<EOF
- (hd0)             ${GRUB_DEVICE}
- (hd1)             ${DEVICE}
-EOF
-
 # install grub!
 echo GRUB_DEVICE = $GRUB_DEVICE
 echo DEVICE = $DEVICE
-${SUDO} grub-install --no-floppy --modules="part_bsd part_msdos" --root-directory=${BOOTMOUNTPOINT} ${GRUB_DEVICE}
+${SUDO} grub-install --no-floppy --modules="part_bsd part_msdos ext2" --root-directory=${BOOTMOUNTPOINT} ${GRUB_DEVICE}
 
 # show what is in the target
 # ${SUDO} find ${UNIKERNELMOUNTPOINT}
@@ -252,8 +250,8 @@ while [ ! -e $DATA_DEVICE ]; do
 done
 
 # copy all the stuff we've done
-dd if=$GRUB_FILE of=$BOOT_DEVICE
-dd if=$IMAGE_FILE of=$DATA_DEVICE
+dd if=$GRUB_FILE of=$BOOT_DEVICE bs=512
+dd if=$IMAGE_FILE of=$DATA_DEVICE bs=512
 
 # detach!
 ec2-detach-volume  ${BOOTVOLID}
@@ -310,3 +308,4 @@ echo Don\'t forget to customise this with a security group, as the
 echo default one won\'t let any inbound traffic in.
 
 # run like this:
+#
