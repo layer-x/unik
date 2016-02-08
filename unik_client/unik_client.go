@@ -5,6 +5,8 @@ import (
 	"github.com/layer-x/layerx-commons/lxerrors"
 "encoding/json"
 "net/http"
+"fmt"
+	"strings"
 )
 
 type UnikClient struct {
@@ -37,6 +39,24 @@ func (c *UnikClient) DeleteUnikInstance(instanceId string) error {
 	}
 	if resp.StatusCode != http.StatusNoContent {
 		return lxerrors.New("failed deleting instance, got message: "+string(body), err)
+	}
+	return nil
+}
+
+func (c *UnikClient) RunUnikernel(unikernelName, instanceName string, instances int, tags map[string]string) error {
+	tagString := ""
+	for key, val := range tags {
+		tagString += key+"="+val+","
+	}
+	tagString = strings.TrimSuffix(tagString, ",")
+
+	path := "/unikernels/" + unikernelName + "/run" + fmt.Sprintf("?instances=%v&name=%s&tags=%s", instances, instanceName, tagString)
+	resp, body, err := lxhttpclient.Post(c.url, path, nil, nil)
+	if err != nil {
+		return lxerrors.New("failed running unikernel", err)
+	}
+	if resp.StatusCode != http.StatusAccepted {
+		return lxerrors.New("failed running unikernel, got message: " + string(body), err)
 	}
 	return nil
 }
