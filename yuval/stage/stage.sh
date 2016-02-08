@@ -37,6 +37,11 @@ DEVICE=$(losetup -f --show $IMAGE_FILE)
 dd if=/dev/zero of=$GRUB_FILE bs=1 count=0 seek=${SIZE}G
 GRUB_DEVICE=$(losetup -f --show $GRUB_FILE)
 
+SECTORS=$[ $(ls -l $GRUB_FILE |cut -d' ' -f5)/512]
+DEVNUM=$(ls -l $GRUB_DEVICE|cut -d' ' -f5|tr -d ,):$(ls -l $GRUB_DEVICE|cut -d' ' -f6)
+${SUDO}  echo "0 $SECTORS linear 7:0 0" | sudo dmsetup create hda
+GRUB_DEVICE=/dev/mapper/hda
+
 
 ##########################################################################################
 ##########################################################################################
@@ -172,10 +177,28 @@ boot
 }
 EOF
 
+${SUDO} cat  > ${BOOTMOUNTPOINT}/boot/grub/grub.conf <<EOF
+default=0
+fallback=1
+timeout=1
+hiddenmenu
+
+title Unik
+root (hd0,0)
+kernel /boot/program.bin $JSONCONFIG
+EOF
+
+
+# hd0,0 is for grub1; grub2 will ignore this anyway..
+${SUDO} cat > ${BOOTMOUNTPOINT}/boot/grub/device.map <<EOF
+(hd0)	${GRUB_DEVICE}
+(hd1)	${DEVICE}
+EOF
+
 # install grub!
 echo GRUB_DEVICE = $GRUB_DEVICE
 echo DEVICE = $DEVICE
-${SUDO} grub-install --no-floppy --modules="part_bsd part_msdos part_gpt ext2" --root-directory=${BOOTMOUNTPOINT} ${GRUB_DEVICE}
+${SUDO} grub-install --no-floppy --root-directory=${BOOTMOUNTPOINT} ${GRUB_DEVICE}
 
 # show what is in the target
 # ${SUDO} find ${UNIKERNELMOUNTPOINT}
@@ -191,6 +214,9 @@ for PARTI in 1 2 3; do
 done
 ${SUDO} kpartx -d $GRUB_DEVICE
 ${SUDO} losetup -d $GRUB_DEVICE
+
+${SUDO}  dmsetup remove hda
+
 ${SUDO} losetup -d $DEVICE
 set -e
 

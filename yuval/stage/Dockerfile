@@ -12,11 +12,10 @@ RUN apt-get install -y software-properties-common && \
     rm -rf awscli-bundle  awscli-bundle.zip && \
     sudo apt-get clean -y && sudo rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --force-yes parted grub2 kpartx git make gcc libdevmapper-dev
-
+RUN apt-get update
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --force-yes libtool autoconf automake autopoint bc gperf texinfo uuid-dev check
 
+RUN DEBIAN_FRONTEND=noninteractive apt-get update  && apt-get install -y --force-yes git make gcc g++ libdevmapper-dev
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --force-yes build-essential fuse libfuse-dev autoconf automake libtool git libbsd-dev e2fslibs-dev
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --force-yes fuse libfuse-dev
@@ -31,6 +30,7 @@ RUN git clone https://github.com/DanielO/fuse-ufs2 && \
     make && make install
 
 
+    RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --force-yes parted grub kpartx
 
 
 # stager takes a xen binary and volums, and creates a AWS ami
