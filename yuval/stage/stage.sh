@@ -206,6 +206,7 @@ ${SUDO} cat  > ${BOOTMOUNTPOINT}/boot/grub/grub.conf <<EOF
 default=0
 fallback=1
 timeout=1
+hiddenmenu
 
 title Unik
 root (hd0,0)
@@ -217,7 +218,7 @@ ${SUDO} cp ${BOOTMOUNTPOINT}/boot/grub/grub.conf  ${BOOTMOUNTPOINT}/boot/grub/me
 # hd0,0 is for grub1; grub2 will ignore this anyway..
 ${SUDO} cat > ${BOOTMOUNTPOINT}/boot/grub/device.map <<EOF
 (hd0) ${GRUB_DEVICE}
-(hd1) ${DEVICE}
+# (hd1) ${DEVICE}
 EOF
 
 
@@ -279,17 +280,16 @@ THISINSTANCEID=`wget -q -O - http://instance-data/latest/meta-data/instance-id`
 THISAVAILABILITYZONE=`wget -q -O - http://instance-data/latest/dynamic/instance-identity/document | awk '/availabilityZone/ {gsub(/[",]/, "", $3); print $3}'`
 
 
-
 # create and attach two volumes
 BOOTVOLID=`ec2-create-volume --availability-zone ${THISAVAILABILITYZONE} -s 1 | awk '{print $2}'`
 DATAVOLID=`ec2-create-volume --availability-zone ${THISAVAILABILITYZONE} -s 1 | awk '{print $2}'`
 
 while [ $(ec2-describe-volumes |grep $BOOTVOLID|awk '{print $5}') != "available" ]; do
-   sleep 1
+   sleep 5
 done
 
 while [ $(ec2-describe-volumes |grep $DATAVOLID|awk '{print $5}') != "available" ]; do
-   sleep 1
+   sleep 5
 done
 
 BOOT_DEVICE=/dev/xvdg
@@ -298,11 +298,11 @@ ec2-attach-volume ${DATAVOLID} --instance ${THISINSTANCEID} --device $DATA_DEVIC
 ec2-attach-volume ${BOOTVOLID} --instance ${THISINSTANCEID} --device $BOOT_DEVICE
 
 while [ ! -e $BOOT_DEVICE ]; do
-  sleep 1
+  sleep 5
 done
 
 while [ ! -e $DATA_DEVICE ]; do
-  sleep 1
+  sleep 5
 done
 
 # copy all the stuff we've done
@@ -314,11 +314,11 @@ ec2-detach-volume  ${BOOTVOLID}
 ec2-detach-volume  ${DATAVOLID}
 
 while [ -e $BOOT_DEVICE ]; do
-  sleep 1
+  sleep 5
 done
 
 while [ -e $DATA_DEVICE ]; do
-  sleep 1
+  sleep 5
 done
 
 
@@ -327,11 +327,11 @@ BOOT_SNAPSHOTID=`ec2-create-snapshot --description 'unikernel boot volume' ${BOO
 DATA_SNAPSHOTID=`ec2-create-snapshot --description 'unikernel boot volume' ${DATAVOLID} | awk '{print $2}'`
 
 while [ $(ec2-describe-snapshots |grep ${BOOT_SNAPSHOTID}|awk '{print $4}') != "completed" ]; do
-  sleep 1
+  sleep 5
 done
 
 while [ $(ec2-describe-snapshots |grep ${DATA_SNAPSHOTID}|awk '{print $4}') != "completed" ]; do
-  sleep 1
+  sleep 5
 done
 
 # Create image/AMI from the snapshot
@@ -355,10 +355,11 @@ AMIID=`ec2-register --name "${NAME}" \
 ##########################################################################################
 
 echo You can now start this instance via:
-echo ec2-run-instances --instance-type t2.micro ${AMIID}
+echo "INSTID=\$(ec2-run-instances --instance-type t2.micro ${AMIID}|head -n 2|tail -n 1|awk '{print \$2}')"
+# INSTID=$(ec2-run-instances --instance-type t2.micro ${AMIID} | head -n 2|tail -n 1 |awk '{print $2}')
 echo ""
 echo Check output with
-echo aws ec2 get-console-output --instance-id ... --region=$THISREGION| jq -r .Output
+echo 'aws ec2 get-console-output --instance-id ... --region=$THISREGION| jq -r .Output'
 echo ""
 echo Don\'t forget to customise this with a security group, as the
 echo default one won\'t let any inbound traffic in.
