@@ -57,8 +57,8 @@ func (c *UnikClient) RunUnikernel(unikernelName, instanceName string, instances 
 	if err != nil {
 		return lxerrors.New("failed running unikernel", err)
 	}
-	if resp.StatusCode != http.StatusAccepted {
-		return lxerrors.New("failed running unikernel, got message: " + string(body), err)
+	if resp.StatusCode != http.StatusOK {
+		return lxerrors.New("failed running unikernel, got message: " + string(body) + " with status code "+fmt.Sprintf("%v", resp.StatusCode), err)
 	}
 	return nil
 }

@@ -18,7 +18,7 @@ func Run(config types.UnikConfig, unikernelName, instanceName string, instances 
 		if err != nil {
 			return lxerrors.New("failed running unikernel", err)
 		}
-		if resp.StatusCode != http.StatusAccepted {
+		if resp.StatusCode != http.StatusOK {
 			return lxerrors.New("failed running unikernel, got message: "+string(body), err)
 		}
 		return nil

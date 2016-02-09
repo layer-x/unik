@@ -33,7 +33,6 @@ func (d *UnikEc2Daemon) registerHandlers() {
 		verbose := req.URL.Query().Get("verbose")
 		if strings.ToLower(verbose) == "true" {
 			httpOutStream := ioutils.NewWriteFlusher(res)
-			defer httpOutStream.Close()
 			uuid := uuid.New()
 			lxlog.AddLogger(uuid, logrus.DebugLevel, httpOutStream)
 			defer lxlog.DeleteLogger(uuid)
