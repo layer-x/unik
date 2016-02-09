@@ -27,7 +27,7 @@ func (c *UnikClient) GetUnikInstances() ([]*types.UnikInstance, error) {
 		return nil, lxerrors.New("error requesting unik instance list", err)
 	}
 	var unikInstances []*types.UnikInstance
-	err = json.Unmarshal(body, unikInstances)
+	err = json.Unmarshal(body, &unikInstances)
 	if err != nil {
 		return nil, lxerrors.New("could not unmarshal unik instance json", err)
 	}
