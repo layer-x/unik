@@ -25,6 +25,7 @@ func RunApp(unikernelName, instanceName string, instances int64, tags map[string
 			}
 			startInstancesInput := &ec2.RunInstancesInput{
 				ImageId:  aws.String(unikernel.AMI),
+				InstanceType: aws.String("t2.nano"),
 				MaxCount: aws.Int64(instances),
 				MinCount: aws.Int64(instances),
 			}
