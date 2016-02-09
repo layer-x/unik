@@ -118,35 +118,15 @@ DEVICE1=/dev/mapper/partition1
 DEVICE2=/dev/mapper/partition2
 DEVICE3=/dev/mapper/partition3
 
-
-# format the EBS volume as ext2
-BOOTLABEL=bootfs
-${SUDO} mkfs -L $BOOTLABEL -I 128 -t ext2 ${BOOT_DEVICE}
-#Label the disk. AWS has an unofficial tutorial that does not include this step.
-${SUDO} tune2fs -L $BOOTLABEL ${BOOT_DEVICE}
-
-ROOTLABEL=rootfs
 ${SUDO} mkfs.ufs -O 2 ${DEVICE1}
 ${SUDO} mkfs.ufs -O 2 ${DEVICE2}
 
 # mount the device
-${SUDO} mount ${BOOT_DEVICE} ${BOOTMOUNTPOINT}
 ${SUDO} fuse-ufs ${DEVICE1} ${VOL1MOUNTPOINT} -o rw
 ${SUDO} fuse-ufs ${DEVICE2} ${VOL2MOUNTPOINT} -o rw
 
-# set permissions
-# ${SUDO} chmod -R ug+rwx ${VOL1MOUNTPOINT} ${VOL2MOUNTPOINT}
-${SUDO} chmod -R ug+rwx ${BOOT_DEVICE}
-
-${SUDO} mkdir -p ${BOOTMOUNTPOINT}/boot/
-${SUDO} cp -r ${UNIKERNELFILE_ROOT}/program.bin ${BOOTMOUNTPOINT}/boot/
 ${SUDO} cp -r ${VOL1FILE_ROOT}/* ${VOL1MOUNTPOINT}
 ${SUDO} cp -r ${VOL2FILE_ROOT}/* ${VOL2MOUNTPOINT}
-
-
-${SUDO} mkdir -p ${BOOTMOUNTPOINT}/boot/grub
-
-
 
 if [ "$AWS" != true ]; then
 NETCFG='
@@ -167,7 +147,9 @@ NETCFG='
   },'
 fi
 
-JSONCONFIG='{"cmdline":"program.bin",
+
+if [ "$AWS" != true ]; then
+BLKCFG='
 "blk" : {
   "source": "dev",
   "path": "/dev/ld1a",
@@ -179,27 +161,42 @@ JSONCONFIG='{"cmdline":"program.bin",
   "path": "/dev/ld1b",
   "fstype": "blk",
   "mountpoint": "/data",
-},'$NETCFG'
+},'
+else
+  BLKCFG='
+  "blk" : {
+    "source": "dev",
+    "path": "/dev/sd1a",
+    "fstype": "blk",
+    "mountpoint": "/etc",
+  },
+  "blk" : {
+    "source": "dev",
+    "path": "/dev/sd1b",
+    "fstype": "blk",
+    "mountpoint": "/data",
+  },'
+fi
+JSONCONFIG='{"cmdline":"program.bin",
+'$NETCFG',
+'$BLKCFG',
 }'
+JSONCONFIG=$(echo $JSONCONFIG |tr -d '\n')
 
-JSONCONFIG='{"cmdline":"program.bin",'$NETCFG'
-}'
-JSONCONFIG=$(echo $JSONCONFIG |tr -d '\n'| sed 's,\",\\",g'| sed -e 's,{,\\{,g' -e 's,},\\},g')
+create_boot () {
+ROOTDRIVE=$1
 
-${SUDO} cat  > ${BOOTMOUNTPOINT}/boot/grub/grub.cfg <<EOF
-timeout=0
+# format the EBS volume as ext2
+BOOTLABEL=bootfs
+${SUDO} mkfs -L $BOOTLABEL -I 128 -t ext2 ${BOOT_DEVICE}
+#Label the disk. AWS has an unofficial tutorial that does not include this step.
+${SUDO} tune2fs -L $BOOTLABEL ${BOOT_DEVICE}
 
-insmod part_msdos
-insmod part_gpt
-insmod part_bsd
-insmod ext2
+${SUDO} mount ${BOOT_DEVICE} ${BOOTMOUNTPOINT}
 
-menuentry "NetBSD Unikernel" {
-search --set=root --label $BOOTLABEL --hint hd0,gpt2
-multiboot /boot/program.bin $JSONCONFIG
-boot
-}
-EOF
+${SUDO} mkdir -p ${BOOTMOUNTPOINT}/boot/grub
+
+${SUDO} cp -r ${UNIKERNELFILE_ROOT}/program.bin ${BOOTMOUNTPOINT}/boot/
 
 ${SUDO} cat  > ${BOOTMOUNTPOINT}/boot/grub/grub.conf <<EOF
 default=0
@@ -208,11 +205,14 @@ timeout=1
 hiddenmenu
 
 title Unik
-root (hd0,0)
+root $ROOTDRIVE
 kernel /boot/program.bin $JSONCONFIG
 EOF
 
 ${SUDO} cp ${BOOTMOUNTPOINT}/boot/grub/grub.conf  ${BOOTMOUNTPOINT}/boot/grub/menu.lst
+}
+
+create_boot "(hd0,0)"
 
 # hd0,0 is for grub1; grub2 will ignore this anyway..
 ${SUDO} cat > ${BOOTMOUNTPOINT}/boot/grub/device.map <<EOF
@@ -275,6 +275,11 @@ elif [ "$AWS" = "" ]; then
   fi
 fi
 
+VTYPE="hvm"
+# unfortunatly wasnt able to get network on an HVM instance, not even when
+# i added the ixgbe intel driver to rump run and used amazon m4 instance (that should have inhanced networking)
+VTYPE="paravirtual"
+
 THISINSTANCEID=`wget -q -O - http://instance-data/latest/meta-data/instance-id`
 THISAVAILABILITYZONE=`wget -q -O - http://instance-data/latest/dynamic/instance-identity/document | awk '/availabilityZone/ {gsub(/[",]/, "", $3); print $3}'`
 
@@ -305,8 +310,18 @@ while [ ! -e $DATA_DEVICE ]; do
 done
 
 # copy all the stuff we've done
-dd if=$GRUB_FILE  of=$BOOT_DEVICE bs=512
 dd if=$IMAGE_FILE of=$DATA_DEVICE bs=512
+
+if [ "$VTYPE" = "paravirtual" ]; then
+
+  create_boot "(hd0)"
+  umount ${BOOTMOUNTPOINT}
+
+  case "${THISREGION}" in ap-northeast-1) KERNELID=aki-176bf516; ;; ap-southeast-1) KERNELID=aki-503e7402; ;; ap-southeast-2) KERNELID=aki-c362fff9; ;; eu-central-1) KERNELID=aki-184c7a05; ;; eu-west-1) KERNELID=aki-52a34525; ;; sa-east-1) KERNELID=aki-5553f448; ;; us-east-1) KERNELID=aki-919dcaf8; ;; us-gov-west-1) KERNELID=aki-1de98d3e; ;; us-west-1) KERNELID=aki-880531cd; ;; us-west-2) KERNELID=aki-fc8f11cc; ;; *) echo $"Error selecting pvgrub kernel for region"; exit 1; esac
+  KERNELARG=" --kernel ${KERNELID} "
+else
+  dd if=$GRUB_FILE  of=$BOOT_DEVICE bs=512
+fi
 
 # detach!
 ec2-detach-volume ${BOOTVOLID}
@@ -343,7 +358,7 @@ AMIID=`ec2-register --name "${NAME}" \
 -s ${BOOT_SNAPSHOTID} \
 --root-device-name /dev/xvda \
 -b "/dev/xvdb=${DATA_SNAPSHOTID}" \
---virtualization-type hvm \
+--virtualization-type $VTYPE $KERNELARG \
 | awk '{print $2}'`
 
 ##########################################################################################
