@@ -153,7 +153,7 @@ NETCFG='
  "net" :  {
    "if":  "vioif0",
    "type": "inet",
-   "method": "static",,
+   "method": "static",
    "addr": "10.0.1.101",
    "mask": "8",
  },'
@@ -181,7 +181,6 @@ JSONCONFIG='{"cmdline":"program.bin",
   "mountpoint": "/data",
 },'$NETCFG'
 }'
-
 
 JSONCONFIG='{"cmdline":"program.bin",'$NETCFG'
 }'
@@ -306,30 +305,27 @@ while [ ! -e $DATA_DEVICE ]; do
 done
 
 # copy all the stuff we've done
-dd if=$GRUB_FILE of=$BOOT_DEVICE bs=512
+dd if=$GRUB_FILE  of=$BOOT_DEVICE bs=512
 dd if=$IMAGE_FILE of=$DATA_DEVICE bs=512
 
 # detach!
-ec2-detach-volume  ${BOOTVOLID}
-ec2-detach-volume  ${DATAVOLID}
+ec2-detach-volume ${BOOTVOLID}
+ec2-detach-volume ${DATAVOLID}
 
 while [ -e $BOOT_DEVICE ]; do
   sleep 5
 done
-
 while [ -e $DATA_DEVICE ]; do
   sleep 5
 done
 
 
 BOOT_SNAPSHOTID=`ec2-create-snapshot --description 'unikernel boot volume' ${BOOTVOLID} | awk '{print $2}'`
-
 DATA_SNAPSHOTID=`ec2-create-snapshot --description 'unikernel boot volume' ${DATAVOLID} | awk '{print $2}'`
 
 while [ $(ec2-describe-snapshots |grep ${BOOT_SNAPSHOTID}|awk '{print $4}') != "completed" ]; do
   sleep 5
 done
-
 while [ $(ec2-describe-snapshots |grep ${DATA_SNAPSHOTID}|awk '{print $4}') != "completed" ]; do
   sleep 5
 done
@@ -359,7 +355,7 @@ echo "INSTID=\$(ec2-run-instances --instance-type t2.micro ${AMIID}|head -n 2|ta
 # INSTID=$(ec2-run-instances --instance-type t2.micro ${AMIID} | head -n 2|tail -n 1 |awk '{print $2}')
 echo ""
 echo Check output with
-echo 'aws ec2 get-console-output --instance-id ... --region=$THISREGION| jq -r .Output'
+echo "aws ec2 get-console-output --instance-id \$INSTID --region=$THISREGION| jq -r .Output"
 echo ""
 echo Don\'t forget to customise this with a security group, as the
 echo default one won\'t let any inbound traffic in.
