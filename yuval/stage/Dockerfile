@@ -30,7 +30,7 @@ RUN git clone https://github.com/DanielO/fuse-ufs2 && \
     make && make install
 
 
-    RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --force-yes parted grub kpartx
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --force-yes parted grub kpartx refit
 
 
 # stager takes a xen binary and volums, and creates a AWS ami

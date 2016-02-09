@@ -35,11 +35,11 @@ DEVICE=$(losetup -f --show $IMAGE_FILE)
 
 
 dd if=/dev/zero of=$GRUB_FILE bs=1 count=0 seek=${SIZE}G
-GRUB_DEVICE=$(losetup -f --show $GRUB_FILE)
+GRUB_DEVICE_LOOP=$(losetup -f --show $GRUB_FILE)
 
 SECTORS=$[ $(ls -l $GRUB_FILE |cut -d' ' -f5)/512]
-DEVNUM=$(ls -l $GRUB_DEVICE|cut -d' ' -f5|tr -d ,):$(ls -l $GRUB_DEVICE|cut -d' ' -f6)
-${SUDO}  echo "0 $SECTORS linear 7:0 0" | sudo dmsetup create hda
+DEVNUM=$(ls -l $GRUB_DEVICE_LOOP|cut -d' ' -f5|tr -d ,):$(ls -l $GRUB_DEVICE_LOOP|cut -d' ' -f6)
+${SUDO}  echo "0 $SECTORS linear $DEVNUM 0" | sudo dmsetup create hda
 GRUB_DEVICE=/dev/mapper/hda
 
 
@@ -62,13 +62,38 @@ ${SUDO} mkdir -p ${VOL2MOUNTPOINT}
 
 
 # partition
-${SUDO} parted --script $GRUB_DEVICE mklabel gpt
-${SUDO} parted --script $GRUB_DEVICE mkpart "grub_boot" 1  4
-${SUDO} parted --script $GRUB_DEVICE set  1 bios_grub on
-${SUDO} parted --script $GRUB_DEVICE mkpart "rootfs" ext2 4 100
-# get second partition..
-BOOT_DEVICE=/dev/mapper/$(kpartx -avs $GRUB_DEVICE | head -2 | tail -1 | cut -d' ' -f3)
+# ${SUDO} parted --script $GRUB_DEVICE mklabel gpt
+# ${SUDO} parted --script $GRUB_DEVICE mkpart no-fs 0 2
+# ${SUDO} parted --script $GRUB_DEVICE mkpart ext2 ext2 2 100
+# ${SUDO} parted --script $GRUB_DEVICE set  1 bios_grub on
 
+${SUDO} parted --script $GRUB_DEVICE mklabel msdos
+${SUDO} parted --script $GRUB_DEVICE mkpart primary ext2 0 100
+
+# get second partition..
+BOOT_DEVICE=/dev/mapper/$(kpartx -avs $GRUB_DEVICE | head -1 | tail -1 | cut -d' ' -f3)
+
+
+# create MBR partition for grub1
+# ${SUDO} gptsync $GRUB_DEVICE
+# gpt sync doesnt work for us :( going to do it manually
+#PARTITIONMAP=$(parted --script --machine $GRUB_DEVICE "unit s" "print"|tail -n +2)
+#FIN2_SECTOR=$(echo "$PARTITIONMAP" | grep -e "^2:"|cut -d: -f3|tr -d s)
+#ST2SECTOR=$(echo "$PARTITIONMAP" | grep -e "^2:"|cut -d: -f2|tr -d s)
+#FIN2_SECTOR=$(echo "$PARTITIONMAP" | grep -e "^2:"|cut -d: -f3|tr -d s)
+
+#set +e
+#${SUDO} fdisk $GRUB_DEVICE <<EOF
+#d
+#n
+#p
+#2
+#$ST2SECTOR
+#$FIN2_SECTOR
+#w
+#EOF
+## it will fail reading partition table cause it is gpt
+#set -e
 
 ${SUDO} parted --script $DEVICE mklabel bsd
 ${SUDO} parted --script $DEVICE mkpart  ext2   2 100
@@ -126,34 +151,34 @@ ${SUDO} mkdir -p ${BOOTMOUNTPOINT}/boot/grub
 if [ "$AWS" != true ]; then
 NETCFG='
  "net" :  {
-   "if":		"vioif0",
-   "type":	"inet",
-   "method":	"static",,
-   "addr":	"10.0.1.101",
-   "mask":	"8",
+   "if":  "vioif0",
+   "type": "inet",
+   "method": "static",,
+   "addr": "10.0.1.101",
+   "mask": "8",
  },'
 else
 NETCFG='
- 	"net" :  {,
- 		"if":		"xenif0",
- 		"cloner":	"true",
- 		"type":	"inet",
- 		"method":	"dhcp",
- 	},'
+  "net" :  {,
+   "if":  "xenif0",
+   "cloner": "true",
+   "type": "inet",
+   "method": "dhcp",
+  },'
 fi
 
 JSONCONFIG='{"cmdline":"program.bin",
 "blk" : {
-  "source":	"dev",
-  "path":	"/dev/ld1a",
-  "fstype":	"blk",
-  "mountpoint":	"/etc",
+  "source": "dev",
+  "path": "/dev/ld1a",
+  "fstype": "blk",
+  "mountpoint": "/etc",
 },
 "blk" : {
-  "source":	"dev",
-  "path":	"/dev/ld1b",
-  "fstype":	"blk",
-  "mountpoint":	"/data",
+  "source": "dev",
+  "path": "/dev/ld1b",
+  "fstype": "blk",
+  "mountpoint": "/data",
 },'$NETCFG'
 }'
 
@@ -181,19 +206,20 @@ ${SUDO} cat  > ${BOOTMOUNTPOINT}/boot/grub/grub.conf <<EOF
 default=0
 fallback=1
 timeout=1
-hiddenmenu
 
 title Unik
 root (hd0,0)
 kernel /boot/program.bin $JSONCONFIG
 EOF
 
+${SUDO} cp ${BOOTMOUNTPOINT}/boot/grub/grub.conf  ${BOOTMOUNTPOINT}/boot/grub/menu.lst
 
 # hd0,0 is for grub1; grub2 will ignore this anyway..
 ${SUDO} cat > ${BOOTMOUNTPOINT}/boot/grub/device.map <<EOF
-(hd0)	${GRUB_DEVICE}
-(hd1)	${DEVICE}
+(hd0) ${GRUB_DEVICE}
+(hd1) ${DEVICE}
 EOF
+
 
 # install grub!
 echo GRUB_DEVICE = $GRUB_DEVICE
@@ -218,6 +244,7 @@ ${SUDO} losetup -d $GRUB_DEVICE
 ${SUDO}  dmsetup remove hda
 
 ${SUDO} losetup -d $DEVICE
+${SUDO} losetup -d $GRUB_DEVICE_LOOP
 set -e
 
 echo Image ready!
