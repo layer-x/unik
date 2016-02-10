@@ -10,7 +10,9 @@ RUN mkdir /tmp/build/
 COPY mainstub.c gomaincaller.go /tmp/build/
 
 # RUN LIKE THIS: docker run --rm -v /path/to/code:/opt/code uvgroovy/rump-xen-go
-CMD sudo cp /tmp/build/* . && \
-    sudo -E CC=x86_64-rumprun-netbsd-gcc CGO_ENABLED=1 GOOS=rumprun /usr/local/go/bin/go build -buildmode=c-archive -v -a -x $(find . -name "*.go") && \
-    sudo -E RUMPRUN_STUBLINK=succeed x86_64-rumprun-netbsd-gcc -g -o program mainstub.c $(find . -name "*.a") && sudo -E rm -f /opt/code/mainstub.c /opt/code/gomaincaller.go &&\
-    sudo -E rumprun-bake xen_pci program.bin program
+CMD set -x && \
+    cp /tmp/build/* . && \
+    CC=x86_64-rumprun-netbsd-gcc CGO_ENABLED=1 GOOS=rumprun /usr/local/go/bin/go build -buildmode=c-archive -v -a -x $(find . -name "*.go") && \
+    RUMPRUN_STUBLINK=succeed x86_64-rumprun-netbsd-gcc -g -o program mainstub.c $(find . -name "*.a") && \
+    rm -f /opt/code/mainstub.c /opt/code/gomaincaller.go && \
+    rumprun-bake xen_pv program.bin program
