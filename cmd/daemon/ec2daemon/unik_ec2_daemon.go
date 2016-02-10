@@ -163,24 +163,30 @@ func (d *UnikEc2Daemon) registerHandlers() {
 			fullTagString := req.URL.Query().Get("tags")
 			tagPairs := strings.Split(fullTagString, ",")
 			tags := make(map[string]string)
-			tagCount := 0
-			maxTags := 5
+
 			for _, tagPair := range tagPairs {
 				splitTag := strings.Split(tagPair, "=")
 				if len(splitTag) != 2 {
 					lxlog.Warnf(logrus.Fields{"tagPair": tagPair}, "was given a tag string with an invalid format, ignoring")
 					continue
 				}
-				if tagCount < maxTags {
-					tagCount += 1
-					tags[splitTag[0]] = splitTag[1]
-				} else {
-					lxlog.Warnf(logrus.Fields{"tag_string": fullTagString}, "given too many tags, only used the first 5")
-					break
-				}
+				tags[splitTag[0]] = splitTag[1]
 			}
 
-			instanceIds, err := ec2api.RunApp(unikernelName, instanceName, int64(instances), tags)
+			fullEnvString := req.URL.Query().Get("env")
+			envPairs := strings.Split(fullEnvString, ",")
+			env := make(map[string]string)
+
+			for _, envPair := range envPairs {
+				splitEnv := strings.Split(envPair, "=")
+				if len(splitEnv) != 2 {
+					lxlog.Warnf(logrus.Fields{"envPair": envPair}, "was given a env string with an invalid format, ignoring")
+					continue
+				}
+				env[splitEnv[0]] = splitEnv[1]
+			}
+
+			instanceIds, err := ec2api.RunApp(unikernelName, instanceName, int64(instances), tags, env)
 			if err != nil {
 				return nil, err
 			}
@@ -249,7 +255,6 @@ func (d *UnikEc2Daemon) registerHandlers() {
 			}
 			if strings.ToLower(follow) == "true" {
 				output := ioutils.NewWriteFlusher(res)
-				defer output.Close()
 
 				err := ec2api.StreamLogs(unikInstanceId, output)
 				if err != nil {

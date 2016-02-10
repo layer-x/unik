@@ -70,7 +70,7 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 			lxmartini.Respond(res, err)
 			return
 		}
-		instanceIds, err := ec2api.RunApp(unikernelName, instanceName, 1, nil)
+		instanceIds, err := ec2api.RunApp(unikernelName, instanceName, 1, nil, nil)
 		if err != nil {
 			lxlog.Errorf(logrus.Fields{"err": err, "unikernel_name": unikernelName}, "launching 1 instances of unikernel "+unikernelName+" for docker")
 			lxmartini.Respond(res, err)

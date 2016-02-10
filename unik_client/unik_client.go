@@ -45,14 +45,20 @@ func (c *UnikClient) DeleteUnikInstance(instanceId string) error {
 	return nil
 }
 
-func (c *UnikClient) RunUnikernel(unikernelName, instanceName string, instances int, tags map[string]string) error {
+func (c *UnikClient) RunUnikernel(unikernelName, instanceName string, instances int, tags map[string]string, env map[string]string) error {
 	tagString := ""
 	for key, val := range tags {
 		tagString += key+"="+val+","
 	}
 	tagString = strings.TrimSuffix(tagString, ",")
 
-	path := "/unikernels/" + unikernelName + "/run" + fmt.Sprintf("?instances=%v&name=%s&tags=%s", instances, instanceName, tagString)
+	envString := ""
+	for key, val := range env {
+		envString += key+"="+val+","
+	}
+	envString = strings.TrimSuffix(envString, ",")
+
+	path := "/unikernels/" + unikernelName + "/run" + fmt.Sprintf("?instances=%v&name=%s&tags=%s&env=%s", instances, instanceName, tagString, envString)
 	resp, body, err := lxhttpclient.Post(c.url, path, nil, nil)
 	if err != nil {
 		return lxerrors.New("failed running unikernel", err)
