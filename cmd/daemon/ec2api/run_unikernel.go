@@ -38,7 +38,7 @@ func RunApp(unikernelName, instanceName string, instances int64, tags map[string
 			lxlog.Debugf(logrus.Fields{"unikinstancedata": string(data), "encoded_bytes": len(encodedData)}, "metadata for running unikinstance")
 			startInstancesInput := &ec2.RunInstancesInput{
 				ImageId:  aws.String(unikernel.AMI),
-				InstanceType: aws.String("t1.micro"),
+				InstanceType: aws.String("m1.small"),
 				MaxCount: aws.Int64(instances),
 				MinCount: aws.Int64(instances),
 				UserData: aws.String(encodedData),

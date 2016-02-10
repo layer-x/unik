@@ -46,10 +46,11 @@ func GetUnikInstanceMetadata(ec2Client *ec2.EC2, instance *ec2.Instance) (*types
 	if err != nil {
 		return nil, lxerrors.New("could not unmarshal userdata string "+string(data)+"to unikinstance data", err)
 	}
-	var unikInstance *types.UnikInstance
-	unikInstance.UnikInstanceData = unikInstanceData
-	unikInstance.UnikInstanceID = unikInstanceId
-	unikInstance.AmazonID = *instance.InstanceId
+	unikInstance := &types.UnikInstance{
+		UnikInstanceData: unikInstanceData,
+		UnikInstanceID: unikInstanceId,
+		AmazonID: *instance.InstanceId,
+	}
 	if instance.PrivateIpAddress != nil {
 		unikInstance.PrivateIp = *instance.PrivateIpAddress
 	}

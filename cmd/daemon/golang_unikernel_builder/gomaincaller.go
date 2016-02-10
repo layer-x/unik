@@ -1,7 +1,7 @@
 package main
 
-import "C"
 import (
+	"C"
 	"net/http"
 	"io/ioutil"
 	"encoding/json"
