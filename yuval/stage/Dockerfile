@@ -32,6 +32,7 @@ RUN git clone https://github.com/DanielO/fuse-ufs2 && \
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --force-yes parted grub kpartx refit
 
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --force-yes jq
 
 # stager takes a xen binary and volums, and creates a AWS ami
 COPY stage.sh    /stager/stage.sh
