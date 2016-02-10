@@ -24,7 +24,6 @@ func main() {
 	var runInstances int
 	var unikernelName string
 	var instanceName string
-	var tags string
 	app.Commands = []cli.Command{
 		{
 			Name:      "delete",
@@ -220,11 +219,15 @@ func main() {
 					Value:       "",
 					Destination: &instanceName,
 				},
-				cli.StringFlag{
+				cli.StringSliceFlag{
 					Name:        "tags, t",
 					Usage:       "-t \"key1=value1,key2=value2...\"",
-					Value:       "",
-					Destination: &tags,
+					Value:       &cli.StringSlice{},
+				},
+				cli.StringSliceFlag{
+					Name:        "env, e",
+					Usage:       "-e \"key1=value1 -e \"key2=value2\"...\"",
+					Value:       &cli.StringSlice{},
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -245,7 +248,9 @@ func main() {
 				if runInstances < 1 {
 					runInstances = 1
 				}
-				err = commands.Run(config, unikernelName, instanceName, runInstances, tags, verbose)
+				tags := c.StringSlice("tags")
+				env := c.StringSlice("env")
+				err = commands.Run(config, unikernelName, instanceName, runInstances, tags, env, verbose)
 				if err != nil {
 					println("unik run failed!")
 					println("error: " + err.Error())

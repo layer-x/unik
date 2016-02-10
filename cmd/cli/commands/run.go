@@ -7,12 +7,25 @@ import (
 	"github.com/layer-x/layerx-commons/lxhttpclient"
 	"github.com/layer-x/unik/types"
 	"net/http"
+	"strings"
 )
 
-func Run(config types.UnikConfig, unikernelName, instanceName string, instances int, tagString string, verbose bool) error {
+func Run(config types.UnikConfig, unikernelName, instanceName string, instances int, tags, env []string, verbose bool) error {
 	fmt.Printf("Running %v instances of unikernel "+unikernelName+"\n", instances)
 	url := config.Url
-	path := "/unikernels/"+unikernelName+"/run"+fmt.Sprintf("?instances=%v&name=%s&tags=%s&verbose=%v", instances, instanceName, tagString, verbose)
+	var tagString string
+	var envString string
+	for _, tag := range tags {
+		tagString += tag+","
+	}
+	tagString = strings.TrimSuffix(tagString, ",")
+
+	for _, envVar := range env {
+		envString += envVar+","
+	}
+	envString = strings.TrimSuffix(envString, ",")
+
+	path := "/unikernels/"+unikernelName+"/run"+fmt.Sprintf("?instances=%v&name=%s&tags=%s&env=%s&verbose=%v", instances, instanceName, tagString, envString, verbose)
 	if !verbose {
 		resp, body, err := lxhttpclient.Post(url, path, nil, nil)
 		if err != nil {
