@@ -136,15 +136,15 @@ NETCFG='
    "method": "static",
    "addr": "10.0.1.101",
    "mask": "8",
- },'
+ }'
 else
 NETCFG='
-  "net" :  {,
+  "net" :  {
    "if":  "xenif0",
    "cloner": "true",
    "type": "inet",
    "method": "dhcp",
-  },'
+  }'
 fi
 
 
@@ -161,22 +161,25 @@ BLKCFG='
   "path": "/dev/ld1b",
   "fstype": "blk",
   "mountpoint": "/data",
-},'
+}'
 else
   BLKCFG='
   "blk" : {
     "source": "dev",
-    "path": "/dev/sd1a",
+    "path": "/dev/ld1a",
     "fstype": "blk",
-    "mountpoint": "/etc",
+    "mountpoint": "/etc"
   },
   "blk" : {
     "source": "dev",
-    "path": "/dev/sd1b",
+    "path": "/dev/ld1b",
     "fstype": "blk",
-    "mountpoint": "/data",
-  },'
+    "mountpoint": "/data"
+  }'
 fi
+
+BLKCFG=''
+
 JSONCONFIG='{"cmdline":"program.bin",
 '$NETCFG',
 '$BLKCFG',
@@ -263,7 +266,7 @@ fi
 THISREGION=`wget -q -O - http://instance-data/latest/dynamic/instance-identity/document | awk '/region/ {gsub(/[",]/, "", $3); print $3}'`
 
 if [ "$AWS" = "true" ]; then
-  if [ "$THISREGION" = ""]; then
+  if [ "$THISREGION" = "" ]; then
     exit 1
   fi
 elif [ "$AWS" = "" ]; then
@@ -311,16 +314,11 @@ done
 
 # copy all the stuff we've done
 dd if=$IMAGE_FILE of=$DATA_DEVICE bs=512
+dd if=$GRUB_FILE  of=$BOOT_DEVICE bs=512
 
 if [ "$VTYPE" = "paravirtual" ]; then
-
-  create_boot "(hd0)"
-  umount ${BOOTMOUNTPOINT}
-
   case "${THISREGION}" in ap-northeast-1) KERNELID=aki-176bf516; ;; ap-southeast-1) KERNELID=aki-503e7402; ;; ap-southeast-2) KERNELID=aki-c362fff9; ;; eu-central-1) KERNELID=aki-184c7a05; ;; eu-west-1) KERNELID=aki-52a34525; ;; sa-east-1) KERNELID=aki-5553f448; ;; us-east-1) KERNELID=aki-919dcaf8; ;; us-gov-west-1) KERNELID=aki-1de98d3e; ;; us-west-1) KERNELID=aki-880531cd; ;; us-west-2) KERNELID=aki-fc8f11cc; ;; *) echo $"Error selecting pvgrub kernel for region"; exit 1; esac
   KERNELARG=" --kernel ${KERNELID} "
-else
-  dd if=$GRUB_FILE  of=$BOOT_DEVICE bs=512
 fi
 
 # detach!
@@ -356,8 +354,8 @@ AMIID=`ec2-register --name "${NAME}" \
 --description "${NAME}" \
 -a x86_64 \
 -s ${BOOT_SNAPSHOTID} \
---root-device-name /dev/xvda \
--b "/dev/xvdb=${DATA_SNAPSHOTID}" \
+--root-device-name /dev/sda \
+-b "/dev/sdb=${DATA_SNAPSHOTID}" \
 --virtualization-type $VTYPE $KERNELARG \
 | awk '{print $2}'`
 
@@ -366,7 +364,7 @@ AMIID=`ec2-register --name "${NAME}" \
 ##########################################################################################
 
 echo You can now start this instance via:
-echo "INSTID=\$(ec2-run-instances --instance-type t2.micro ${AMIID}|head -n 2|tail -n 1|awk '{print \$2}')"
+echo "INSTID=\$(ec2-run-instances --instance-type m1.small ${AMIID}|head -n 2|tail -n 1|awk '{print \$2}')"
 # INSTID=$(ec2-run-instances --instance-type t2.micro ${AMIID} | head -n 2|tail -n 1 |awk '{print $2}')
 echo ""
 echo Check output with
