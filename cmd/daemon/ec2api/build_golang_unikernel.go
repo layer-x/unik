@@ -62,7 +62,11 @@ func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, han
 	lxlog.Infof(logrus.Fields{"bytes": bytesWritten}, "file written to disk")
 	err = lxfileutils.Untar(savedTar.Name(), unikernelPath)
 	if err != nil {
-		return lxerrors.New("untarring saved tar", err)
+		lxlog.Warnf(logrus.Fields{"saved tar name":savedTar.Name()}, "failed to untar using gzip, trying again without")
+		err = lxfileutils.UntarNogzip(savedTar.Name(), unikernelPath)
+		if err != nil {
+			return lxerrors.New("untarring saved tar", err)
+		}
 	}
 	lxlog.Infof(logrus.Fields{"path": unikernelPath, "unikernel_name": unikernelName}, "unikernel tarball untarred")
 	buildUnikernelCommand := exec.Command("docker", "run",
