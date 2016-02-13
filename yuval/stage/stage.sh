@@ -164,21 +164,18 @@ BLKCFG='
 }'
 else
   BLKCFG='
-  "blk" : {
-    "source": "dev",
-    "path": "/dev/ld1a",
-    "fstype": "blk",
-    "mountpoint": "/etc"
-  },
-  "blk" : {
-    "source": "dev",
-    "path": "/dev/ld1b",
-    "fstype": "blk",
-    "mountpoint": "/data"
-  }'
+   "blk" : {
+      "source": "etfs",
+      "path": "sda",
+      "fstype": "blk",
+    },
+    "blk" : {
+        "source": "etfs",
+        "path": "sdb",
+        "fstype": "blk",
+    }
+    '
 fi
-
-BLKCFG=''
 
 JSONCONFIG='{"cmdline":"program.bin",
 '$NETCFG',
@@ -278,10 +275,12 @@ elif [ "$AWS" = "" ]; then
   fi
 fi
 
-VTYPE="hvm"
 # unfortunatly wasnt able to get network on an HVM instance, not even when
 # i added the ixgbe intel driver to rump run and used amazon m4 instance (that should have inhanced networking)
+
+VTYPE="hvm"
 VTYPE="paravirtual"
+
 
 THISINSTANCEID=`wget -q -O - http://instance-data/latest/meta-data/instance-id`
 THISAVAILABILITYZONE=`wget -q -O - http://instance-data/latest/dynamic/instance-identity/document | awk '/availabilityZone/ {gsub(/[",]/, "", $3); print $3}'`
@@ -318,7 +317,16 @@ dd if=$GRUB_FILE  of=$BOOT_DEVICE bs=512
 
 if [ "$VTYPE" = "paravirtual" ]; then
   case "${THISREGION}" in ap-northeast-1) KERNELID=aki-176bf516; ;; ap-southeast-1) KERNELID=aki-503e7402; ;; ap-southeast-2) KERNELID=aki-c362fff9; ;; eu-central-1) KERNELID=aki-184c7a05; ;; eu-west-1) KERNELID=aki-52a34525; ;; sa-east-1) KERNELID=aki-5553f448; ;; us-east-1) KERNELID=aki-919dcaf8; ;; us-gov-west-1) KERNELID=aki-1de98d3e; ;; us-west-1) KERNELID=aki-880531cd; ;; us-west-2) KERNELID=aki-fc8f11cc; ;; *) echo $"Error selecting pvgrub kernel for region"; exit 1; esac
-  KERNELARG=" --kernel ${KERNELID} "
+  KERNELARG="--kernel ${KERNELID}"
+  ROOTDEVNAME="/dev/sda"
+  DATADEVNAME="/dev/sdb"
+  INSTTYPE=m1.small
+
+else
+  ROOTDEVNAME="/dev/xvda"
+  DATADEVNAME="/dev/xvdb"
+  INSTTYPE=m4.large
+
 fi
 
 # detach!
@@ -348,23 +356,23 @@ done
 ## HAVING TROUBLE? COULD IT BE [--root-device-name name]
 
 
+
 # take name from command line or use default unique name to avoid registration clashes
 NAME=${1:-unikernel-`date +"%d-%b-%Y-%s"`}
 AMIID=`ec2-register --name "${NAME}" \
 --description "${NAME}" \
 -a x86_64 \
 -s ${BOOT_SNAPSHOTID} \
---root-device-name /dev/sda \
--b "/dev/sdb=${DATA_SNAPSHOTID}" \
+--root-device-name $ROOTDEVNAME \
+-b "$DATADEVNAME=${DATA_SNAPSHOTID}" \
 --virtualization-type $VTYPE $KERNELARG \
 | awk '{print $2}'`
 
 ##########################################################################################
 ###### finish
 ##########################################################################################
-
 echo You can now start this instance via:
-echo "INSTID=\$(ec2-run-instances --instance-type m1.small ${AMIID}|head -n 2|tail -n 1|awk '{print \$2}')"
+echo "INSTID=\$(ec2-run-instances --instance-type $INSTTYPE ${AMIID}|head -n 2|tail -n 1|awk '{print \$2}')"
 # INSTID=$(ec2-run-instances --instance-type t2.micro ${AMIID} | head -n 2|tail -n 1 |awk '{print $2}')
 echo ""
 echo Check output with
