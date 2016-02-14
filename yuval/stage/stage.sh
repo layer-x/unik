@@ -173,10 +173,23 @@ else
         "source": "etfs",
         "path": "sdb",
         "fstype": "blk",
+    },
+    "blk" : {
+        "source": "dev",
+        "path": "/dev/sdba",
+        "fstype": "blk",
+        "mountpoint": "/data",
     }
     '
 fi
-
+BLKCFG='
+  "blk" : {
+      "source": "etfs",
+      "path": "sdb1",
+      "fstype": "blk",
+      "mountpoint": "/data",
+  }
+  '
 JSONCONFIG='{"cmdline":"program.bin",
 '$NETCFG',
 '$BLKCFG',
@@ -312,15 +325,26 @@ while [ ! -e $DATA_DEVICE ]; do
 done
 
 # copy all the stuff we've done
-dd if=$IMAGE_FILE of=$DATA_DEVICE bs=512
-dd if=$GRUB_FILE  of=$BOOT_DEVICE bs=512
+# dd if=$IMAGE_FILE of=$DATA_DEVICE bs=512
+# dd if=$GRUB_FILE  of=$BOOT_DEVICE bs=512
 
 if [ "$VTYPE" = "paravirtual" ]; then
   case "${THISREGION}" in ap-northeast-1) KERNELID=aki-176bf516; ;; ap-southeast-1) KERNELID=aki-503e7402; ;; ap-southeast-2) KERNELID=aki-c362fff9; ;; eu-central-1) KERNELID=aki-184c7a05; ;; eu-west-1) KERNELID=aki-52a34525; ;; sa-east-1) KERNELID=aki-5553f448; ;; us-east-1) KERNELID=aki-919dcaf8; ;; us-gov-west-1) KERNELID=aki-1de98d3e; ;; us-west-1) KERNELID=aki-880531cd; ;; us-west-2) KERNELID=aki-fc8f11cc; ;; *) echo $"Error selecting pvgrub kernel for region"; exit 1; esac
   KERNELARG="--kernel ${KERNELID}"
-  ROOTDEVNAME="/dev/sda"
-  DATADEVNAME="/dev/sdb"
+  ROOTDEVNAME="/dev/sda1"
+  DATADEVNAME="/dev/sdb1"
   INSTTYPE=m1.small
+
+  create_boot "(hd0)"
+  ${SUDO} umount ${BOOTMOUNTPOINT}
+
+  ${SUDO} mkfs  -I 128 -t ext2 ${DATA_DEVICE}
+
+  ${SUDO} mount ${DATA_DEVICE} ${VOL1MOUNTPOINT}
+
+  ${SUDO} cp -r ${VOL1FILE_ROOT}/* ${VOL1MOUNTPOINT}
+
+  ${SUDO} umount ${VOL1MOUNTPOINT}
 
 else
   ROOTDEVNAME="/dev/xvda"
