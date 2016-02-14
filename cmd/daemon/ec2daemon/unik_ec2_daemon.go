@@ -140,7 +140,7 @@ func (d *UnikEc2Daemon) registerHandlers() {
 					return unikernel, nil
 				}
 			}
-			return nil, lxerrors.New("cannot locate uploaded unikernel "+unikernelName, nil)
+				return "unikernel created", nil
 		})
 	})
 	d.server.Post("/unikernels/:unikernel_name/run", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
@@ -164,6 +164,15 @@ func (d *UnikEc2Daemon) registerHandlers() {
 			tagPairs := strings.Split(fullTagString, ",")
 			tags := make(map[string]string)
 
+			envDelimiter := req.URL.Query().Get("useDelimiter")
+			if envDelimiter == "" {
+				envDelimiter = ","
+			}
+			envPairDelimiter := req.URL.Query().Get("usePairDelimiter")
+			if envPairDelimiter == "" {
+				envPairDelimiter = "="
+			}
+
 			for _, tagPair := range tagPairs {
 				splitTag := strings.Split(tagPair, "=")
 				if len(splitTag) != 2 {
@@ -174,11 +183,11 @@ func (d *UnikEc2Daemon) registerHandlers() {
 			}
 
 			fullEnvString := req.URL.Query().Get("env")
-			envPairs := strings.Split(fullEnvString, ",")
+			envPairs := strings.Split(fullEnvString, envDelimiter)
 			env := make(map[string]string)
 
 			for _, envPair := range envPairs {
-				splitEnv := strings.Split(envPair, "=")
+				splitEnv := strings.Split(envPair, envPairDelimiter)
 				if len(splitEnv) != 2 {
 					lxlog.Warnf(logrus.Fields{"envPair": envPair}, "was given a env string with an invalid format, ignoring")
 					continue
