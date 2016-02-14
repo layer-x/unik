@@ -16,10 +16,13 @@ const UNIKERNEL_ID = "UNIKERNEL_ID"
 
 func GetUnikInstanceMetadata(ec2Client *ec2.EC2, instance *ec2.Instance) (*types.UnikInstance, error) {
 	var unikInstanceId string
+	var instanceName string
 	for _, tag := range instance.Tags {
 		if *tag.Key == UNIK_INSTANCE_ID {
 			unikInstanceId = *tag.Value
-			break
+		}
+		if *tag.Key == "Name" {
+			instanceName = *tag.Value
 		}
 	}
 	if unikInstanceId == "" {
@@ -46,10 +49,14 @@ func GetUnikInstanceMetadata(ec2Client *ec2.EC2, instance *ec2.Instance) (*types
 	if err != nil {
 		return nil, lxerrors.New("could not unmarshal userdata string "+string(data)+"to unikinstance data", err)
 	}
+	if instanceName == "" {
+		instanceName = unikInstanceId
+	}
 	unikInstance := &types.UnikInstance{
 		UnikInstanceData: unikInstanceData,
 		UnikInstanceID: unikInstanceId,
 		AmazonID: *instance.InstanceId,
+		UnikInstanceName: instanceName,
 	}
 	if instance.PrivateIpAddress != nil {
 		unikInstance.PrivateIp = *instance.PrivateIpAddress

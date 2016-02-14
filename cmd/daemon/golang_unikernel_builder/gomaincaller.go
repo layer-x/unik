@@ -33,7 +33,7 @@ func gomaincaller() {
 }
 
 //make sure this remains the same as defined in
-//github.com/layer-x/unik/cmd/daemon/ec2api/run_unikernel.go
+//github.com/layer-x/unik/cmd/daemon/ec2api/run_unik_instance.go
 type UnikInstanceData struct {
 	Tags			 map[string]string `json:"Tags"`
 	Env				 map[string]string `json:"Env"`

@@ -195,7 +195,7 @@ func (d *UnikEc2Daemon) registerHandlers() {
 				env[splitEnv[0]] = splitEnv[1]
 			}
 
-			instanceIds, err := ec2api.RunApp(unikernelName, instanceName, int64(instances), tags, env)
+			instanceIds, err := ec2api.RunUnikInstance(unikernelName, instanceName, int64(instances), tags, env)
 			if err != nil {
 				return nil, err
 			}
@@ -243,7 +243,7 @@ func (d *UnikEc2Daemon) registerHandlers() {
 			if strings.ToLower(forceStr) == "true" {
 				force = true
 			}
-			err := ec2api.DeleteApp(unikernelName, force)
+			err := ec2api.DeleteUnikernelByName(unikernelName, force)
 			if err != nil {
 				lxlog.Errorf(logrus.Fields{"err": err}, "could not delete unikernel "+unikernelName)
 				return nil, err

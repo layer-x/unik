@@ -14,7 +14,7 @@ import (
 	"encoding/base64"
 )
 
-func RunApp(unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {
+func RunUnikInstance(unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {
 	unikernels, err := ListUnikernels()
 	instanceIds := []string{}
 	if err != nil {

@@ -16,7 +16,7 @@ import (
 )
 
 func GetLogs(unikInstanceId string) (string, error) {
-	unikInstance, err := GetUnikInstanceByPrefix(unikInstanceId)
+	unikInstance, err := GetUnikInstanceByPrefixOrName(unikInstanceId)
 	if err != nil {
 		return "", lxerrors.New("failed to retrieve unik instance", err)
 	}

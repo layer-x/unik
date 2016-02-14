@@ -70,7 +70,7 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 			lxmartini.Respond(res, err)
 			return
 		}
-		instanceIds, err := ec2api.RunApp(unikernelName, instanceName, 1, nil, nil)
+		instanceIds, err := ec2api.RunUnikInstance(unikernelName, instanceName, 1, nil, nil)
 		if err != nil {
 			lxlog.Errorf(logrus.Fields{"err": err, "unikernel_name": unikernelName}, "launching 1 instances of unikernel "+unikernelName+" for docker")
 			lxmartini.Respond(res, err)
@@ -115,7 +115,7 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 	})
 	m.Get("/v1.20/containers/:instance_id/json", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
 		unikInstanceId := params["instance_id"]
-		unikInstance, err := ec2api.GetUnikInstanceByPrefix(unikInstanceId)
+		unikInstance, err := ec2api.GetUnikInstanceByPrefixOrName(unikInstanceId)
 		if err != nil {
 			lxlog.Errorf(logrus.Fields{"err": err, "unikInstanceId": unikInstanceId}, "could not get unik instance")
 			lxmartini.Respond(res, err)
