@@ -263,9 +263,14 @@ func (d *UnikEc2Daemon) registerHandlers() {
 				return nil, lxerrors.New("not a flusher", nil)
 			}
 			if strings.ToLower(follow) == "true" {
-				output := ioutils.NewWriteFlusher(res)
+				deleteOnDisconnectStr := req.URL.Query().Get("delete")
+				deleteOnDisconnect := false
+				if strings.ToLower(deleteOnDisconnectStr) == "true" {
+					deleteOnDisconnect = true
+				}
 
-				err := ec2api.StreamLogs(unikInstanceId, output)
+				output := ioutils.NewWriteFlusher(res)
+				err := ec2api.StreamLogs(unikInstanceId, output, deleteOnDisconnect)
 				if err != nil {
 					lxlog.Warnf(logrus.Fields{"err": err, "unikInstanceId": unikInstanceId}, "streaming logs stopped")
 					return nil, err
