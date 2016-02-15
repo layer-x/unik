@@ -14,7 +14,10 @@ import (
 	"strings"
 	"github.com/layer-x/layerx-commons/lxlog"
 	"github.com/Sirupsen/logrus"
+	"os"
 )
+
+var remoteAddr string
 
 func main() {
 	unikIpPtr := flag.String("ip", "", "unik ip")
@@ -31,7 +34,18 @@ func main() {
 	errc := make(chan error)
 	go monitorInstance(url, instanceName, errc)
 	go followLogs(url, instanceName, errc)
-
+	go func(){
+		WaitRemoteIp:
+		for {
+			if remoteAddr != "" {
+				lxlog.Infof(logrus.Fields{"ip": remoteAddr+":3000"}, "received public ip for instance")
+				listen("0.0.0.0:"+os.Getenv("PORT"), remoteAddr+":3000", errc)
+				break WaitRemoteIp
+			}
+			lxlog.Infof(logrus.Fields{"ip": remoteAddr+":3000"}, "waiting on remote ip")
+			time.Sleep(1000 * time.Millisecond)
+		}
+	}()
 	err = <-errc
 	lxlog.Fatalf(logrus.Fields{"error": err, "instanceName": instanceName, "url": url, "env": *envStrPtr}, "unk instance controller terminated!")
 }
@@ -76,6 +90,7 @@ func monitorInstance(url, instanceName string, errc chan error) {
 		strings.Contains(unikInstance.State, "stopped") {
 			errc <- lxerrors.New("instance " + instanceName + " is no longer running!", nil)
 		}
+		remoteAddr = unikInstance.PublicIp
 		time.Sleep(2000 * time.Millisecond)
 	}
 }
