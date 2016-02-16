@@ -20,6 +20,7 @@ func main() {
 	var forcePush bool
 	var forceRmu bool
 	var follow bool
+	var destroy bool
 	var verbose bool
 	var runInstances int
 	var unikernelName string
@@ -101,6 +102,11 @@ func main() {
 					Usage:       "Follow logs",
 					Destination: &follow,
 				},
+				cli.BoolFlag{
+					Name:        "destroy, d",
+					Usage:       "Destroy instance after disconnect (only works if follow is enabled)",
+					Destination: &destroy,
+				},
 				cli.StringFlag{
 					Name:        "name, n",
 					Usage:       "name=CUSTOM_INSTANCE_NAME",
@@ -123,7 +129,7 @@ func main() {
 					println("Try 'unik target UNIK_URL'")
 					os.Exit(-1)
 				}
-				err = commands.Logs(config, unikInstanceId, follow)
+				err = commands.Logs(config, unikInstanceId, follow, destroy)
 				if err != nil {
 					println("unik logs failed!")
 					println("error: " + err.Error())
