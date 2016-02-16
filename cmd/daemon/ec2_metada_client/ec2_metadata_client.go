@@ -37,7 +37,9 @@ func NewEC2Client() (*unikEc2Client, error) {
 		if err != nil {
 			return nil, lxerrors.New("getting region from ec2 metadata server", err)
 		}
-		ec2ClientSingleton = ec2.New(session.New(), &aws.Config{
+		session := session.New()
+		session.Config.WithMaxRetries(MAX_RETRIES)
+		ec2ClientSingleton = ec2.New(session, &aws.Config{
 			Region: aws.String(region),
 		})
 	}
@@ -51,8 +53,8 @@ func (c *unikEc2Client) TerminateInstances(input *ec2.TerminateInstancesInput) (
 	var retries uint
 	for {
 		output, err := c.ec2Client.TerminateInstances(input)
-		if err == nil {
-			return output, nil
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
 		}
 		time.Sleep((1 << retries) * time.Second)
 		retries++
@@ -66,8 +68,8 @@ func (c *unikEc2Client) DeregisterImage(input *ec2.DeregisterImageInput) (*ec2.D
 	var retries uint
 	for {
 		output, err := c.ec2Client.DeregisterImage(input)
-		if err == nil {
-			return output, nil
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
 		}
 		time.Sleep((1 << retries) * time.Second)
 		retries++
@@ -81,31 +83,53 @@ func (c *unikEc2Client) DescribeSnapshots(input *ec2.DescribeSnapshotsInput) (*e
 	var retries uint
 	for {
 		output, err := c.ec2Client.DescribeSnapshots(input)
-		if err == nil {
-			return output, nil
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
 		}
 		time.Sleep((1 << retries) * time.Second)
 		retries++
 		if retries > MAX_RETRIES {
 			return nil, err
-}
+		}
 	}
 }
 
 func (c *unikEc2Client) DeleteSnapshot(input *ec2.DeleteSnapshotInput) (*ec2.DeleteSnapshotOutput, error) {
-	return c.ec2Client.DeleteSnapshot(input)
+	var retries uint
+	for {
+		output, err := c.ec2Client.DeleteSnapshot(input)
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
+		}
+		time.Sleep((1 << retries) * time.Second)
+		retries++
+		if retries > MAX_RETRIES {
+			return nil, err
+		}
+	}
 }
 
 func (c *unikEc2Client) DeleteVolume(input *ec2.DeleteVolumeInput) (*ec2.DeleteVolumeOutput, error) {
-	return c.ec2Client.DeleteVolume(input)
+	var retries uint
+	for {
+		output, err := c.ec2Client.DeleteVolume(input)
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
+		}
+		time.Sleep((1 << retries) * time.Second)
+		retries++
+		if retries > MAX_RETRIES {
+			return nil, err
+		}
+	}
 }
 
 func (c *unikEc2Client) GetConsoleOutput(input *ec2.GetConsoleOutputInput) (*ec2.GetConsoleOutputOutput, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.GetConsoleOutput(input)
-		if err == nil {
-			return output, nil
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
 		}
 		time.Sleep((1 << retries) * time.Second)
 		retries++
@@ -119,8 +143,8 @@ func (c *unikEc2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*e
 	var retries uint
 	for {
 		output, err := c.ec2Client.DescribeInstances(input)
-		if err == nil {
-			return output, nil
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
 		}
 		time.Sleep((1 << retries) * time.Second)
 		retries++
@@ -134,8 +158,8 @@ func (c *unikEc2Client) DescribeImages(input *ec2.DescribeImagesInput) (*ec2.Des
 	var retries uint
 	for {
 		output, err := c.ec2Client.DescribeImages(input)
-		if err == nil {
-			return output, nil
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
 		}
 		time.Sleep((1 << retries) * time.Second)
 		retries++
@@ -149,8 +173,8 @@ func (c *unikEc2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reserva
 	var retries uint
 	for {
 		output, err := c.ec2Client.RunInstances(input)
-		if err == nil {
-			return output, nil
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
 		}
 		time.Sleep((1 << retries) * time.Second)
 		retries++
@@ -164,8 +188,8 @@ func (c *unikEc2Client) CreateTags(input *ec2.CreateTagsInput) (*ec2.CreateTagsO
 	var retries uint
 	for {
 		output, err := c.ec2Client.CreateTags(input)
-		if err == nil {
-			return output, nil
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
 		}
 		time.Sleep((1 << retries) * time.Second)
 		retries++
@@ -180,8 +204,8 @@ func (c *unikEc2Client) DescribeInstanceAttribute(input *ec2.DescribeInstanceAtt
 	var retries uint
 	for {
 		output, err := c.ec2Client.DescribeInstanceAttribute(input)
-		if err == nil {
-			return output, nil
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
 		}
 		time.Sleep((1 << retries) * time.Second)
 		retries++
