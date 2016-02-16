@@ -9,12 +9,17 @@ import (
 "encoding/json"
 "github.com/Sirupsen/logrus"
 "github.com/layer-x/layerx-commons/lxlog"
+	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
 )
 
 const UNIK_INSTANCE_ID = "UNIK_INSTANCE_ID"
 const UNIKERNEL_ID = "UNIKERNEL_ID"
 
-func GetUnikInstanceMetadata(ec2Client *ec2.EC2, instance *ec2.Instance) (*types.UnikInstance, error) {
+func GetUnikInstanceMetadata(instance *ec2.Instance) (*types.UnikInstance, error) {
+	ec2Client, err := ec2_metada_client.NewEC2Client()
+	if err != nil {
+		return nil, lxerrors.New("could not start ec2 client session", err)
+	}
 	var unikInstanceId string
 	var instanceName string
 	for _, tag := range instance.Tags {
