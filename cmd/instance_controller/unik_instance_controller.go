@@ -26,21 +26,29 @@ func main() {
 	envDelimiterPtr := flag.String("envDelimiter", "", "split env pairs")
 	envPairDelimiterPtr := flag.String("envPairDelimiter", "", "split env key and env val")
 	flag.Parse()
+	fmt.Printf("environ: %v\n", os.Environ())
+	port := os.Getenv("PORT")
+	if port == "" {
+		panic("must be given a port!")
+	}
 	url := *unikIpPtr
 	instanceName, err := bootInstance(url, *unikernelNamePtr, *envStrPtr, *envDelimiterPtr, *envPairDelimiterPtr)
 	if err != nil {
 		panic(err)
 	}
 	errc := make(chan error)
+
+	lxlog.Infof(logrus.Fields{"unik_ip": url, "port": port},"instance controller initialized with port "+port)
+
 	go monitorInstance(url, instanceName, errc)
 	go followLogs(url, instanceName, errc)
 	go func(){
-		WaitRemoteIp:
 		for {
 			if remoteAddr != "" {
-				lxlog.Infof(logrus.Fields{"ip": remoteAddr+":3000"}, "received public ip for instance")
-				listen("0.0.0.0:"+os.Getenv("PORT"), remoteAddr+":3000", errc)
-				break WaitRemoteIp
+				lxlog.Infof(logrus.Fields{"ip": remoteAddr+":3000", "port": port}, "received public ip for instance")
+				startRedirectServer(port, remoteAddr+":3000", errc)
+				lxlog.Infof(logrus.Fields{"ip": remoteAddr+":3000", "port": port}, "started!")
+				break
 			}
 			lxlog.Infof(logrus.Fields{"ip": remoteAddr+":3000"}, "waiting on remote ip")
 			time.Sleep(1000 * time.Millisecond)
