@@ -199,11 +199,70 @@ func (c *unikEc2Client) CreateTags(input *ec2.CreateTagsInput) (*ec2.CreateTagsO
 	}
 }
 
-
 func (c *unikEc2Client) DescribeInstanceAttribute(input *ec2.DescribeInstanceAttributeInput) (*ec2.DescribeInstanceAttributeOutput, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.DescribeInstanceAttribute(input)
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
+		}
+		time.Sleep((1 << retries) * time.Second)
+		retries++
+		if retries > MAX_RETRIES {
+			return nil, err
+		}
+	}
+}
+
+func (c *unikEc2Client) CreateVolume(input *ec2.CreateVolumeInput) (*ec2.Volume, error) {
+	var retries uint
+	for {
+		output, err := c.ec2Client.CreateVolume(input)
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
+		}
+		time.Sleep((1 << retries) * time.Second)
+		retries++
+		if retries > MAX_RETRIES {
+			return nil, err
+		}
+	}
+}
+
+func (c *unikEc2Client) DescribeVolumes(input *ec2.DescribeVolumesInput) (*ec2.DescribeVolumesOutput, error) {
+	var retries uint
+	for {
+		output, err := c.ec2Client.DescribeVolumes(input)
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
+		}
+		time.Sleep((1 << retries) * time.Second)
+		retries++
+		if retries > MAX_RETRIES {
+			return nil, err
+		}
+	}
+}
+
+func (c *unikEc2Client) AttachVolume(input *ec2.AttachVolumeInput) (*ec2.VolumeAttachment, error) {
+	var retries uint
+	for {
+		output, err := c.ec2Client.AttachVolume(input)
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
+		}
+		time.Sleep((1 << retries) * time.Second)
+		retries++
+		if retries > MAX_RETRIES {
+			return nil, err
+		}
+	}
+}
+
+func (c *unikEc2Client) DetachVolume(input *ec2.DetachVolumeInput) (*ec2.VolumeAttachment, error) {
+	var retries uint
+	for {
+		output, err := c.ec2Client.DetachVolume(input)
 		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
 			return output, err
 		}

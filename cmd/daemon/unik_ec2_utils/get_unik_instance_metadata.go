@@ -3,12 +3,12 @@ package unik_ec2_utils
 import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/unik/types"
-	"github.com/layer-x/unik/Godeps/_workspace/src/github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"encoding/base64"
-"encoding/json"
-"github.com/Sirupsen/logrus"
-"github.com/layer-x/layerx-commons/lxlog"
+	"encoding/json"
+	"github.com/Sirupsen/logrus"
+	"github.com/layer-x/layerx-commons/lxlog"
 	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
 )
 
@@ -39,11 +39,11 @@ func GetUnikInstanceMetadata(instance *ec2.Instance) (*types.UnikInstance, error
 	}
 	describeUserDataOutput, err := ec2Client.DescribeInstanceAttribute(describeUserDataInput)
 	if err != nil {
-		return nil, lxerrors.New("could not get userdata for instance "+*instance.InstanceId, err)
+		return nil, lxerrors.New("could not get userdata for instance " + *instance.InstanceId, err)
 	}
 	lxlog.Debugf(logrus.Fields{"describe_userdata_output": describeUserDataOutput}, "ec2api: describing userdata")
 	if describeUserDataOutput.UserData == nil {
-		return nil, lxerrors.New("userdata was nil for instance "+unikInstanceId, nil)
+		return nil, lxerrors.New("userdata was nil for instance " + unikInstanceId, nil)
 	}
 	data, err := base64.StdEncoding.DecodeString(*describeUserDataOutput.UserData.Value)
 	if err != nil {
@@ -52,7 +52,7 @@ func GetUnikInstanceMetadata(instance *ec2.Instance) (*types.UnikInstance, error
 	var unikInstanceData types.UnikInstanceData
 	err = json.Unmarshal(data, &unikInstanceData)
 	if err != nil {
-		return nil, lxerrors.New("could not unmarshal userdata string "+string(data)+"to unikinstance data", err)
+		return nil, lxerrors.New("could not unmarshal userdata string " + string(data) + "to unikinstance data", err)
 	}
 	if instanceName == "" {
 		instanceName = unikInstanceId

@@ -284,6 +284,89 @@ func (d *UnikEc2Daemon) registerHandlers() {
 			return logs, nil
 		})
 	})
+	d.server.Get("/volumes", func(res http.ResponseWriter, req *http.Request) {
+		streamOrRespond(res, req, func() (interface{}, error) {
+			lxlog.Debugf(logrus.Fields{}, "listing volumes started")
+			volumes, err := ec2api.ListVolumes()
+			if err != nil {
+				return nil, lxerrors.New("could not retrieve volumes", err)
+			}
+			lxlog.Infof(logrus.Fields{"volumes": volumes}, "volumes")
+			return volumes, nil
+		})
+	})
+	d.server.Post("/volumes/:volume_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		streamOrRespond(res, req, func() (interface{}, error) {
+			volumeName := params["volume_name"]
+			sizeStr := req.URL.Query().Get("size")
+			if sizeStr == "" {
+				sizeStr = "1"
+			}
+			size, err := strconv.Atoi(sizeStr)
+			if err != nil {
+				return nil, lxerrors.New("could not parse given size", err)
+			}
+			lxlog.Debugf(logrus.Fields{"size": size, "name": volumeName}, "creating volume started")
+			volume, err := ec2api.CreateVolume(volumeName, size)
+			if err != nil {
+				return nil, lxerrors.New("could not create volume", err)
+			}
+			lxlog.Infof(logrus.Fields{"volume": volume}, "volume created")
+			return volume, nil
+		})
+	})
+	d.server.Delete("/volumes/:volume_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		streamOrRespond(res, req, func() (interface{}, error) {
+			volumeName := params["volume_name"]
+			forceStr := req.URL.Query().Get("force")
+			force := false
+			if strings.ToLower(forceStr) == "true" {
+				force = true
+			}
+
+			lxlog.Debugf(logrus.Fields{"force": force, "name": volumeName}, "deleting volume started")
+			err := ec2api.DeleteVolume(volumeName, force)
+			if err != nil {
+				return nil, lxerrors.New("could not create volume", err)
+			}
+			lxlog.Infof(logrus.Fields{"volume": volumeName}, "volume deleted")
+			return volumeName, nil
+		})
+	})
+	d.server.Put("/instances/:instance_id/volumes/:volume_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		streamOrRespond(res, req, func() (interface{}, error) {
+			volumeName := params["volume_name"]
+			instanceId := params["instance_id"]
+			device := req.URL.Query().Get("device")
+			if device == "" {
+				return nil, lxerrors.New("must provide a device name in URL query", nil)
+			}
+			lxlog.Debugf(logrus.Fields{"instance": instanceId, "volume": volumeName}, "attaching volume to instance")
+			err := ec2api.AttachVolume(volumeName, instanceId, device)
+			if err != nil {
+				return nil, lxerrors.New("could not attach volume to instance", err)
+			}
+			lxlog.Infof(logrus.Fields{"instance": instanceId, "volume": volumeName}, "volume attached")
+			return volumeName, nil
+		})
+	})
+	d.server.Post("/volumes/:volume_name/detach", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		streamOrRespond(res, req, func() (interface{}, error) {
+			volumeName := params["volume_name"]
+			forceStr := req.URL.Query().Get("force")
+			force := false
+			if strings.ToLower(forceStr) == "true" {
+				force = true
+			}
+			lxlog.Debugf(logrus.Fields{"volume": volumeName}, "detaching volume from any instance")
+			err := ec2api.DetachVolume(volumeName, force)
+			if err != nil {
+				return nil, lxerrors.New("could not attach volume to instance", err)
+			}
+			lxlog.Infof(logrus.Fields{"volume": volumeName}, "volume detached")
+			return volumeName, nil
+		})
+	})
 }
 
 func (d *UnikEc2Daemon) addDockerHandlers() {
