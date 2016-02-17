@@ -14,6 +14,7 @@ type Attachment struct {
 	AttachTime time.Time `json:"AttachTime"`
 	Device string `json:"Device"`
 	InstanceId string `json:"InstanceId"`
+	UnikInstanceId string `json:"UnikInstanceId"`
 	State string `json:"State"`
 	VolumeId string `json:"VolumeId"`
 }

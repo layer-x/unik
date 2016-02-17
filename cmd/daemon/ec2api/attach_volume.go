@@ -5,6 +5,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
+"github.com/Sirupsen/logrus"
+"github.com/layer-x/layerx-commons/lxlog"
 )
 
 
@@ -33,10 +35,26 @@ func AttachVolume(volumeNameOrId, unikInstanceId, deviceName string) error {
 		InstanceId: aws.String(unikInstance.AmazonID),
 		Device: aws.String(deviceName),
 	}
-	_, err = ec2Client.AttachVolume(attachVolumeInput)
+	attachVolumeOutput, err := ec2Client.AttachVolume(attachVolumeInput)
 	if err != nil {
 		return lxerrors.New("could not attach volume "+volume.Name+" to instance "+unikInstance.UnikInstanceID, err)
 	}
+
+	createTagsInput := &ec2.CreateTagsInput{
+		Resources: aws.StringSlice([]string{volume.VolumeId}),
+		Tags: []*ec2.Tag{
+			&ec2.Tag{
+				Key:   aws.String("ATTACHED_UNIK_INSTANCE"),
+				Value: aws.String(unikInstance.UnikInstanceID),
+			},
+		},
+	}
+	createTagsOutput, err := ec2Client.CreateTags(createTagsInput)
+	if err != nil {
+		return lxerrors.New("failed to tag volume " + volume.Name, err)
+	}
+	lxlog.Debugf(logrus.Fields{"output": createTagsOutput}, "tagged volume " + volume.Name)
+	lxlog.Infof(logrus.Fields{"output": attachVolumeOutput}, "attached volume " + volume.Name+ " to instance "+ unikInstanceId)
 
 	return nil
 }

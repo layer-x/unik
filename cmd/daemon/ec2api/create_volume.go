@@ -24,6 +24,7 @@ func CreateVolume(volumeName string, size int) (*types.Volume, error) {
 	createVolumeInput := &ec2.CreateVolumeInput{
 		Size: aws.Int64(int64(size)),
 		VolumeType: aws.String("standard"),
+		AvailabilityZone: aws.String(ec2Client.AvailabilityZone),
 	}
 	awsVol, err := ec2Client.CreateVolume(createVolumeInput)
 	if err != nil {

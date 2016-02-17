@@ -118,3 +118,60 @@ func (c *UnikClient) FollowUnikInstanceLogs(unikInstanceId string, stdout io.Wri
 		stdout.Write(append(line, byte('\n')))
 	}
 }
+
+func (c *UnikClient) CreateVolume(volumeName string, size int) (*types.Volume, error) {
+	path := fmt.Sprintf("/volumes/"+volumeName+"?size=%v", size)
+	resp, body, err := lxhttpclient.Post(c.url, path, nil, nil)
+	if err != nil {
+		return nil, lxerrors.New("failed to create volume", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", lxerrors.New("failed to create volume, got message: "+string(body), err)
+	}
+	var volume *types.Volume
+	err = json.Unmarshal(body, volume)
+	if err != nil {
+		return nil, lxerrors.New("could not unmarshal volume json", err)
+	}
+	return volume, nil
+}
+
+func (c *UnikClient) DeleteVolume(volumeName string, force bool) (string, error) {
+	path := fmt.Sprintf("/volumes/"+volumeName+"?force=%v", force)
+	resp, body, err := lxhttpclient.Delete(c.url, path, nil)
+	if err != nil {
+		return nil, lxerrors.New("failed to delete volume", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", lxerrors.New("failed to delete volume, got message: "+string(body), err)
+	}
+
+	return string(body), nil
+}
+
+func (c *UnikClient) AttachVolume(volumeName, instanceName, device string) (string, error) {
+	path := fmt.Sprintf("/instances/"+instanceName+"/volumes/"+volumeName+"?device=%s", device)
+	resp, body, err := lxhttpclient.Post(c.url, path, nil, nil)
+	if err != nil {
+		return nil, lxerrors.New("failed to attach volume", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", lxerrors.New("failed to attach volume, got message: "+string(body), err)
+	}
+
+	return string(body), nil
+}
+
+
+func (c *UnikClient) DetachVolume(volumeName string, force bool) (string, error) {
+	path := fmt.Sprintf("/volumes/"+volumeName+"/detach/?force=%v", force)
+	resp, body, err := lxhttpclient.Post(c.url, path, nil, nil)
+	if err != nil {
+		return nil, lxerrors.New("failed to detach volume", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", lxerrors.New("failed to detach volume, got message: "+string(body), err)
+	}
+
+	return string(body), nil
+}

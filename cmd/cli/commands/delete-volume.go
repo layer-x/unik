@@ -9,21 +9,23 @@ import (
 	"net/http"
 )
 
-func Rmu(config types.UnikConfig, unikernelName string, force, verbose bool) error {
-	fmt.Printf("Deleting unikernel "+unikernelName+" force=%v\n", force)
+func DeleteVolume(config types.UnikConfig, volumeName string, force, verbose bool) error {
+	fmt.Printf("Deleting volume %s force==%v\n", volumeName, force)
 	url := config.Url
 
+	path := fmt.Sprintf("/volumes/"+volumeName+"?force=%v&verbose=%v", force, verbose)
 	if !verbose {
-		resp, body, err := lxhttpclient.Delete(url, "/unikernels/"+unikernelName+fmt.Sprintf("?force=%v", force), nil)
+		resp, body, err := lxhttpclient.Delete(url, path, nil)
 		if err != nil {
-			return lxerrors.New("failed deleting unikernel", err)
+			return lxerrors.New("failed deleting volume", err)
 		}
-		if resp.StatusCode != http.StatusNoContent {
-			return lxerrors.New("failed deleting unikernel, got message: "+string(body), err)
+		if resp.StatusCode != http.StatusOK {
+			return lxerrors.New("failed deleting volume, got message: " + string(body), err)
 		}
+		fmt.Printf("%s\n", string(body))
 		return nil
 	} else {
-		resp, err := lxhttpclient.DeleteAsync(url, "/unikernels/"+unikernelName+fmt.Sprintf("?force=%v&verbose=%v", force, verbose), nil)
+		resp, err := lxhttpclient.DeleteAsync(url, path, nil)
 		if err != nil {
 			return lxerrors.New("error performing DELETE request", err)
 		}
@@ -38,7 +40,8 @@ func Rmu(config types.UnikConfig, unikernelName string, force, verbose bool) err
 				if err != nil {
 					return lxerrors.New("reading final line", err)
 				}
-				return printUnikernel(body)
+				fmt.Printf("%s\n", string(body))
+				return nil
 			}
 			fmt.Printf("%s", string(line))
 		}

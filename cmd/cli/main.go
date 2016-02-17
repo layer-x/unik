@@ -25,6 +25,10 @@ func main() {
 	var runInstances int
 	var unikernelName string
 	var instanceName string
+	var volumeSize int
+	var forceRmv bool
+	var deviceName string
+	var forceDetach bool
 	app.Commands = []cli.Command{
 		{
 			Name:      "delete",
@@ -35,7 +39,7 @@ func main() {
 				if len(c.Args()) < 1 {
 					println("unik: \"rm\" takes at least one argument")
 					println("See 'unik rm -h'")
-					println("USAGE:    unik rm INSTANCE_ID_1 [INSTANCE_ID_2...]")
+					println("USAGE:    unik [-V] rm INSTANCE_ID_1 [INSTANCE_ID_2...]")
 					println("delete running instances")
 					os.Exit(-1)
 				}
@@ -71,7 +75,7 @@ func main() {
 				if len(c.Args()) < 1 {
 					println("unik: \"rmu\" takes at least one argument")
 					println("See 'unik rmu -h'")
-					println("USAGE:    unik rmu UNIKERNEL_NAME_1 [UNIKERNEL_NAME_2...]")
+					println("USAGE:    unik [-V] rmu UNIKERNEL_NAME_1 [UNIKERNEL_NAME_2...]")
 					println("delete compiled unikernel")
 					os.Exit(-1)
 				}
@@ -118,7 +122,7 @@ func main() {
 				if len(c.Args()) != 1 {
 					println("unik: \"run\" requires exactly 1 argument")
 					println("See 'unik logs -h'")
-					println("USAGE:    unik logs [-f] NAME")
+					println("USAGE:    unik [-V] logs [-f] NAME")
 					println("get stdout/stderr from a running unikernel")
 					os.Exit(-1)
 				}
@@ -153,7 +157,7 @@ func main() {
 				if len(c.Args()) != 0 {
 					println("unik: \"ps\" takes no arguments")
 					println("See 'unik ps -h'")
-					println("USAGE:    unik ps [-u UNIKERNEL]")
+					println("USAGE:    unik [-V] ps [-u UNIKERNEL]")
 					println("list running instances")
 					os.Exit(-1)
 				}
@@ -187,7 +191,7 @@ func main() {
 				if len(c.Args()) != 2 {
 					println("unik: \"push\" requires exactly 2 arguments")
 					println("See 'unik push -h'")
-					println("USAGE:    unik push [-f] NAME PATH")
+					println("USAGE:    unik [-V] push [-f] NAME PATH")
 					println("push a new unikernel from the source code at PATH")
 					os.Exit(-1)
 				}
@@ -240,7 +244,7 @@ func main() {
 				if len(c.Args()) != 1 {
 					println("unik: \"run\" requires exactly 1 argument")
 					println("See 'unik run -h'")
-					println("USAGE:    unik run [-i=INSTANCES] NAME")
+					println("USAGE:    unik [-V] run [-i=INSTANCES] NAME")
 					println("run one or more instances of a unikernel")
 					os.Exit(-1)
 				}
@@ -267,13 +271,21 @@ func main() {
 		{
 			Name:      "target",
 			Aliases:   []string{"t"},
-			ArgsUsage: "unik target URL",
-			Usage:     "set unik cli endpoint",
+			ArgsUsage: "unik target [URL]",
+			Usage:     "set unik cli endpoint or view current endpoint",
 			Action: func(c *cli.Context) {
+				if len(c.Args()) == 0 {
+					err := commands.ShowTarget()
+					if err != nil {
+						println("failed to reveal current target: " + err.Error())
+						os.Exit(-1)
+					}
+					return
+				}
 				if len(c.Args()) != 1 {
 					println("unik: \"target\" requires exactly 1 argument")
 					println("See 'unik target -h'")
-					println("USAGE:    unik target URL")
+					println("USAGE:    unik [-V] target URL")
 					println("set unik cli endpoint")
 					os.Exit(-1)
 				}
@@ -295,7 +307,7 @@ func main() {
 				if len(c.Args()) != 0 {
 					println("unik: \"unikernels\" takes no arguments")
 					println("See 'unik unikernels -h'")
-					println("USAGE:    unik unikernels [-v]")
+					println("USAGE:    unik [-V] unikernels [-v]")
 					println("list running unikernels")
 					os.Exit(-1)
 				}
@@ -310,6 +322,188 @@ func main() {
 					println("unik unikernels failed!")
 					println("error: " + err.Error())
 					os.Exit(-1)
+				}
+			},
+		},
+		{
+			Name:      "list-volumes",
+			Aliases:   []string{"lv"},
+			ArgsUsage: "unik [-V] list-volumes",
+			Usage:     "list unik-managed volumes",
+			Action: func(c *cli.Context) {
+				if len(c.Args()) != 0 {
+					println("unik: \"list-volumes\" takes no arguments")
+					println("See 'unik list-volumes -h'")
+					println("USAGE:    unik [-V] list-volumes")
+					println("list unik-managed volumes")
+					os.Exit(-1)
+				}
+				config, err := getConfig()
+				if err != nil {
+					println("You must be logged in to run this command.")
+					println("Try 'unik target UNIK_URL'")
+					os.Exit(-1)
+				}
+				err = commands.ListVolumes(config, verbose)
+				if err != nil {
+					println("unik list-volumes failed!")
+					println("error: " + err.Error())
+					os.Exit(-1)
+				}
+			},
+		},
+		{
+			Name:      "create-volume",
+			Aliases:   []string{"cv"},
+			ArgsUsage: "unik [-V] create-volume NAME -s SIZE",
+			Usage:     "create a unik-managed volume with NAME of SIZE GB",
+			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name:        "size, s",
+					Usage:       "size SIZE_IN_GB",
+					Value:       0,
+					Destination: &volumeSize,
+				},
+			},
+			Action: func(c *cli.Context) {
+				if len(c.Args()) != 1 {
+					println("unik: \"create-volume\" takes exactly 1 argument")
+					println("See 'unik create-volume -h'")
+					println("USAGE:    unik [-V] create-volume NAME SIZE_IN_GB")
+					println("create a unik-managed SIZE GB volume with named NAME")
+					os.Exit(-1)
+				}
+				config, err := getConfig()
+				if err != nil {
+					println("You must be logged in to run this command.")
+					println("Try 'unik target UNIK_URL'")
+					os.Exit(-1)
+				}
+				if volumeSize < 1 {
+					println("Must specify a positive integer for size with -s flag.")
+					println("See 'unik create-volume -h'")
+					os.Exit(-1)
+				}
+				volumeName := c.Args().Get(0)
+				err = commands.CreateVolume(config, volumeName, volumeSize, verbose)
+				if err != nil {
+					println("unik create-volume failed!")
+					println("error: " + err.Error())
+					os.Exit(-1)
+				}
+			},
+		},
+		{
+			Name:      "delete-volume",
+			Aliases:   []string{"rmv"},
+			ArgsUsage: "unik rmu [-f|] VOLUME_NAME_1 [VOLUME_NAME_2...]",
+			Usage:     "delete volume",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:        "force, f",
+					Usage:       "force delete if volume is attached to an instance",
+					Destination: &forceRmv,
+				},
+			},
+			Action: func(c *cli.Context) {
+				if len(c.Args()) < 1 {
+					println("unik: \"rmv\" takes at least one argument")
+					println("See 'unik rmv -h'")
+					println("USAGE:    unik rmv [-f|] VOLUME_NAME_1 [VOLUME_NAME_2...]")
+					println("delete volume")
+					os.Exit(-1)
+				}
+				config, err := getConfig()
+				if err != nil {
+					println("You must be logged in to run this command.")
+					println("Try 'unik target UNIK_URL'")
+					os.Exit(-1)
+				}
+				for _, volumeName := range c.Args() {
+					err = commands.DeleteVolume(config, volumeName, forceRmv, verbose)
+					if err != nil {
+						println("unik rmu failed!")
+						println("error: " + err.Error())
+						os.Exit(-1)
+					}
+				}
+			},
+		},
+		{
+			Name:      "attach-volume",
+			Aliases:   []string{"av"},
+			ArgsUsage: "unik attach-volume INSTANCE_NAME VOLUME_NAME -d DEVICE_NAME",
+			Usage:     "attach volume to instance",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:        "device, d",
+					Usage:       "name the device should be attached with, eg '/dev/xvdf",
+					Destination: &deviceName,
+					Value: "",
+				},
+			},
+			Action: func(c *cli.Context) {
+				if len(c.Args()) != 2 {
+					println("unik: \"av\" takes exactly 2 arguments")
+					println("See 'unik attach-volume -h'")
+					println("USAGE:    unik attach-volume INSTANCE_NAME VOLUME_NAME -d DEVICE_NAME")
+					println("attach volume to instance")
+					os.Exit(-1)
+				}
+				config, err := getConfig()
+				if err != nil {
+					println("You must be logged in to run this command.")
+					println("Try 'unik target UNIK_URL'")
+					os.Exit(-1)
+				}
+				if deviceName == "" {
+					println("Must specify a device name with -d flag.")
+					println("See 'unik attach-volume -h'")
+					os.Exit(-1)
+				}
+				unikInstanceName := c.Args().Get(0)
+				volumeName := c.Args().Get(1)
+				err = commands.AttachVolume(config, unikInstanceName, volumeName, deviceName, verbose)
+				if err != nil {
+					println("unik attach-volume failed!")
+					println("error: " + err.Error())
+					os.Exit(-1)
+				}
+			},
+		},
+		{
+			Name:      "detach-volume",
+			Aliases:   []string{"dv"},
+			ArgsUsage: "unik detach-volume [-f|] VOLUME_NAME_1 [VOLUME_NAME_2...]",
+			Usage:     "detach volume from instance",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:        "force, f",
+					Usage:       "force detaching the volume",
+					Destination: &forceDetach,
+				},
+			},
+			Action: func(c *cli.Context) {
+				if len(c.Args()) < 1 {
+					println("unik: \"dv\" takes at least 1 argument")
+					println("See 'unik detach-volume -h'")
+					println("USAGE:    unik detach-volume [-f|] VOLUME_NAME_1 [VOLUME_NAME_2...]")
+					println("detach volume from instance")
+					os.Exit(-1)
+				}
+				config, err := getConfig()
+				if err != nil {
+					println("You must be logged in to run this command.")
+					println("Try 'unik target UNIK_URL'")
+					os.Exit(-1)
+				}
+				for _, volumeName := range c.Args() {
+					err = commands.DetachVolume(config, volumeName, forceDetach, verbose)
+					if err != nil {
+						println("unik detach-volume failed!")
+						println("error: " + err.Error())
+						os.Exit(-1)
+					}
 				}
 			},
 		},

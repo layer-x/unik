@@ -333,7 +333,7 @@ func (d *UnikEc2Daemon) registerHandlers() {
 			return volumeName, nil
 		})
 	})
-	d.server.Put("/instances/:instance_id/volumes/:volume_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+	d.server.Post("/instances/:instance_id/volumes/:volume_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
 		streamOrRespond(res, req, func() (interface{}, error) {
 			volumeName := params["volume_name"]
 			instanceId := params["instance_id"]

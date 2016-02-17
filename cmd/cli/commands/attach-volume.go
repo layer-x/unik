@@ -7,33 +7,22 @@ import (
 	"github.com/layer-x/layerx-commons/lxhttpclient"
 	"github.com/layer-x/unik/types"
 	"net/http"
-	"strings"
 )
 
-func Run(config types.UnikConfig, unikernelName, instanceName string, instances int, tags, env []string, verbose bool) error {
-	fmt.Printf("Running %v instances of unikernel "+unikernelName+"\n", instances)
+func AttachVolume(config types.UnikConfig, unikInstanceName, volumeName, device string, verbose bool) error {
+	fmt.Printf("Attaching volume %s to unik instance %s as '%s'\n", volumeName, unikInstanceName, device)
 	url := config.Url
-	var tagString string
-	var envString string
-	for _, tag := range tags {
-		tagString += tag+","
-	}
-	tagString = strings.TrimSuffix(tagString, ",")
 
-	for _, envVar := range env {
-		envString += envVar+","
-	}
-	envString = strings.TrimSuffix(envString, ",")
-
-	path := "/unikernels/"+unikernelName+"/run"+fmt.Sprintf("?instances=%v&name=%s&tags=%s&env=%s&verbose=%v", instances, instanceName, tagString, envString, verbose)
+	path := fmt.Sprintf("/instances/"+unikInstanceName+"/volumes/"+volumeName+"?device=%s&verbose=%v", device, verbose)
 	if !verbose {
 		resp, body, err := lxhttpclient.Post(url, path, nil, nil)
 		if err != nil {
-			return lxerrors.New("failed running unikernel", err)
+			return lxerrors.New("failed attaching volume", err)
 		}
 		if resp.StatusCode != http.StatusOK {
-			return lxerrors.New("failed running unikernel, got message: "+string(body), err)
+			return lxerrors.New("failed attaching volume, got message: " + string(body), err)
 		}
+		println(string(body))
 		return nil
 	} else {
 		resp, err := lxhttpclient.PostAsync(url, path, nil, nil)
@@ -51,7 +40,8 @@ func Run(config types.UnikConfig, unikernelName, instanceName string, instances 
 				if err != nil {
 					return lxerrors.New("reading final line", err)
 				}
-				return printUnikInstances(unikernelName, body)
+				println(string(body))
+				return nil
 			}
 			fmt.Printf("%s", string(line))
 		}

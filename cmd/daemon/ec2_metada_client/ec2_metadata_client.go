@@ -12,10 +12,14 @@ import (
 
 const MAX_RETRIES = 5
 
-var ec2ClientSingleton *ec2.EC2
+var (
+	ec2ClientSingleton *ec2.EC2
+	availabilityZone string
+)
 
 type unikEc2Client struct {
 	ec2Client *ec2.EC2
+	AvailabilityZone string
 }
 
 func getRegion() (string, error) {
@@ -31,11 +35,26 @@ func getRegion() (string, error) {
 	return region, nil
 }
 
+func getAZ() (string, error) {
+	curlCommand := exec.Command("curl", "http://169.254.169.254/latest/meta-data/placement/availability-zone")
+	azBytes, err := curlCommand.Output()
+	if err != nil {
+		return "", lxerrors.New("could not run \"curl http://169.254.169.254/latest/meta-data/placement/availability-zone\"", err)
+	}
+	az := string(azBytes)
+	return az, nil
+}
+
 func NewEC2Client() (*unikEc2Client, error) {
 	if ec2ClientSingleton == nil {
-		region, err := getRegion()
+		var err error
+		availabilityZone, err = getAZ()
 		if err != nil {
 			return nil, lxerrors.New("getting region from ec2 metadata server", err)
+		}
+		region := availabilityZone
+		for _, r := range "abcde" {
+			region = strings.TrimSuffix(region, string(r))
 		}
 		session := session.New()
 		session.Config.WithMaxRetries(MAX_RETRIES)
@@ -45,6 +64,7 @@ func NewEC2Client() (*unikEc2Client, error) {
 	}
 	return &unikEc2Client{
 		ec2Client: ec2ClientSingleton,
+		AvailabilityZone: availabilityZone,
 	}, nil
 }
 

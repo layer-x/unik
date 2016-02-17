@@ -53,3 +53,25 @@ func Target(url string) error {
 
 	return nil
 }
+
+func ShowTarget() error {
+	usr, err := user.Current()
+	if err != nil {
+		panic("user not found: " + err.Error())
+	}
+	configPath := filepath.Join(usr.HomeDir, ".unik", "config.json")
+
+	data, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return lxerrors.New("could not read config file", err)
+	}
+
+	config := types.UnikConfig{}
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return lxerrors.New("invalid config", err)
+	}
+
+	fmt.Printf("Current Unik EC2 Backend set to %s\n", config.Url)
+	return nil
+}

@@ -26,7 +26,7 @@ func Rm(config types.UnikConfig, instanceId string, verbose bool) error {
 	} else {
 		resp, err := lxhttpclient.DeleteAsync(url, "/instances/"+instanceId+"?verbose=true", nil)
 		if err != nil {
-			return lxerrors.New("error performing GET request", err)
+			return lxerrors.New("error performing DELETE request", err)
 		}
 		reader := bufio.NewReader(resp.Body)
 		for {

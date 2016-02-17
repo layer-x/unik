@@ -6,9 +6,13 @@ import (
 
 func GetVolumeMetadata(awsVol *ec2.Volume) *types.Volume {
 	volume := &types.Volume{}
+	attachedUnikInstance := ""
 	for _, tag := range awsVol.Tags {
 		if *tag.Key == "UNIK_VOLUME_NAME" {
 			volume.Name = *tag.Value
+		}
+		if *tag.Key == "ATTACHED_UNIK_INSTANCE" {
+			attachedUnikInstance = *tag.Value
 		}
 	}
 	if volume.Name == "" {
@@ -43,6 +47,7 @@ func GetVolumeMetadata(awsVol *ec2.Volume) *types.Volume {
 		if awsAttachment.VolumeId != nil {
 			attachment.VolumeId = *awsAttachment.VolumeId
 		}
+		attachment.UnikInstanceId = attachedUnikInstance
 		volume.Attachments = append(volume.Attachments, attachment)
 	}
 	return volume
