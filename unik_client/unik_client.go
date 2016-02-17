@@ -126,7 +126,7 @@ func (c *UnikClient) CreateVolume(volumeName string, size int) (*types.Volume, e
 		return nil, lxerrors.New("failed to create volume", err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return "", lxerrors.New("failed to create volume, got message: "+string(body), err)
+		return nil, lxerrors.New("failed to create volume, got message: "+string(body), err)
 	}
 	var volume *types.Volume
 	err = json.Unmarshal(body, volume)
@@ -140,7 +140,7 @@ func (c *UnikClient) DeleteVolume(volumeName string, force bool) (string, error)
 	path := fmt.Sprintf("/volumes/"+volumeName+"?force=%v", force)
 	resp, body, err := lxhttpclient.Delete(c.url, path, nil)
 	if err != nil {
-		return nil, lxerrors.New("failed to delete volume", err)
+		return "", lxerrors.New("failed to delete volume", err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return "", lxerrors.New("failed to delete volume, got message: "+string(body), err)
@@ -153,7 +153,7 @@ func (c *UnikClient) AttachVolume(volumeName, instanceName, device string) (stri
 	path := fmt.Sprintf("/instances/"+instanceName+"/volumes/"+volumeName+"?device=%s", device)
 	resp, body, err := lxhttpclient.Post(c.url, path, nil, nil)
 	if err != nil {
-		return nil, lxerrors.New("failed to attach volume", err)
+		return "", lxerrors.New("failed to attach volume", err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return "", lxerrors.New("failed to attach volume, got message: "+string(body), err)
@@ -167,11 +167,41 @@ func (c *UnikClient) DetachVolume(volumeName string, force bool) (string, error)
 	path := fmt.Sprintf("/volumes/"+volumeName+"/detach/?force=%v", force)
 	resp, body, err := lxhttpclient.Post(c.url, path, nil, nil)
 	if err != nil {
-		return nil, lxerrors.New("failed to detach volume", err)
+		return "", lxerrors.New("failed to detach volume", err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return "", lxerrors.New("failed to detach volume, got message: "+string(body), err)
 	}
 
 	return string(body), nil
+}
+
+func (c *UnikClient) GetVolumes() ([]*types.Volume, error) {
+	path := fmt.Sprintf("/volumes")
+	resp, body, err := lxhttpclient.Get(c.url, path, nil)
+	if err != nil {
+		return nil, lxerrors.New("failed listing volumes", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, lxerrors.New("failed listing volumes, got message: " + string(body), err)
+	}
+	volumes := []*types.Volume{}
+	err = json.Unmarshal(body, &volumes)
+	if err != nil {
+		return nil, lxerrors.New("failed to retrieve volumes: " + string(body), err)
+	}
+	return volumes, nil
+}
+
+func (c *UnikClient) GetVolume(volumeName string) (*types.Volume, error) {
+	volumes, err := c.GetVolumes()
+	if err != nil {
+		return nil, lxerrors.New("could not get volume list", err)
+	}
+	for _, volume := range volumes {
+		if strings.Contains(volume.Name, volumeName) {
+			return volume, nil
+		}
+	}
+	return nil, lxerrors.New("could not find volume "+volumeName, nil)
 }

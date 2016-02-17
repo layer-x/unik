@@ -15,7 +15,13 @@ import (
 	"github.com/layer-x/layerx-commons/lxlog"
 	"github.com/Sirupsen/logrus"
 	"os"
+	"github.com/layer-x/unik/unik_client"
 )
+
+type volumeData struct {
+	Name string `json:"Name"`
+	Size int `json:"Size"`
+}
 
 var remoteAddr string
 
@@ -25,6 +31,7 @@ func main() {
 	envStrPtr := flag.String("envStr", "", "one long env string")
 	envDelimiterPtr := flag.String("envDelimiter", "", "split env pairs")
 	envPairDelimiterPtr := flag.String("envPairDelimiter", "", "split env key and env val")
+	volumeDataStringPtr := flag.String("volumeData", "NOTHING", "json encoded volume data string")
 	flag.Parse()
 	fmt.Printf("environ: %v\n", os.Environ())
 	port := os.Getenv("PORT")
@@ -52,6 +59,46 @@ func main() {
 			}
 			lxlog.Infof(logrus.Fields{"ip": remoteAddr+":3000"}, "waiting on remote ip")
 			time.Sleep(1000 * time.Millisecond)
+		}
+	}()
+	go func(){
+		if *volumeDataStringPtr != "NOTHING" {
+			var desiredVolumes []*volumeData
+			err = json.Unmarshal([]byte(*volumeDataStringPtr), &desiredVolumes)
+			if err != nil {
+				panic(lxerrors.New("could not unmarshal volume data", err))
+			}
+			deviceNames := []string{
+				"/dev/xvdf",
+				"/dev/xvdg",
+				"/dev/xvdh",
+				"/dev/xvdi",
+				"/dev/xvdj",
+				"/dev/xvdk",
+				"/dev/xvdl",
+				"/dev/xvdm",
+				"/dev/xvdn",
+				"/dev/xvdo",
+				"/dev/xvdp",
+			}
+			for i, vol := range desiredVolumes {
+				if i >= len(deviceNames) {
+					break
+				}
+				deviceName := deviceNames[i]
+				volumeName := vol.Name
+				size := vol.Size
+				lxlog.Infof(logrus.Fields{
+					"instanceName": instanceName,
+					"deviceName": deviceName,
+					"volumeName": volumeName,
+					"size": size,
+				},"attaching volume to instance")
+				err = retryCreateAndAttachVolume(url, instanceName, volumeName, deviceName, size, 30)
+				if err != nil {
+					panic(err)
+				}
+			}
 		}
 	}()
 	err = <-errc
@@ -135,4 +182,32 @@ func getUnikInstance(url, instanceName string) (*types.UnikInstance, error) {
 		}
 	}
 	return nil, lxerrors.New("could not find unik instance " + instanceName, nil)
+}
+
+func retryCreateAndAttachVolume(url, instanceName, volumeName, deviceName string, size, retries int) error {
+	client := unik_client.NewUnikClient(url)
+	_, err := client.CreateVolume(volumeName, size)
+	if err != nil {
+		var err2 error
+		_, err2 = client.GetVolume(volumeName)
+		if err2 != nil {
+			return lxerrors.New("could not find OR create volume: "+err2.Error(), err)
+		}
+	}
+	_, err = client.AttachVolume(volumeName, instanceName, deviceName)
+	if  err != nil {
+		if retries > 0 {
+			return retryCreateAndAttachVolume(url, instanceName, volumeName, deviceName, size, retries-1)
+			time.Sleep(5 * time.Second)
+			lxlog.Infof(logrus.Fields{
+				"url": url,
+				"instanceName": instanceName,
+				"volumeName": volumeName,
+				"deviceName": deviceName,
+			},"failed to attach volume, retrying %v more times", retries)
+		} else {
+			return lxerrors.New("error attaching volume", err)
+		}
+	}
+	return nil
 }
