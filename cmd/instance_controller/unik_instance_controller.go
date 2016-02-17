@@ -21,6 +21,7 @@ import (
 type volumeData struct {
 	Name string `json:"Name"`
 	Size int `json:"Size"`
+	Device string `json:"Device"`
 }
 
 var remoteAddr string
@@ -68,24 +69,8 @@ func main() {
 			if err != nil {
 				panic(lxerrors.New("could not unmarshal volume data", err))
 			}
-			deviceNames := []string{
-				"/dev/xvdf",
-				"/dev/xvdg",
-				"/dev/xvdh",
-				"/dev/xvdi",
-				"/dev/xvdj",
-				"/dev/xvdk",
-				"/dev/xvdl",
-				"/dev/xvdm",
-				"/dev/xvdn",
-				"/dev/xvdo",
-				"/dev/xvdp",
-			}
-			for i, vol := range desiredVolumes {
-				if i >= len(deviceNames) {
-					break
-				}
-				deviceName := deviceNames[i]
+			for _, vol := range desiredVolumes {
+				deviceName := vol.Device
 				volumeName := vol.Name
 				size := vol.Size
 				lxlog.Infof(logrus.Fields{
