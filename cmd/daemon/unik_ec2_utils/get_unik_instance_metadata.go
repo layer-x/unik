@@ -41,7 +41,6 @@ func GetUnikInstanceMetadata(instance *ec2.Instance) (*types.UnikInstance, error
 	if err != nil {
 		return nil, lxerrors.New("could not get userdata for instance " + *instance.InstanceId, err)
 	}
-	lxlog.Debugf(logrus.Fields{"describe_userdata_output": describeUserDataOutput}, "ec2api: describing userdata")
 	if describeUserDataOutput.UserData == nil {
 		return nil, lxerrors.New("userdata was nil for instance " + unikInstanceId, nil)
 	}
@@ -75,5 +74,6 @@ func GetUnikInstanceMetadata(instance *ec2.Instance) (*types.UnikInstance, error
 	if instance.LaunchTime != nil {
 		unikInstance.Created = *instance.LaunchTime
 	}
+	lxlog.Debugf(logrus.Fields{"unik-instance": unikInstance}, "read unik instance")
 	return unikInstance, nil
 }

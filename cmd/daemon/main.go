@@ -6,10 +6,15 @@ import (
 	"github.com/layer-x/unik/cmd/daemon/ec2daemon"
 	"os"
 	"os/exec"
+	"flag"
 )
 
 func main() {
-	lxlog.ActiveDebugMode()
+	debugMode := flag.String("debug", "false", "enable verbose/debug mode")
+	flag.Parse()
+	if *debugMode == "true" {
+		lxlog.ActiveDebugMode()
+	}
 	buildCommand := exec.Command("docker", "build", "-t", "golang_unikernel_builder", ".")
 	buildCommand.Dir = "./golang_unikernel_builder"
 	buildCommand.Stdout = os.Stdout

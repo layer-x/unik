@@ -87,8 +87,8 @@ func StreamLogs(unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect b
 			return nil
 		}
 		if len(logLines)-1 == linesCounted {
-			time.Sleep(1000 * time.Millisecond)
-			lxlog.Warnf(logrus.Fields{"unik_instance_id": unikInstanceId}, "no new logs since last poll, sleeping")
+			time.Sleep(5000 * time.Millisecond)
+//			lxlog.Warnf(logrus.Fields{"unik_instance_id": unikInstanceId}, "no new logs since last poll, sleeping")
 			continue
 		}
 	}

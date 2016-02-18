@@ -52,15 +52,14 @@ func main() {
 	go monitorInstance(url, instanceName, errc)
 	go followLogs(url, instanceName, errc)
 	go func(){
+		lxlog.Infof(logrus.Fields{}, "waiting on remote ip")
 		for {
 			if remoteAddr != "" {
 				lxlog.Infof(logrus.Fields{"ip": remoteAddr+":3000", "port": port}, "received public ip for instance")
 				startRedirectServer(port, remoteAddr+":3000", errc)
-				lxlog.Infof(logrus.Fields{"ip": remoteAddr+":3000", "port": port}, "started!")
 				break
 			}
-			lxlog.Infof(logrus.Fields{"ip": remoteAddr+":3000"}, "waiting on remote ip")
-			time.Sleep(1000 * time.Millisecond)
+			time.Sleep(2000 * time.Millisecond)
 		}
 	}()
 	go func(){
@@ -91,6 +90,7 @@ func main() {
 		}
 	}()
 	err = <-errc
+	lxhttpclient.Delete(url, "/instances/"+instanceName, nil)
 	lxlog.Fatalf(logrus.Fields{"error": err, "instanceName": instanceName, "url": url, "env": *envStrPtr}, "unk instance controller terminated!")
 }
 
