@@ -33,6 +33,7 @@ func main() {
 	envDelimiterPtr := flag.String("envDelimiter", "", "split env pairs")
 	envPairDelimiterPtr := flag.String("envPairDelimiter", "", "split env key and env val")
 	volumeDataStringPtr := flag.String("volumeData", "NOTHING", "json encoded volume data string")
+	useCfInstanceIndexPtr := flag.Bool("useCfInstanceIndex", false, "use CF_INSTANCE_INDEX env var to set vol name")
 	flag.Parse()
 	fmt.Printf("environ: %v\n", os.Environ())
 	port := os.Getenv("PORT")
@@ -72,6 +73,9 @@ func main() {
 			for _, vol := range desiredVolumes {
 				deviceName := vol.Device
 				volumeName := vol.Name
+				if *useCfInstanceIndexPtr {
+					volumeName += "_instance"+os.Getenv("CF_INSTANCE_INDEX")
+				}
 				size := vol.Size
 				lxlog.Infof(logrus.Fields{
 					"instanceName": instanceName,
