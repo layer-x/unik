@@ -102,11 +102,11 @@ func (d *UnikEc2Daemon) registerHandlers() {
 	})
 	d.server.Post("/unikernels/:unikernel_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
 		streamOrRespond(res, req, func() (interface{}, error) {
-			lxlog.Debugf(logrus.Fields{"req": req}, "parsing multipart form")
 			err := req.ParseMultipartForm(0)
 			if err != nil {
 				return nil, err
 			}
+			lxlog.Debugf(logrus.Fields{"req": req}, "parsing multipart form")
 			unikernelName := params["unikernel_name"]
 			if unikernelName == "" {
 				return nil, lxerrors.New("unikernel must be named", nil)
