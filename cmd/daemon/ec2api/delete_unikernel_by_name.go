@@ -2,7 +2,7 @@ package ec2api
 
 import "github.com/layer-x/layerx-commons/lxerrors"
 
-func DeleteApp(unikernelName string, force bool) error {
+func DeleteUnikernelByName(unikernelName string, force bool) error {
 	unikernels, err := ListUnikernels()
 	if err != nil {
 		return lxerrors.New("could not get unikernel list", err)

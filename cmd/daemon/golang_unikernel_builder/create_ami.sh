@@ -9,7 +9,7 @@ THISAVAILABILITYZONE=`wget -q -O - http://instance-data/latest/dynamic/instance-
 case "${THISREGION}" in ap-northeast-1) KERNELID=aki-176bf516; ;; ap-southeast-1) KERNELID=aki-503e7402; ;; ap-southeast-2) KERNELID=aki-c62fff9; ;; eu-central-1) KERNELID=aki-184c7a05; ;; eu-west-1) KERNELID=aki-52a34525; ;; sa-east-1) KERNELID=aki-5553f448; ;; us-east-1) KERNELID=aki-919dcaf8; ;; us-gov-west-1) KERNELID=aki-1de98d3e; ;; us-west-1) KERNELID=aki-880531cd; ;; us-west-2) KERNELID=aki-fc8f11cc; ;; *) echo $"Error selecting pvgrub kernel for region"; exit 1; esac
 
 # Make name unique to avoid registration clashes
-NAME=$NAME-`date +"%d-%b-%Y-%s"`
+NAME=${UNIKERNEL_APP_NAME}-`date +"%d-%b-%Y-%s"`
 
 echo Name : ${NAME}
 echo THISREGION: ${THISREGION}

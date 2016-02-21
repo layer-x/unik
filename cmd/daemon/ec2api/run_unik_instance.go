@@ -9,9 +9,12 @@ import (
 	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
 	"github.com/layer-x/unik/cmd/daemon/unik_ec2_utils"
 	"github.com/pborman/uuid"
+	"github.com/layer-x/unik/types"
+	"github.com/docker/go/canonical/json"
+	"encoding/base64"
 )
 
-func RunApp(unikernelName, instanceName string, instances int64, tags map[string]string) ([]string, error) {
+func RunUnikInstance(unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {
 	unikernels, err := ListUnikernels()
 	instanceIds := []string{}
 	if err != nil {
@@ -23,11 +26,22 @@ func RunApp(unikernelName, instanceName string, instances int64, tags map[string
 			if err != nil {
 				return instanceIds, lxerrors.New("could not start ec2 client session", err)
 			}
+			unikInstanceData := types.UnikInstanceData{
+				Tags: tags,
+				Env:  env,
+			}
+			data, err := json.Marshal(unikInstanceData)
+			if err != nil {
+				return instanceIds, lxerrors.New("could not convert unik instance data struct to json", err)
+			}
+			encodedData := base64.StdEncoding.EncodeToString(data)
+			lxlog.Debugf(logrus.Fields{"unikinstancedata": string(data), "encoded_bytes": len(encodedData)}, "metadata for running unikinstance")
 			startInstancesInput := &ec2.RunInstancesInput{
 				ImageId:  aws.String(unikernel.AMI),
-				InstanceType: aws.String("t2.nano"),
+				InstanceType: aws.String("m1.small"),
 				MaxCount: aws.Int64(instances),
 				MinCount: aws.Int64(instances),
+				UserData: aws.String(encodedData),
 			}
 			lxlog.Debugf(logrus.Fields{"input": startInstancesInput}, "starting instance for unikernel "+unikernelName)
 			reservation, err := ec2Client.RunInstances(startInstancesInput)
@@ -61,14 +75,6 @@ func RunApp(unikernelName, instanceName string, instances int64, tags map[string
 								Value: aws.String(unikernelName),
 							},
 						},
-					}
-					if tags != nil && len(tags) > 0{
-						for key, value := range tags {
-							createTagsInput.Tags = append(createTagsInput.Tags, &ec2.Tag{
-								Key: aws.String(key),
-								Value: aws.String(value),
-							})
-						}
 					}
 					lxlog.Debugf(logrus.Fields{"tags": createTagsInput}, "tagging instance for unikernel "+instanceId)
 					createTagsOutput, err := ec2Client.CreateTags(createTagsInput)

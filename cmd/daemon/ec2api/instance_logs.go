@@ -16,7 +16,7 @@ import (
 )
 
 func GetLogs(unikInstanceId string) (string, error) {
-	unikInstance, err := GetUnikInstanceByPrefix(unikInstanceId)
+	unikInstance, err := GetUnikInstanceByPrefixOrName(unikInstanceId)
 	if err != nil {
 		return "", lxerrors.New("failed to retrieve unik instance", err)
 	}
@@ -51,7 +51,11 @@ func GetLogs(unikInstanceId string) (string, error) {
 		output), nil
 }
 
-func StreamLogs(unikInstanceId string, w io.Writer) error {
+func StreamLogs(unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error {
+	if deleteInstanceOnDisconnect {
+		defer DeleteUnikInstance(unikInstanceId)
+	}
+
 	linesCounted := -1
 	for {
 		currentLogs, err := GetLogs(unikInstanceId)
@@ -83,8 +87,8 @@ func StreamLogs(unikInstanceId string, w io.Writer) error {
 			return nil
 		}
 		if len(logLines)-1 == linesCounted {
-			time.Sleep(1000 * time.Millisecond)
-			lxlog.Warnf(logrus.Fields{"unik_instance_id": unikInstanceId}, "no new logs since last poll, sleeping")
+			time.Sleep(5000 * time.Millisecond)
+//			lxlog.Warnf(logrus.Fields{"unik_instance_id": unikInstanceId}, "no new logs since last poll, sleeping")
 			continue
 		}
 	}

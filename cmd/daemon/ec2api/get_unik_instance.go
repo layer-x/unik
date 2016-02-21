@@ -6,15 +6,15 @@ import (
 	"strings"
 )
 
-func GetUnikInstanceByPrefix(unikInstanceIdPrefix string) (*types.UnikInstance, error) {
+func GetUnikInstanceByPrefixOrName(unikInstanceIdPrefixOrName string) (*types.UnikInstance, error) {
 	unikInstances, err := ListUnikInstances()
 	if err != nil {
 		return nil, lxerrors.New("failed to retrieve known instances", err)
 	}
 	for _, unikInstance := range unikInstances {
-		if strings.HasPrefix(unikInstance.UnikInstanceID, unikInstanceIdPrefix) {
+		if strings.HasPrefix(unikInstance.UnikInstanceID, unikInstanceIdPrefixOrName) || strings.HasPrefix(unikInstance.UnikInstanceName, unikInstanceIdPrefixOrName) {
 			return unikInstance, nil
 		}
 	}
-	return nil, lxerrors.New("unik instance with prefix "+unikInstanceIdPrefix+" not found", nil)
+	return nil, lxerrors.New("unik instance with prefix "+ unikInstanceIdPrefixOrName +" not found", nil)
 }

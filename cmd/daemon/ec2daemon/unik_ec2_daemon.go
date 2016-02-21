@@ -102,11 +102,11 @@ func (d *UnikEc2Daemon) registerHandlers() {
 	})
 	d.server.Post("/unikernels/:unikernel_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
 		streamOrRespond(res, req, func() (interface{}, error) {
-			lxlog.Debugf(logrus.Fields{"req": req}, "parsing multipart form")
 			err := req.ParseMultipartForm(0)
 			if err != nil {
 				return nil, err
 			}
+			lxlog.Debugf(logrus.Fields{"req": req}, "parsing multipart form")
 			unikernelName := params["unikernel_name"]
 			if unikernelName == "" {
 				return nil, lxerrors.New("unikernel must be named", nil)
@@ -140,7 +140,7 @@ func (d *UnikEc2Daemon) registerHandlers() {
 					return unikernel, nil
 				}
 			}
-			return nil, lxerrors.New("cannot locate uploaded unikernel "+unikernelName, nil)
+				return "unikernel created", nil
 		})
 	})
 	d.server.Post("/unikernels/:unikernel_name/run", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
@@ -163,24 +163,39 @@ func (d *UnikEc2Daemon) registerHandlers() {
 			fullTagString := req.URL.Query().Get("tags")
 			tagPairs := strings.Split(fullTagString, ",")
 			tags := make(map[string]string)
-			tagCount := 0
-			maxTags := 5
+
+			envDelimiter := req.URL.Query().Get("useDelimiter")
+			if envDelimiter == "" {
+				envDelimiter = ","
+			}
+			envPairDelimiter := req.URL.Query().Get("usePairDelimiter")
+			if envPairDelimiter == "" {
+				envPairDelimiter = "="
+			}
+
 			for _, tagPair := range tagPairs {
 				splitTag := strings.Split(tagPair, "=")
 				if len(splitTag) != 2 {
 					lxlog.Warnf(logrus.Fields{"tagPair": tagPair}, "was given a tag string with an invalid format, ignoring")
 					continue
 				}
-				if tagCount < maxTags {
-					tagCount += 1
-					tags[splitTag[0]] = splitTag[1]
-				} else {
-					lxlog.Warnf(logrus.Fields{"tag_string": fullTagString}, "given too many tags, only used the first 5")
-					break
-				}
+				tags[splitTag[0]] = splitTag[1]
 			}
 
-			instanceIds, err := ec2api.RunApp(unikernelName, instanceName, int64(instances), tags)
+			fullEnvString := req.URL.Query().Get("env")
+			envPairs := strings.Split(fullEnvString, envDelimiter)
+			env := make(map[string]string)
+
+			for _, envPair := range envPairs {
+				splitEnv := strings.Split(envPair, envPairDelimiter)
+				if len(splitEnv) != 2 {
+					lxlog.Warnf(logrus.Fields{"envPair": envPair}, "was given a env string with an invalid format, ignoring")
+					continue
+				}
+				env[splitEnv[0]] = splitEnv[1]
+			}
+
+			instanceIds, err := ec2api.RunUnikInstance(unikernelName, instanceName, int64(instances), tags, env)
 			if err != nil {
 				return nil, err
 			}
@@ -228,7 +243,7 @@ func (d *UnikEc2Daemon) registerHandlers() {
 			if strings.ToLower(forceStr) == "true" {
 				force = true
 			}
-			err := ec2api.DeleteApp(unikernelName, force)
+			err := ec2api.DeleteUnikernelByName(unikernelName, force)
 			if err != nil {
 				lxlog.Errorf(logrus.Fields{"err": err}, "could not delete unikernel "+unikernelName)
 				return nil, err
@@ -248,10 +263,14 @@ func (d *UnikEc2Daemon) registerHandlers() {
 				return nil, lxerrors.New("not a flusher", nil)
 			}
 			if strings.ToLower(follow) == "true" {
-				output := ioutils.NewWriteFlusher(res)
-				defer output.Close()
+				deleteOnDisconnectStr := req.URL.Query().Get("delete")
+				deleteOnDisconnect := false
+				if strings.ToLower(deleteOnDisconnectStr) == "true" {
+					deleteOnDisconnect = true
+				}
 
-				err := ec2api.StreamLogs(unikInstanceId, output)
+				output := ioutils.NewWriteFlusher(res)
+				err := ec2api.StreamLogs(unikInstanceId, output, deleteOnDisconnect)
 				if err != nil {
 					lxlog.Warnf(logrus.Fields{"err": err, "unikInstanceId": unikInstanceId}, "streaming logs stopped")
 					return nil, err
@@ -263,6 +282,89 @@ func (d *UnikEc2Daemon) registerHandlers() {
 				return nil, err
 			}
 			return logs, nil
+		})
+	})
+	d.server.Get("/volumes", func(res http.ResponseWriter, req *http.Request) {
+		streamOrRespond(res, req, func() (interface{}, error) {
+			lxlog.Debugf(logrus.Fields{}, "listing volumes started")
+			volumes, err := ec2api.ListVolumes()
+			if err != nil {
+				return nil, lxerrors.New("could not retrieve volumes", err)
+			}
+			lxlog.Infof(logrus.Fields{"volumes": volumes}, "volumes")
+			return volumes, nil
+		})
+	})
+	d.server.Post("/volumes/:volume_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		streamOrRespond(res, req, func() (interface{}, error) {
+			volumeName := params["volume_name"]
+			sizeStr := req.URL.Query().Get("size")
+			if sizeStr == "" {
+				sizeStr = "1"
+			}
+			size, err := strconv.Atoi(sizeStr)
+			if err != nil {
+				return nil, lxerrors.New("could not parse given size", err)
+			}
+			lxlog.Debugf(logrus.Fields{"size": size, "name": volumeName}, "creating volume started")
+			volume, err := ec2api.CreateVolume(volumeName, size)
+			if err != nil {
+				return nil, lxerrors.New("could not create volume", err)
+			}
+			lxlog.Infof(logrus.Fields{"volume": volume}, "volume created")
+			return volume, nil
+		})
+	})
+	d.server.Delete("/volumes/:volume_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		streamOrRespond(res, req, func() (interface{}, error) {
+			volumeName := params["volume_name"]
+			forceStr := req.URL.Query().Get("force")
+			force := false
+			if strings.ToLower(forceStr) == "true" {
+				force = true
+			}
+
+			lxlog.Debugf(logrus.Fields{"force": force, "name": volumeName}, "deleting volume started")
+			err := ec2api.DeleteVolume(volumeName, force)
+			if err != nil {
+				return nil, lxerrors.New("could not create volume", err)
+			}
+			lxlog.Infof(logrus.Fields{"volume": volumeName}, "volume deleted")
+			return volumeName, nil
+		})
+	})
+	d.server.Post("/instances/:instance_id/volumes/:volume_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		streamOrRespond(res, req, func() (interface{}, error) {
+			volumeName := params["volume_name"]
+			instanceId := params["instance_id"]
+			device := req.URL.Query().Get("device")
+			if device == "" {
+				return nil, lxerrors.New("must provide a device name in URL query", nil)
+			}
+			lxlog.Debugf(logrus.Fields{"instance": instanceId, "volume": volumeName}, "attaching volume to instance")
+			err := ec2api.AttachVolume(volumeName, instanceId, device)
+			if err != nil {
+				return nil, lxerrors.New("could not attach volume to instance", err)
+			}
+			lxlog.Infof(logrus.Fields{"instance": instanceId, "volume": volumeName}, "volume attached")
+			return volumeName, nil
+		})
+	})
+	d.server.Post("/volumes/:volume_name/detach", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		streamOrRespond(res, req, func() (interface{}, error) {
+			volumeName := params["volume_name"]
+			forceStr := req.URL.Query().Get("force")
+			force := false
+			if strings.ToLower(forceStr) == "true" {
+				force = true
+			}
+			lxlog.Debugf(logrus.Fields{"volume": volumeName}, "detaching volume from any instance")
+			err := ec2api.DetachVolume(volumeName, force)
+			if err != nil {
+				return nil, lxerrors.New("could not attach volume to instance", err)
+			}
+			lxlog.Infof(logrus.Fields{"volume": volumeName}, "volume detached")
+			return volumeName, nil
 		})
 	})
 }
