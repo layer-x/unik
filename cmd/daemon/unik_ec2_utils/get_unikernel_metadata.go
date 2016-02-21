@@ -8,12 +8,12 @@ import (
 	"time"
 )
 
-const UNIKERNEL_APP_NAME = "UNIKERNEL_APP_NAME"
+const UNIKERNEL_NAME = "UNIKERNEL_APP_NAME"
 
 func GetUnikernelMetadata(image *ec2.Image) *types.Unikernel {
 	unikernel := &types.Unikernel{}
 	for _, tag := range image.Tags {
-		if *tag.Key == UNIKERNEL_APP_NAME {
+		if *tag.Key == UNIKERNEL_NAME {
 			unikernel.UnikernelName = *tag.Value
 		}
 	}

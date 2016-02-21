@@ -20,14 +20,19 @@ func GetUnikInstanceMetadata(instance *ec2.Instance) (*types.UnikInstance, error
 	if err != nil {
 		return nil, lxerrors.New("could not start ec2 client session", err)
 	}
-	var unikInstanceId string
-	var instanceName string
+	var unikInstanceId, instanceName, unikernelName, unikernelId string
 	for _, tag := range instance.Tags {
 		if *tag.Key == UNIK_INSTANCE_ID {
 			unikInstanceId = *tag.Value
 		}
 		if *tag.Key == "Name" {
 			instanceName = *tag.Value
+		}
+		if *tag.Key == UNIKERNEL_NAME {
+			unikernelName = *tag.Value
+		}
+		if *tag.Key == UNIKERNEL_ID {
+			unikernelId = *tag.Value
 		}
 	}
 	if unikInstanceId == "" {
@@ -61,6 +66,8 @@ func GetUnikInstanceMetadata(instance *ec2.Instance) (*types.UnikInstance, error
 		UnikInstanceID: unikInstanceId,
 		AmazonID: *instance.InstanceId,
 		UnikInstanceName: instanceName,
+		UnikernelId: unikernelId,
+		UnikernelName: unikernelName,
 	}
 	if instance.PrivateIpAddress != nil {
 		unikInstance.PrivateIp = *instance.PrivateIpAddress

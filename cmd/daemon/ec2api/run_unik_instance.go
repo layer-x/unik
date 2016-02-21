@@ -71,7 +71,7 @@ func RunUnikInstance(unikernelName, instanceName string, instances int64, tags m
 								Value: aws.String(unikernel.AMI),
 							},
 							&ec2.Tag{
-								Key:   aws.String(unik_ec2_utils.UNIKERNEL_APP_NAME),
+								Key:   aws.String(unik_ec2_utils.UNIKERNEL_NAME),
 								Value: aws.String(unikernelName),
 							},
 						},
