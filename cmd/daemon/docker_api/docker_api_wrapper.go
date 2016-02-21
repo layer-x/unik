@@ -231,6 +231,10 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 			outStream.Write([]byte(logLine + "\n"))
 		}
 	})
+	m.Post("/v1.22/containers/:instance_id/start", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		lxlog.Infof(logrus.Fields{"req": req}, "received docker start container request")
+		res.WriteHeader(http.StatusNoContent)
+	})
 	m.Get("/v1.22/containers/:instance_id/json", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
 		unikInstanceId := params["instance_id"]
 		unikInstance, err := ec2api.GetUnikInstanceByPrefixOrName(unikInstanceId)
