@@ -39,9 +39,6 @@ func init() {
 	}
 }
 
-// BuildHandler is a named request handler for building rest protocol requests
-var BuildHandler = request.NamedHandler{Name: "awssdk.rest.Build", Fn: Build}
-
 // Build builds the REST component of a service request.
 func Build(r *request.Request) {
 	if r.ParamsFilled() {

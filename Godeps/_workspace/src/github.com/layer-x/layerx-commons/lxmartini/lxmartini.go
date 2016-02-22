@@ -1,14 +1,14 @@
 package lxmartini
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/go-martini/martini"
-	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/layerx-commons/lxlog"
 	"net/http"
 	"time"
+	"github.com/layer-x/layerx-commons/lxerrors"
+	"encoding/json"
 )
 
 func QuietMartini() *martini.ClassicMartini {
@@ -44,7 +44,7 @@ func customLogger() martini.Handler {
 }
 
 func Respond(res http.ResponseWriter, message interface{}) error {
-	switch message.(type) {
+	switch message.(type){
 	case string:
 		messageString := message.(string)
 		data := []byte(messageString)
@@ -55,11 +55,7 @@ func Respond(res http.ResponseWriter, message interface{}) error {
 		return nil
 	case error:
 		responseError := message.(error)
-		data := []byte(responseError.Error())
-		_, err := res.Write(data)
-		if err != nil {
-			return lxerrors.New("writing data", err)
-		}
+		http.Error(res, responseError.Error(), http.StatusInternalServerError)
 		return nil
 	}
 	data, err := json.Marshal(message)

@@ -1,14 +1,14 @@
 package lxlog
 
 import (
-	"bufio"
 	"fmt"
 	"github.com/Sirupsen/logrus"
+	"runtime"
+	"strings"
 	"io"
 	"net/http"
 	"os/exec"
-	"runtime"
-	"strings"
+	"bufio"
 )
 
 var log = logrus.New()
@@ -51,7 +51,7 @@ func LogCommand(cmd *exec.Cmd, debug bool) {
 		in := bufio.NewScanner(stderr)
 
 		for in.Scan() {
-			Errorf(logrus.Fields{}, in.Text())
+			Debugf(logrus.Fields{}, in.Text())
 		}
 	}()
 }
