@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
+	"../shell"
 	log "github.com/Sirupsen/logrus"
-	"github.com/layer-x/rumpstager/shell"
 )
 
 type DiskSize interface {

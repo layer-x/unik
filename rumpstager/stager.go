@@ -11,10 +11,10 @@ import (
 	"strings"
 	"text/template"
 
+	"./device"
+	"./model"
+	"./shell"
 	log "github.com/Sirupsen/logrus"
-	"github.com/layer-x/rumpstager/device"
-	"github.com/layer-x/rumpstager/model"
-	"github.com/layer-x/rumpstager/shell"
 )
 
 const GrubTemplate = `default=0
