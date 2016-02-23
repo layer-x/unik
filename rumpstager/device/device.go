@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
-	"../shell"
 	log "github.com/Sirupsen/logrus"
+	"github.com/layer-x/unik/rumpstager/shell"
 )
 
 type DiskSize interface {
@@ -129,9 +129,9 @@ type Part interface {
 func runParted(device string, args ...string) ([]byte, error) {
 	log.WithFields(log.Fields{"device": device, "args": args}).Debug("running parted")
 	args = append([]string{"--script", "--machine", device}, args...)
-	out, err := exec.Command("parted", args...).Output()
+	out, err := exec.Command("parted", args...).CombinedOutput()
 	if err != nil {
-		log.WithFields(log.Fields{"args": args, "err": err}).Error("parted failed")
+		log.WithFields(log.Fields{"args": args, "err": err, "out": string(out)}).Error("parted failed")
 	}
 	return out, err
 }
@@ -369,11 +369,22 @@ func (p *DeviceMapperDevice) Acquire() (BlockDevice, error) {
 	// dmsetup create partition${PARTI} --table "0 $SIZE linear $DEVICE $SECTOR"
 	table := fmt.Sprintf("0 %d linear %s %d", p.size, p.orginalDevice, p.start)
 
-	return p.Get(), shell.RunLogCommand("dmsetup", "create", p.DeviceName, "--table", table)
+	err := shell.RunLogCommand("dmsetup", "create", p.DeviceName, "--table", table)
+
+	if err == nil && !IsExists(p.Get().Name()) {
+		err = shell.RunLogCommand("dmsetup", "mknodes", p.DeviceName)
+	}
+
+	return p.Get(), err
 }
 
 func (p *DeviceMapperDevice) Release() error {
-	return shell.RunLogCommand("dmsetup", "remove", p.DeviceName)
+	err := shell.RunLogCommand("dmsetup", "remove", p.DeviceName)
+	if err == nil && IsExists(p.Get().Name()) {
+		err = os.Remove(p.Get().Name())
+	}
+	return err
+
 }
 
 func (p *DeviceMapperDevice) Get() BlockDevice {

@@ -5,13 +5,13 @@ import (
 	"sync"
 	"time"
 
-	"./device"
-	"./model"
 	log "github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/layer-x/unik/rumpstager/device"
+	"github.com/layer-x/unik/rumpstager/model"
 )
 
 func stage_aws(appName, kernelPath string, volumes map[string]Volume, c model.RumpConfig) {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -11,10 +12,11 @@ import (
 	"strings"
 	"text/template"
 
-	"./device"
-	"./model"
-	"./shell"
 	log "github.com/Sirupsen/logrus"
+	"github.com/andrew-d/go-termutil"
+	"github.com/layer-x/unik/rumpstager/device"
+	"github.com/layer-x/unik/rumpstager/model"
+	"github.com/layer-x/unik/rumpstager/shell"
 )
 
 const GrubTemplate = `default=0
@@ -33,10 +35,12 @@ const ProgramName = "program.bin"
 
 func checkErr(err error) {
 	if err != nil {
-		//		fmt.Println("Error has happened. please examine. press enter to release resources")
-		//	bufio.NewReader(os.Stdin).ReadBytes('\n')
+
+		if termutil.Isatty(os.Stdin.Fd()) {
+			fmt.Println("Error has happened. please examine. press enter to release resources")
+			bufio.NewReader(os.Stdin).ReadBytes('\n')
+		}
 		log.WithError(err).Panic("Failed in script!")
-		//	panic(err)
 	}
 }
 
@@ -92,11 +96,15 @@ func createBootImage(rootFile, progPath, jsonConfig string) error {
 
 	p := &device.MsDosPartioner{rootDevice.Name()}
 	p.MakeTable()
-	p.MakePart("primary", device.MegaBytes(0), device.MegaBytes(100))
+	p.MakePart("primary", device.MegaBytes(2), device.MegaBytes(100))
 	parts, err := device.ListParts(rootDevice)
 
 	if err != nil {
 		checkErr(err)
+	}
+
+	if len(parts) < 1 {
+		log.Panic("No parts created")
 	}
 
 	part := parts[0]
@@ -165,6 +173,7 @@ func writeDeviceMap(fname, rootDevice string) error {
 
 	t := template.Must(template.New("devicemap").Parse(DeviceMapFile))
 
+	log.WithFields(log.Fields{"device": rootDevice, "file": fname}).Debug("Writing device map")
 	t.Execute(f, struct {
 		GrubDevice string
 	}{rootDevice})
