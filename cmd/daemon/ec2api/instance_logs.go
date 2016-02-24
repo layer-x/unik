@@ -58,6 +58,7 @@ func StreamLogs(unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect b
 
 	linesCounted := -1
 	for {
+		time.Sleep(5000 * time.Millisecond)
 		currentLogs, err := GetLogs(unikInstanceId)
 		if err != nil {
 			return lxerrors.New("could not get logs for unik instance "+unikInstanceId, err)

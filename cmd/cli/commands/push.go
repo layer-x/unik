@@ -59,6 +59,9 @@ func Push(config types.UnikConfig, unikernelName, path string, force, verbose bo
 		for {
 			line, err := reader.ReadBytes('\n')
 			if err != nil {
+				if strings.Contains(err.Error(), "EOF") {
+					return nil
+				}
 				return lxerrors.New("reading line", err)
 			}
 			if string(line) == TERMINATE_OUTPUT {

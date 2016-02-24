@@ -8,6 +8,9 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/layer-x/layerx-commons/lxlog"
+	"github.com/Sirupsen/logrus"
 )
 
 const MAX_RETRIES = 5
@@ -58,6 +61,9 @@ func NewEC2Client() (*unikEc2Client, error) {
 		}
 		session := session.New()
 		session.Config.WithMaxRetries(MAX_RETRIES)
+		session.Handlers.Send.PushFront(func(r *request.Request) {
+			lxlog.Debugf(logrus.Fields{"request": r}, "request sent to aws")
+		})
 		ec2ClientSingleton = ec2.New(session, &aws.Config{
 			Region: aws.String(region),
 		})
