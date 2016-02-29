@@ -38,14 +38,14 @@ func DeleteUnikernel(unikernelId string, force bool) error {
 	if err != nil {
 		return lxerrors.New("could not deregister ami for unikernel "+unikernelId, err)
 	}
-	err = DeleteSnapshotAndVolume(unikernelId)
+	err = DeleteArtifacts(unikernelId)
 	if err != nil {
 		return lxerrors.New("could not delete snapshot or volume for unikernel "+unikernelId, err)
 	}
 	return nil
 }
 
-func DeleteSnapshotAndVolume(unikernelId string) error {
+func DeleteArtifacts(unikernelId string) error {
 	ec2Client, err := ec2_metada_client.NewEC2Client()
 	if err != nil {
 		return lxerrors.New("could not start ec2 client session", err)
@@ -80,7 +80,7 @@ func DeleteSnapshotAndVolume(unikernelId string) error {
 	return lxerrors.New("snapshot not found for unikernel "+unikernelId, err)
 }
 
-func DeleteSnapshotAndVolumeForApp(unikernelName string) error {
+func DeleteArtifactsForUnikernel(unikernelName string) error {
 	ec2Client, err := ec2_metada_client.NewEC2Client()
 	if err != nil {
 		return lxerrors.New("could not start ec2 client session", err)
