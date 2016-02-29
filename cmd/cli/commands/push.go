@@ -93,7 +93,7 @@ func printUnikernel(body []byte) error {
 	fmt.Printf("UNIKERNEL \t\t\t AMI \t\t\t CREATED\n")
 	fmt.Printf("%s \t\t\t %s \t\t %ss\n",
 		unikernel.UnikernelName,
-		unikernel.AMI,
+		unikernel.ImageId,
 		unikernel.CreationDate)
 	return nil
 }

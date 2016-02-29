@@ -5,7 +5,7 @@ import "time"
 type UnikInstance struct {
 	UnikInstanceID   string           `json:"UnikID"`
 	UnikInstanceName string           `json:"UnikInstanceName"`
-	AmazonID         string           `json:"AmazonID"`
+	VMID             string           `json:"VMID"`
 	UnikernelId      string           `json:"UnikernelId"`
 	UnikernelName    string           `json:"UnikernelName"`
 	Created          time.Time        `json:"Created"`

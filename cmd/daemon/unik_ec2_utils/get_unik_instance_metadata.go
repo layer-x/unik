@@ -64,7 +64,7 @@ func GetUnikInstanceMetadata(instance *ec2.Instance) (*types.UnikInstance, error
 	unikInstance := &types.UnikInstance{
 		UnikInstanceData: unikInstanceData,
 		UnikInstanceID: unikInstanceId,
-		AmazonID: *instance.InstanceId,
+		VMID: *instance.InstanceId,
 		UnikInstanceName: instanceName,
 		UnikernelId: unikernelId,
 		UnikernelName: unikernelName,

@@ -37,7 +37,7 @@ func RunUnikInstance(unikernelName, instanceName string, instances int64, tags m
 			encodedData := base64.StdEncoding.EncodeToString(data)
 			lxlog.Debugf(logrus.Fields{"unikinstancedata": string(data), "encoded_bytes": len(encodedData)}, "metadata for running unikinstance")
 			startInstancesInput := &ec2.RunInstancesInput{
-				ImageId:  aws.String(unikernel.AMI),
+				ImageId:  aws.String(unikernel.ImageId),
 				InstanceType: aws.String("m1.small"),
 				MaxCount: aws.Int64(instances),
 				MinCount: aws.Int64(instances),
@@ -50,7 +50,7 @@ func RunUnikInstance(unikernelName, instanceName string, instances int64, tags m
 			}
 			lxlog.Debugf(logrus.Fields{"reservation": reservation}, "started instance for unikernel "+unikernelName)
 			for _, instance := range reservation.Instances {
-				if unikernel.AMI == *instance.ImageId {
+				if unikernel.ImageId == *instance.ImageId {
 					instanceId := unikernelName + "_" + uuid.New()
 					if instanceName == "" {
 						instanceName = instanceId
@@ -68,7 +68,7 @@ func RunUnikInstance(unikernelName, instanceName string, instances int64, tags m
 							},
 							&ec2.Tag{
 								Key:   aws.String(unik_ec2_utils.UNIKERNEL_ID),
-								Value: aws.String(unikernel.AMI),
+								Value: aws.String(unikernel.ImageId),
 							},
 							&ec2.Tag{
 								Key:   aws.String(unik_ec2_utils.UNIKERNEL_NAME),

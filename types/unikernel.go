@@ -1,7 +1,7 @@
 package types
 
 type Unikernel struct {
-	AMI           string `json:"AMI_ID"`
+	ImageId string `json:"ImageId"`
 	UnikernelName string `json:"UnikernelName"`
 	CreationDate  string `json:"CreationDate"`
 	Created       int64  `json:"Created"`

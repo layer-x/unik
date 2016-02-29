@@ -53,7 +53,7 @@ func printUnikernels(body []byte) error {
 	for _, unikInstance := range unikernels {
 		fmt.Printf("%s \t\t\t %s \t\t %ss\n",
 			unikInstance.UnikernelName,
-			unikInstance.AMI,
+			unikInstance.ImageId,
 			unikInstance.CreationDate)
 	}
 	return nil
