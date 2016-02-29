@@ -20,22 +20,21 @@ import (
 
 type UnikDaemon struct {
 	server *martini.ClassicMartini
-	cpis map[string]UnikCPI
+	cpi UnikCPI
 }
 
-func NewUnikDaemon() *UnikDaemon {
+func NewUnikDaemon(provider string) *UnikDaemon {
+	var cpi UnikCPI
+	switch provider{
+	case "ec2":
+		cpi = ec2.NewUnikEC2CPI()
+		break
+	default:
+		panic("Unrecognized provider "+provider)
+	}
 	return &UnikDaemon{
 		server: lxmartini.QuietMartini(),
-		cpis: map[string]UnikCPI{
-			"ec2": ec2.NewUnikEC2CPI(),
-		},
-	}
-}
-
-func (d *UnikDaemon) chooseCPI(provider string) UnikCPI {
-	switch provider {
-	default:
-		return d.cpis["ec2"]
+		cpi: cpi,
 	}
 }
 
@@ -91,7 +90,7 @@ func (d *UnikDaemon) registerHandlers() {
 
 	d.server.Get("/instances", func(res http.ResponseWriter, req *http.Request) {
 		streamOrRespond(res, req, func() (interface{}, error) {
-			unikInstances, err := d.chooseCPI(req.URL.Query().Get("provider")).ListUnikInstances()
+			unikInstances, err := d.cpi.ListUnikInstances()
 			if err != nil {
 				lxlog.Errorf(logrus.Fields{"err": err}, "could not get unik instance list")
 			} else {
@@ -102,7 +101,7 @@ func (d *UnikDaemon) registerHandlers() {
 	})
 	d.server.Get("/unikernels", func(res http.ResponseWriter, req *http.Request) {
 		streamOrRespond(res, req, func() (interface{}, error) {
-			unikernels, err := d.chooseCPI(req.URL.Query().Get("provider")).ListUnikernels()
+			unikernels, err := d.cpi.ListUnikernels()
 			if err != nil {
 				lxlog.Errorf(logrus.Fields{"err": err}, "could not get unikernel list")
 			} else {
@@ -130,18 +129,18 @@ func (d *UnikDaemon) registerHandlers() {
 			defer uploadedTar.Close()
 			force := req.FormValue("force")
 			lxlog.Debugf(logrus.Fields{"unikernelName": unikernelName, "force": force, "uploadedTar": uploadedTar}, "building unikernel")
-			err = d.chooseCPI(req.URL.Query().Get("provider")).BuildUnikernel(unikernelName, force, uploadedTar, handler)
+			err = d.cpi.BuildUnikernel(unikernelName, force, uploadedTar, handler)
 			if err != nil {
 				lxlog.Errorf(logrus.Fields{"err": err, "form": fmt.Sprintf("%v", req.Form), "unikernel_name": unikernelName}, "building unikernel from unikernel source")
 				lxlog.Warnf(logrus.Fields{}, "cleaning up unikernel build artifacts (volumes, snapshots)")
-				snapshotErr := d.chooseCPI(req.URL.Query().Get("provider")).DeleteArtifactsForUnikernel(unikernelName)
+				snapshotErr := d.cpi.DeleteArtifactsForUnikernel(unikernelName)
 				if snapshotErr != nil {
 					lxlog.Errorf(logrus.Fields{"err": snapshotErr, "unikernel_name": unikernelName}, "could not remove volume and/or snapshot for instance")
 				}
 				return nil, err
 			}
 			lxlog.Debugf(logrus.Fields{}, "verifying unikernel succeeded")
-			unikernels, err := d.chooseCPI(req.URL.Query().Get("provider")).ListUnikernels()
+			unikernels, err := d.cpi.ListUnikernels()
 			if err != nil {
 				lxlog.Errorf(logrus.Fields{"err": err}, "could not get unikernel list")
 				return nil, err
@@ -206,13 +205,13 @@ func (d *UnikDaemon) registerHandlers() {
 				env[splitEnv[0]] = splitEnv[1]
 			}
 
-			instanceIds, err := d.chooseCPI(req.URL.Query().Get("provider")).RunUnikInstance(unikernelName, instanceName, int64(instances), tags, env)
+			instanceIds, err := d.cpi.RunUnikInstance(unikernelName, instanceName, int64(instances), tags, env)
 			if err != nil {
 				return nil, err
 			}
 			lxlog.Debugf(logrus.Fields{}, "verifying instances started")
 			successfulInstances := []*types.UnikInstance{}
-			unikInstances, err := d.chooseCPI(req.URL.Query().Get("provider")).ListUnikInstances()
+			unikInstances, err := d.cpi.ListUnikInstances()
 			if err != nil {
 				lxlog.Errorf(logrus.Fields{"err": err}, "could not get unik instance list")
 			}
@@ -233,7 +232,7 @@ func (d *UnikDaemon) registerHandlers() {
 		streamOrRespond(res, req, func() (interface{}, error) {
 			instanceId := params["instance_id"]
 			lxlog.Infof(logrus.Fields{"request": req}, "deleting instance "+instanceId)
-			err := d.chooseCPI(req.URL.Query().Get("provider")).DeleteUnikInstance(instanceId)
+			err := d.cpi.DeleteUnikInstance(instanceId)
 			if err != nil {
 				lxlog.Errorf(logrus.Fields{"err": err}, "could not delete instance "+instanceId)
 				return nil, err
@@ -254,7 +253,7 @@ func (d *UnikDaemon) registerHandlers() {
 			if strings.ToLower(forceStr) == "true" {
 				force = true
 			}
-			err := d.chooseCPI(req.URL.Query().Get("provider")).DeleteUnikernelByName(unikernelName, force)
+			err := d.cpi.DeleteUnikernelByName(unikernelName, force)
 			if err != nil {
 				lxlog.Errorf(logrus.Fields{"err": err}, "could not delete unikernel "+unikernelName)
 				return nil, err
@@ -281,13 +280,13 @@ func (d *UnikDaemon) registerHandlers() {
 				}
 
 				output := ioutils.NewWriteFlusher(res)
-				err := d.chooseCPI(req.URL.Query().Get("provider")).StreamLogs(unikInstanceId, output, deleteOnDisconnect)
+				err := d.cpi.StreamLogs(unikInstanceId, output, deleteOnDisconnect)
 				if err != nil {
 					lxlog.Warnf(logrus.Fields{"err": err, "unikInstanceId": unikInstanceId}, "streaming logs stopped")
 					return nil, err
 				}
 			}
-			logs, err := d.chooseCPI(req.URL.Query().Get("provider")).GetLogs(unikInstanceId)
+			logs, err := d.cpi.GetLogs(unikInstanceId)
 			if err != nil {
 				lxlog.Errorf(logrus.Fields{"err": err, "unikInstanceId": unikInstanceId}, "failed to perform get logs request")
 				return nil, err
@@ -298,7 +297,7 @@ func (d *UnikDaemon) registerHandlers() {
 	d.server.Get("/volumes", func(res http.ResponseWriter, req *http.Request) {
 		streamOrRespond(res, req, func() (interface{}, error) {
 			lxlog.Debugf(logrus.Fields{}, "listing volumes started")
-			volumes, err := d.chooseCPI(req.URL.Query().Get("provider")).ListVolumes()
+			volumes, err := d.cpi.ListVolumes()
 			if err != nil {
 				return nil, lxerrors.New("could not retrieve volumes", err)
 			}
@@ -318,7 +317,7 @@ func (d *UnikDaemon) registerHandlers() {
 				return nil, lxerrors.New("could not parse given size", err)
 			}
 			lxlog.Debugf(logrus.Fields{"size": size, "name": volumeName}, "creating volume started")
-			volume, err := d.chooseCPI(req.URL.Query().Get("provider")).CreateVolume(volumeName, size)
+			volume, err := d.cpi.CreateVolume(volumeName, size)
 			if err != nil {
 				return nil, lxerrors.New("could not create volume", err)
 			}
@@ -336,7 +335,7 @@ func (d *UnikDaemon) registerHandlers() {
 			}
 
 			lxlog.Debugf(logrus.Fields{"force": force, "name": volumeName}, "deleting volume started")
-			err := d.chooseCPI(req.URL.Query().Get("provider")).DeleteVolume(volumeName, force)
+			err := d.cpi.DeleteVolume(volumeName, force)
 			if err != nil {
 				return nil, lxerrors.New("could not create volume", err)
 			}
@@ -353,7 +352,7 @@ func (d *UnikDaemon) registerHandlers() {
 				return nil, lxerrors.New("must provide a device name in URL query", nil)
 			}
 			lxlog.Debugf(logrus.Fields{"instance": instanceId, "volume": volumeName}, "attaching volume to instance")
-			err := d.chooseCPI(req.URL.Query().Get("provider")).AttachVolume(volumeName, instanceId, device)
+			err := d.cpi.AttachVolume(volumeName, instanceId, device)
 			if err != nil {
 				return nil, lxerrors.New("could not attach volume to instance", err)
 			}
@@ -370,7 +369,7 @@ func (d *UnikDaemon) registerHandlers() {
 				force = true
 			}
 			lxlog.Debugf(logrus.Fields{"volume": volumeName}, "detaching volume from any instance")
-			err := d.chooseCPI(req.URL.Query().Get("provider")).DetachVolume(volumeName, force)
+			err := d.cpi.DetachVolume(volumeName, force)
 			if err != nil {
 				return nil, lxerrors.New("could not attach volume to instance", err)
 			}

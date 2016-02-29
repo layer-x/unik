@@ -10,6 +10,7 @@ import (
 
 func main() {
 	debugMode := flag.String("debug", "false", "enable verbose/debug mode")
+	provider := flag.String("provider", "ec2", "cloud provider to use")
 	flag.Parse()
 	if *debugMode == "true" {
 		lxlog.ActiveDebugMode()
@@ -24,6 +25,6 @@ func main() {
 		return
 	}
 	lxlog.Infof(logrus.Fields{}, "built golang_unikernel_builder image")
-	unikDaemon := NewUnikDaemon()
+	unikDaemon := NewUnikDaemon(*provider)
 	unikDaemon.Start(3000)
 }
