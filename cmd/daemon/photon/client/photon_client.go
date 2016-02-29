@@ -8,8 +8,8 @@ import (
 
 type PhotonClient struct {
 	url string
-	project string
-	tenant string
+	projectId string
+	tenantId string
 	defaultHeaders map[string]string
 }
 
@@ -40,20 +40,20 @@ const (
 func NewPhotonClient(url string) (*PhotonClient, error) {
 	client := &PhotonClient{
 		url: url,
-		project: unik_project_name,
-		tenant: unik_tenant_name,
 		defaultHeaders: map[string]string{
 			"Content-Type:": "application/json",
 		},
 	}
-	err := client.bootstrapPhoton()
+	tenantId, projectId, err := client.bootstrapPhoton()
 	if err != nil {
 		return nil, lxerrors.New("error bootstrapping unik project in photon-controller", err)
 	}
+	client.tenantId = tenantId
+	client.projectId = projectId
 	return client, nil
 }
 
-func (client *PhotonClient) bootstrapPhoton() error {
+func (client *PhotonClient) bootstrapPhoton() (string, string, error) {
 	tenant, err := client.GetUnikTenant()
 	if err != nil {
 		err = client.createUnikTenant()
@@ -65,18 +65,18 @@ func (client *PhotonClient) bootstrapPhoton() error {
 			return lxerrors.New("could not retrieve unik tenant after creation", err)
 		}
 	}
-	_, err = client.GetUnikProject(tenant.ID)
+	project, err := client.GetUnikProject(tenant.ID)
 	if err != nil {
 		err = client.createUnikProject(tenant.ID)
 		if err != nil {
 			return lxerrors.New("creating 'unik' project", err)
 		}
-		_, err = client.GetUnikProject(tenant.ID)
+		project, err = client.GetUnikProject(tenant.ID)
 		if err != nil {
 			return lxerrors.New("could not retrieve unik project after creation", err)
 		}
 	}
-	return nil
+	return tenant.ID, project.ID, nil
 }
 
 func (client *PhotonClient) GetUnikTenant() (*photon_types.Tenant, error) {
