@@ -184,3 +184,9 @@ type ResourceTicketList struct {
 	NextPageLink interface{} `json:"nextPageLink"`
 	PreviousPageLink interface{} `json:"previousPageLink"`
 }
+
+type FlavorCreateSpec struct {
+	Cost []QuotaLineItem `json:"cost"`
+	Kind string `json:"kind"`
+	Name string `json:"name"`
+}

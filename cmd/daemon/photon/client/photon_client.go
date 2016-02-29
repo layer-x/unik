@@ -18,10 +18,12 @@ const (
 	tenants = "/tenants"
 	projects = "/projects"
 	resource_tickets = "/resource_tickets"
+	flavors = "/flavors"
 
 	unik_tenant_name = "unik"
 	unik_project_name = "unik"
 	unik_resource_ticket_name = "unik"
+	unik_flavor_name = "default-unik-flavor"
 
 	 defaultLimits = []photon_types.QuotaLineItem{
 		photon_types.QuotaLineItem{
@@ -34,7 +36,24 @@ const (
 			Unit: "COUNT",
 			Value: 1000,
 		},
-	},
+	}
+
+	defaultFlavorCreateSpec = photon_types.FlavorCreateSpec{
+		Cost: []photon_types.QuotaLineItem{
+			photon_types.QuotaLineItem{
+				Key: "vm.memory",
+				Unit: "GB",
+				Value: 1,
+			},
+			photon_types.QuotaLineItem{
+				Key: "vm.cpu",
+				Unit: "COUNT",
+				Value: 1,
+			},
+		},
+		Kind: "vm",
+		Name: unik_flavor_name,
+	}
 )
 
 func NewPhotonClient(url string) (*PhotonClient, error) {
@@ -76,6 +95,7 @@ func (client *PhotonClient) bootstrapPhoton() (string, string, error) {
 			return lxerrors.New("could not retrieve unik project after creation", err)
 		}
 	}
+	client.createUnikFlavor()
 	return tenant.ID, project.ID, nil
 }
 
@@ -189,6 +209,17 @@ func (client *PhotonClient) createUnikResourceTicket(unikTenantId string) error 
 	}
 	if resp.StatusCode != 201 {
 		return lxerrors.New(fmt.Printf("performing POST create resource ticket request on photon-controller; resp was %s, expected 201", string(body)), nil)
+	}
+	return nil
+}
+
+func (client *PhotonClient) createUnikFlavor() error {
+	resp, body, err := lxhttpclient.Post(client.url, flavors, client.defaultHeaders, defaultFlavorCreateSpec)
+	if err != nil {
+		return lxerrors.New("performing POST create flavor request on photon-controller", err)
+	}
+	if resp.StatusCode != 201 {
+		return lxerrors.New(fmt.Printf("performing POST create flavor request on photon-controller; resp was %s, expected 201", string(body)), nil)
 	}
 	return nil
 }
