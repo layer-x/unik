@@ -1,4 +1,4 @@
-package ec2daemon
+package main
 
 import (
 	"encoding/json"
@@ -22,7 +22,7 @@ type UnikEc2Daemon struct {
 	server *martini.ClassicMartini
 }
 
-func NewUnikEc2Daemon() *UnikEc2Daemon {
+func NewUnikDaemon() *UnikEc2Daemon {
 	return &UnikEc2Daemon{
 		server: lxmartini.QuietMartini(),
 	}

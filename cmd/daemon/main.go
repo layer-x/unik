@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"github.com/layer-x/unik/cmd/daemon/ec2daemon"
 	"os"
 	"os/exec"
 	"flag"
@@ -25,6 +24,6 @@ func main() {
 		return
 	}
 	lxlog.Infof(logrus.Fields{}, "built golang_unikernel_builder image")
-	unikDaemon := ec2daemon.NewUnikEc2Daemon()
+	unikDaemon := NewUnikDaemon()
 	unikDaemon.Start(3000)
 }
