@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
+	"github.com/layer-x/unik/cmd/daemon/ec2/ec2_metada_client"
 	"io"
 	"net/http"
 	"strings"
@@ -24,7 +24,7 @@ func GetLogs(unikInstanceId string) (string, error) {
 	if err != nil {
 		return "", lxerrors.New("could not start ec2 client session", err)
 	}
-	getConsoleInput := &ec2.GetConsoleOutputInput{InstanceId: aws.String(unikInstance.AmazonID)}
+	getConsoleInput := &ec2.GetConsoleOutputInput{InstanceId: aws.String(unikInstance.VMID)}
 	consoleOutputOutput, err := ec2Client.GetConsoleOutput(getConsoleInput)
 	if err != nil {
 		return "", lxerrors.New("could not get console output for "+unikInstanceId, err)

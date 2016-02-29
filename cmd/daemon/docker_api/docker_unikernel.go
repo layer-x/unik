@@ -15,7 +15,7 @@ type DockerUnikernel struct {
 func convertUnikernel(unikernel *types.Unikernel) *DockerUnikernel {
 	return &DockerUnikernel{
 		Repotags:    []string{unikernel.UnikernelName + ":latest"},
-		ID:          unikernel.ImageId,
+		ID:          unikernel.Id,
 		Size:        1000,
 		Virtualsize: 1000,
 		Created:     unikernel.Created,

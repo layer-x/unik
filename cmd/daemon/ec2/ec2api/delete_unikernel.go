@@ -4,7 +4,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/layerx-commons/lxerrors"
-	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
+	"github.com/layer-x/unik/cmd/daemon/ec2/ec2_metada_client"
 )
 
 const UNIKERNEL_APP_NAME = "UNIKERNEL_APP_NAME"

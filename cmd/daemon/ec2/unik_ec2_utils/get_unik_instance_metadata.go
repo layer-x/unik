@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"github.com/Sirupsen/logrus"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
+	"github.com/layer-x/unik/cmd/daemon/ec2/ec2_metada_client"
 )
 
 const UNIK_INSTANCE_ID = "UNIK_INSTANCE_ID"

@@ -20,7 +20,7 @@ func GetUnikernelMetadata(image *ec2.Image) *types.Unikernel {
 	if unikernel.UnikernelName == "" {
 		return nil
 	}
-	unikernel.ImageId = *image.ImageId
+	unikernel.Id = *image.ImageId
 	unikernel.CreationDate = *image.CreationDate
 	layout := "2006-01-02T15:04:05.000Zs"
 	createdTime, err := time.Parse(layout, *image.CreationDate)

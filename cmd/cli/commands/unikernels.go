@@ -49,11 +49,11 @@ func printUnikernels(body []byte) error {
 	if err != nil {
 		return lxerrors.New("failed to retrieve unikernels: "+string(body), err)
 	}
-	fmt.Printf("UNIKERNEL \t\t\t AMI \t\t\t CREATED\n")
+	fmt.Printf("UNIKERNEL \t\t\t IMAGE ID \t\t\t CREATED\n")
 	for _, unikInstance := range unikernels {
 		fmt.Printf("%s \t\t\t %s \t\t %ss\n",
 			unikInstance.UnikernelName,
-			unikInstance.ImageId,
+			unikInstance.Id,
 			unikInstance.CreationDate)
 	}
 	return nil

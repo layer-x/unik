@@ -10,7 +10,7 @@ import (
 	"github.com/layer-x/layerx-commons/lxlog"
 	"github.com/layer-x/layerx-commons/lxmartini"
 	"github.com/layer-x/unik/cmd/daemon/docker_api"
-	"github.com/layer-x/unik/cmd/daemon/ec2api"
+	"github.com/layer-x/unik/cmd/daemon/ec2/ec2api"
 	"github.com/layer-x/unik/types"
 	"github.com/pborman/uuid"
 	"net/http"
@@ -18,17 +18,17 @@ import (
 	"strings"
 )
 
-type UnikEc2Daemon struct {
+type UnikDaemon struct {
 	server *martini.ClassicMartini
 }
 
-func NewUnikDaemon() *UnikEc2Daemon {
-	return &UnikEc2Daemon{
+func NewUnikDaemon() *UnikDaemon {
+	return &UnikDaemon{
 		server: lxmartini.QuietMartini(),
 	}
 }
 
-func (d *UnikEc2Daemon) registerHandlers() {
+func (d *UnikDaemon) registerHandlers() {
 	streamOrRespond := func(res http.ResponseWriter, req *http.Request, action func() (interface{}, error)) {
 		verbose := req.URL.Query().Get("verbose")
 		if strings.ToLower(verbose) == "true" {
@@ -369,11 +369,11 @@ func (d *UnikEc2Daemon) registerHandlers() {
 	})
 }
 
-func (d *UnikEc2Daemon) addDockerHandlers() {
+func (d *UnikDaemon) addDockerHandlers() {
 	d.server = docker_api.AddDockerApi(d.server)
 }
 
-func (d *UnikEc2Daemon) Start(port int) {
+func (d *UnikDaemon) Start(port int) {
 	d.registerHandlers()
 	d.addDockerHandlers()
 	d.server.RunOnAddr(fmt.Sprintf(":%v", port))

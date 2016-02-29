@@ -4,7 +4,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/layerx-commons/lxerrors"
-	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
+	"github.com/layer-x/unik/cmd/daemon/ec2/ec2_metada_client"
 )
 
 func DeleteUnikInstance(unikInstanceId string) error {
@@ -17,7 +17,7 @@ func DeleteUnikInstance(unikInstanceId string) error {
 		return lxerrors.New("could not start ec2 client session", err)
 	}
 	terminateInstancesInput := &ec2.TerminateInstancesInput{
-		InstanceIds: []*string{aws.String(unikInstance.AmazonID)},
+		InstanceIds: []*string{aws.String(unikInstance.VMID)},
 	}
 	_, err = ec2Client.TerminateInstances(terminateInstancesInput)
 	if err != nil {

@@ -9,9 +9,9 @@ func DeleteUnikernelByName(unikernelName string, force bool) error {
 	}
 	for _, unikernel := range unikernels {
 		if unikernel.UnikernelName == unikernelName {
-			err = DeleteUnikernel(unikernel.AMI, force)
+			err = DeleteUnikernel(unikernel.Id, force)
 			if err != nil {
-				return lxerrors.New("could not delete unikernel "+unikernel.AMI, err)
+				return lxerrors.New("could not delete unikernel "+unikernel.Id, err)
 			}
 			return nil
 		}

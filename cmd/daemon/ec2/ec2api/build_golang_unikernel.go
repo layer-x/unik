@@ -21,9 +21,9 @@ func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, han
 	for _, unikernel := range unikernels {
 		if unikernel.UnikernelName == unikernelName {
 			if strings.ToLower(force) == "true" {
-				lxlog.Warnf(logrus.Fields{"unikernelName": unikernelName, "ami": unikernel.AMI},
+				lxlog.Warnf(logrus.Fields{"unikernelName": unikernelName, "ami": unikernel.Id},
 					"deleting unikernel before building new unikernel")
-				err = DeleteUnikernel(unikernel.AMI, true)
+				err = DeleteUnikernel(unikernel.Id, true)
 				if err != nil {
 					return lxerrors.New("could not delete unikernel", err)
 				}

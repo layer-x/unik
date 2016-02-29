@@ -1,13 +1,13 @@
 package ec2api
 import (
 	"github.com/layer-x/layerx-commons/lxerrors"
-	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
+	"github.com/layer-x/unik/cmd/daemon/ec2/ec2_metada_client"
 	"github.com/layer-x/unik/types"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/layer-x/layerx-commons/lxlog"
 	"github.com/Sirupsen/logrus"
-	"github.com/layer-x/unik/cmd/daemon/unik_ec2_utils"
+	"github.com/layer-x/unik/cmd/daemon/ec2/unik_ec2_utils"
 )
 
 func ListVolumes() ([]*types.Volume, error) {

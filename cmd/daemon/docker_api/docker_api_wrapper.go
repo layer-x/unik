@@ -14,7 +14,7 @@ import (
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/layerx-commons/lxlog"
 	"github.com/layer-x/layerx-commons/lxmartini"
-	"github.com/layer-x/unik/cmd/daemon/ec2api"
+	"github.com/layer-x/unik/cmd/daemon/ec2/ec2api"
 )
 
 func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
@@ -142,7 +142,7 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 		for _, instance := range unikInstances {
 			dockerInstance := convertUnikInstanceVerbose(instance)
 			for _, unikernel := range unikernels {
-				if unikernel.AMI == instance.UnikernelId {
+				if unikernel.Id == instance.UnikernelId {
 					dockerInstance.Image = unikernel.UnikernelName
 				}
 			}

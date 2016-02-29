@@ -6,12 +6,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
-	"github.com/layer-x/unik/cmd/daemon/unik_ec2_utils"
+	"github.com/layer-x/unik/cmd/daemon/ec2/ec2_metada_client"
+	"github.com/layer-x/unik/cmd/daemon/ec2/unik_ec2_utils"
 	"github.com/pborman/uuid"
 	"github.com/layer-x/unik/types"
-	"github.com/docker/go/canonical/json"
 	"encoding/base64"
+	"encoding/json"
 )
 
 func RunUnikInstance(unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {
@@ -37,7 +37,7 @@ func RunUnikInstance(unikernelName, instanceName string, instances int64, tags m
 			encodedData := base64.StdEncoding.EncodeToString(data)
 			lxlog.Debugf(logrus.Fields{"unikinstancedata": string(data), "encoded_bytes": len(encodedData)}, "metadata for running unikinstance")
 			startInstancesInput := &ec2.RunInstancesInput{
-				ImageId:  aws.String(unikernel.ImageId),
+				ImageId:  aws.String(unikernel.Id),
 				InstanceType: aws.String("m1.small"),
 				MaxCount: aws.Int64(instances),
 				MinCount: aws.Int64(instances),
@@ -50,7 +50,7 @@ func RunUnikInstance(unikernelName, instanceName string, instances int64, tags m
 			}
 			lxlog.Debugf(logrus.Fields{"reservation": reservation}, "started instance for unikernel "+unikernelName)
 			for _, instance := range reservation.Instances {
-				if unikernel.ImageId == *instance.ImageId {
+				if unikernel.Id == *instance.ImageId {
 					instanceId := unikernelName + "_" + uuid.New()
 					if instanceName == "" {
 						instanceName = instanceId
@@ -68,7 +68,7 @@ func RunUnikInstance(unikernelName, instanceName string, instances int64, tags m
 							},
 							&ec2.Tag{
 								Key:   aws.String(unik_ec2_utils.UNIKERNEL_ID),
-								Value: aws.String(unikernel.ImageId),
+								Value: aws.String(unikernel.Id),
 							},
 							&ec2.Tag{
 								Key:   aws.String(unik_ec2_utils.UNIKERNEL_NAME),

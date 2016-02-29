@@ -4,7 +4,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/layerx-commons/lxerrors"
-	"github.com/layer-x/unik/cmd/daemon/ec2_metada_client"
+	"github.com/layer-x/unik/cmd/daemon/ec2/ec2_metada_client"
 "github.com/Sirupsen/logrus"
 "github.com/layer-x/layerx-commons/lxlog"
 )
@@ -32,7 +32,7 @@ func AttachVolume(volumeNameOrId, unikInstanceId, deviceName string) error {
 
 	attachVolumeInput := &ec2.AttachVolumeInput{
 		VolumeId: aws.String(volume.VolumeId),
-		InstanceId: aws.String(unikInstance.AmazonID),
+		InstanceId: aws.String(unikInstance.VMID),
 		Device: aws.String(deviceName),
 	}
 	attachVolumeOutput, err := ec2Client.AttachVolume(attachVolumeInput)
