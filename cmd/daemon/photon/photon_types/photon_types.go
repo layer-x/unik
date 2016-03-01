@@ -190,3 +190,22 @@ type FlavorCreateSpec struct {
 	Kind string `json:"kind"`
 	Name string `json:"name"`
 }
+
+type VmCreateSpec struct {
+	Flavor string `json:"flavor"`
+	Environment map[string]string `json:"environment"`
+	SourceImageId string `json:"sourceImageId"`
+	AttachedDisks []AttachedDiskCreateSpec `json:"attachedDisks"`
+	Affinities []localitySpec `json:"affinities,omitempty"`
+	Name string `json:"name"`
+	Networks []string `json:"networks,omitempty"`
+	Tags []string `json:"tags,omitempty"`
+}
+
+type AttachedDiskCreateSpec struct {
+	Flavor string `json:"flavor"`
+	Kind string `json:"kind"`
+	CapacityGb int `json:"capacityGb,omitempty"`
+	Name string `json:"name"`
+	BootDisk bool `json:"bootDisk"`
+}
