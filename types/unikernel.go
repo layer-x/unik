@@ -5,4 +5,6 @@ type Unikernel struct {
 	UnikernelName string `json:"UnikernelName"`
 	CreationDate  string `json:"CreationDate"`
 	Created       int64  `json:"Created"`
+	//vsphere only
+	Path		string `json:"Path"`
 }

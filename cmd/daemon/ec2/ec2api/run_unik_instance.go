@@ -20,8 +20,10 @@ func RunUnikInstance(unikernelName, instanceName string, instances int64, tags m
 	if err != nil {
 		return instanceIds, lxerrors.New("could not retrieve unikernel list", err)
 	}
+	var unikernelFound bool
 	for _, unikernel := range unikernels {
 		if unikernel.UnikernelName == unikernelName {
+			unikernelFound = true
 			ec2Client, err := ec2_metada_client.NewEC2Client()
 			if err != nil {
 				return instanceIds, lxerrors.New("could not start ec2 client session", err)
@@ -86,6 +88,9 @@ func RunUnikInstance(unikernelName, instanceName string, instances int64, tags m
 				}
 			}
 		}
+	}
+	if !unikernelFound {
+		return instanceIds, lxerrors.New("could not find a unikernel with name "+unikernelName, nil)
 	}
 	return instanceIds, nil
 }
