@@ -161,7 +161,7 @@ public class VsphereClient {
             System.out.printf("reached\n");
             targetFolder = rootFolder.createFolder(TARGET_FOLDER_NAME);
             System.out.printf("reached\n");
-        } catch (DuplicateName e) {
+        } catch (Exception e) {
             for (ManagedEntity me : rootFolder.getChildEntity()) {
                 if (me.getName().equals(TARGET_FOLDER_NAME)) {
                     targetFolder = (Folder) me;
