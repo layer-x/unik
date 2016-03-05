@@ -59,8 +59,8 @@ func RunUnikInstance(creds Creds, unikernelName, instanceName string, instances 
 		if err != nil {
 			return instanceIds, lxerrors.New("importing osv appliance to vsphere", err)
 		}
-
 		instanceIds = append(instanceIds, instanceId)
 	}
+
 	return instanceIds, nil
 }

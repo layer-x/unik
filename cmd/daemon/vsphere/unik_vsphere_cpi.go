@@ -6,7 +6,9 @@ import (
 	"github.com/layer-x/unik/cmd/daemon/vsphere/vsphere_api"
 	"strings"
 	"net/url"
-	"github.com/layer-x/unik/cmd/daemon/vsphere/vsphere_utils"
+	"github.com/layer-x/layerx-commons/lxerrors"
+	"github.com/layer-x/layerx-commons/lxlog"
+"github.com/Sirupsen/logrus"
 )
 
 type UnikVsphereCPI struct{
@@ -17,7 +19,7 @@ func NewUnikVsphereCPI(rawUrl, user, password string) *UnikVsphereCPI {
 	rawUrl = "https://"+user+":"+password+"@"+strings.TrimSuffix(strings.TrimPrefix(strings.TrimPrefix(rawUrl, "http://"), "https://"), "/sdk")+"/sdk"
 	u, err := url.Parse(rawUrl)
 	if err != nil {
-		panic("parsing provided url "+ rawUrl+": "+err.Error())
+		lxlog.Fatalf(logrus.Fields{"raw-url": rawUrl, "err": err},"parsing provided url")
 	}
 	return &UnikVsphereCPI{
 		creds: vsphere_api.Creds{
@@ -26,7 +28,7 @@ func NewUnikVsphereCPI(rawUrl, user, password string) *UnikVsphereCPI {
 	}
 }
 func (cpi *UnikVsphereCPI) AttachVolume(volumeNameOrId, unikInstanceId, deviceName string) error {
-	return vsphere_api.AttachVolume(cpi.creds, volumeNameOrId, unikInstanceId, deviceName)
+	return lxerrors.New("method not implemented", nil)
 }
 
 func (cpi *UnikVsphereCPI) BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
@@ -34,47 +36,47 @@ func (cpi *UnikVsphereCPI) BuildUnikernel(unikernelName, force string, uploadedT
 }
 
 func (cpi *UnikVsphereCPI) CreateVolume(volumeName string, size int) (*types.Volume, error) {
-	return vsphere_api.CreateVolume(cpi.creds, volumeName, size)
+	return nil, lxerrors.New("method not implemented", nil)
 }
 
 func (cpi *UnikVsphereCPI) DeleteArtifacts(unikernelId string) error {
-	return vsphere_api.DeleteArtifacts(cpi.creds, unikernelId)
+	return lxerrors.New("method not implemented", nil)
 }
 
 func (cpi *UnikVsphereCPI) DeleteUnikInstance(unikInstanceId string) error {
-	return vsphere_api.DeleteUnikInstance(cpi.creds, unikInstanceId)
+	return lxerrors.New("method not implemented", nil)
 }
 
 func (cpi *UnikVsphereCPI) DeleteArtifactsForUnikernel(unikernelName string) error {
-	return vsphere_api.DeleteArtifactsForUnikernel(cpi.creds, unikernelName)
+	return lxerrors.New("method not implemented", nil)
 }
 
 func (cpi *UnikVsphereCPI) DeleteUnikernel(unikernelId string, force bool) error {
-	return vsphere_api.DeleteUnikernel(cpi.creds, unikernelId, force)
+	return lxerrors.New("method not implemented", nil)
 }
 
 func (cpi *UnikVsphereCPI) DeleteUnikernelByName(unikernelName string, force bool) error {
-	return vsphere_api.DeleteUnikernelByName(cpi.creds, unikernelName, force)
+	return lxerrors.New("method not implemented", nil)
 }
 
 func (cpi *UnikVsphereCPI) DeleteVolume(volumeNameOrId string, force bool) error {
-	return vsphere_api.DeleteVolume(cpi.creds, volumeNameOrId, force)
+	return lxerrors.New("method not implemented", nil)
 }
 
 func (cpi *UnikVsphereCPI) DetachVolume(volumeNameOrId string, force bool) error {
-	return vsphere_api.DetachVolume(cpi.creds, volumeNameOrId, force)
+	return lxerrors.New("method not implemented", nil)
 }
 
 func (cpi *UnikVsphereCPI) GetUnikInstanceByPrefixOrName(unikInstanceIdPrefixOrName string) (*types.UnikInstance, error) {
-	return vsphere_api.GetUnikInstanceByPrefixOrName(cpi.creds, unikInstanceIdPrefixOrName)
+	return lxerrors.New("method not implemented", nil)
 }
 
 func (cpi *UnikVsphereCPI) GetVolumeByIdOrName(volumeIdOrName string) (*types.Volume, error) {
-	return vsphere_api.GetVolumeByIdOrName(cpi.creds, volumeIdOrName)
+	return lxerrors.New("method not implemented", nil)
 }
 
 func (cpi *UnikVsphereCPI) GetLogs(unikInstanceId string) (string, error) {
-	return vsphere_api.GetLogs(cpi.creds, unikInstanceId)
+	return lxerrors.New("method not implemented", nil)
 }
 
 func (cpi *UnikVsphereCPI) ListUnikInstances() ([]*types.UnikInstance, error) {
@@ -86,7 +88,7 @@ func (cpi *UnikVsphereCPI) ListUnikernels() ([]*types.Unikernel, error) {
 }
 
 func (cpi *UnikVsphereCPI) ListVolumes() ([]*types.Volume, error) {
-	return vsphere_api.ListVolumes(cpi.creds)
+	return lxerrors.New("method not implemented", nil)
 }
 
 func (cpi *UnikVsphereCPI) RunUnikInstance(unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {
@@ -94,5 +96,5 @@ func (cpi *UnikVsphereCPI) RunUnikInstance(unikernelName, instanceName string, i
 }
 
 func (cpi *UnikVsphereCPI) StreamLogs(unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error {
-	return vsphere_api.StreamLogs(cpi.creds, unikInstanceId, w, deleteInstanceOnDisconnect)
+	return lxerrors.New("method not implemented", nil)
 }

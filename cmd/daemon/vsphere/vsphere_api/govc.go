@@ -27,3 +27,22 @@ func (govc *Govc) importOva(name, annotation, ovaPath string) (error) {
 	lxlog.Debugf(logrus.Fields{"result":result}, "running import ova command finished successfully")
 	return nil
 }
+
+func (govc *Govc) powerOnVm(name string) (error) {
+	lxlog.Debugf(logrus.Fields{"name":name}, "booting vm")
+	result, err := lxexec.RunCommand("govc",
+		"vm.power",
+		"-k",
+		"-json=true",
+		"-url", govc.url,
+		"-name", name,
+		"-annotation", annotation,
+		ovaPath,
+	)
+	if err != nil {
+		return lxerrors.New("executing command", err)
+	}
+	lxlog.Debugf(logrus.Fields{"result":result}, "running import ova command finished successfully")
+	return nil
+
+}
