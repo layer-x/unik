@@ -8,6 +8,10 @@ import (
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/property"
  vspheretypes "github.com/vmware/govmomi/vim25/types"
+	"os/exec"
+	"github.com/layer-x/layerx-commons/lxlog"
+"github.com/Sirupsen/logrus"
+	"path/filepath"
 )
 
 type VsphereClient struct {
@@ -49,4 +53,83 @@ func (vc *VsphereClient) Vms() ([]mo.VirtualMachine, error) {
 		vmList = append(vmList, managedVms[0])
 	}
 	return vmList, nil
+}
+
+func (vc *VsphereClient) CreateVm(vmName string) error {
+	cmd := exec.Command("docker", "run", "--rm",
+		"govc",
+		"vm.create",
+		"-k",
+		"-u", vc.c.URL().String(),
+		"--force=true",
+		"--m=512",
+		"--on=false",
+		vmName,
+	)
+	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
+	lxlog.LogCommand(cmd, true)
+	err := cmd.Run()
+	if err != nil {
+		return lxerrors.New("failed running govc vm.create "+vmName, err)
+	}
+	return nil
+}
+
+//TODO: copy vmdk
+
+func (vc *VsphereClient) DestroyVm(vmName string) error {
+	cmd := exec.Command("docker", "run", "--rm",
+		"govc",
+		"vm.destroy",
+		"-k",
+		"-u", vc.c.URL().String(),
+		"--force=true",
+		"--m=512",
+		"--on=false",
+		vmName,
+	)
+	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
+	lxlog.LogCommand(cmd, true)
+	err := cmd.Run()
+	if err != nil {
+		return lxerrors.New("failed running govc vm.create "+vmName, err)
+	}
+	return nil
+}
+
+func (vc *VsphereClient) Rmdir(folder string) error {
+	cmd := exec.Command("docker", "run", "--rm",
+		"govc",
+		"datastore.rm",
+		"-k",
+		"-u", vc.c.URL().String(),
+		folder,
+	)
+	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
+	lxlog.LogCommand(cmd, true)
+	err := cmd.Run()
+	if err != nil {
+		return lxerrors.New("failed running govc datastore.rm "+folder, err)
+	}
+	return nil
+}
+
+func (vc *VsphereClient) UploadVmdk(vmdkPath, folder string) error {
+	vmdkFolder := filepath.Dir(vmdkPath)
+	vmdkFilename := filepath.Base(vmdkPath)
+	cmd := exec.Command("docker", "run", "--rm", "-v", vmdkFolder+":/unikernel",
+		"govc",
+		"import.vmdk",
+		"-k",
+		"-u", vc.c.URL().String(),
+		"/unikernel"+vmdkFilename,
+		folder,
+	)
+	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
+	lxlog.LogCommand(cmd, true)
+	err := cmd.Run()
+	if err != nil {
+		return lxerrors.New("failed running govc import.vmdk "+folder, err)
+	}
+	return nil
 }
