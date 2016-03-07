@@ -3,9 +3,9 @@ package main
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"os"
 	"os/exec"
 	"flag"
+"github.com/layer-x/unik/pkg/daemon"
 )
 
 func main() {
@@ -15,16 +15,23 @@ func main() {
 	if *debugMode == "true" {
 		lxlog.ActiveDebugMode()
 	}
-	buildCommand := exec.Command("docker", "build", "-t", "golang_unikernel_builder", ".")
-	buildCommand.Dir = "./golang_unikernel_builder"
-	buildCommand.Stdout = os.Stdout
-	buildCommand.Stderr = os.Stderr
+	buildCommand := exec.Command("docker", "build", "-t", "rumpstager", ".")
+	buildCommand.Dir = "../../rumpstager"
+	lxlog.LogCommand(buildCommand, true)
 	err := buildCommand.Run()
 	if err != nil {
-		lxlog.Errorf(logrus.Fields{"err": err}, "building golang unikernel builder")
+		lxlog.Errorf(logrus.Fields{"err": err}, "building rumpstager")
 		return
 	}
-	lxlog.Infof(logrus.Fields{}, "built golang_unikernel_builder image")
-	unikDaemon := NewUnikDaemon(*provider)
+	buildCommand = exec.Command("docker", "build", "-t", "rumpstager", ".")
+	buildCommand.Dir = "../../rumpcompiler"
+	lxlog.LogCommand(buildCommand, true)
+	err = buildCommand.Run()
+	if err != nil {
+		lxlog.Errorf(logrus.Fields{"err": err}, "building rumpstager")
+		return
+	}
+	lxlog.Infof(logrus.Fields{}, "built rumpstager image")
+	unikDaemon := daemon.NewUnikDaemon(*provider)
 	unikDaemon.Start(3000)
 }

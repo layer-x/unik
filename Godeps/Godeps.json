@@ -7,8 +7,12 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.6.2-10-g51fe59a",
-			"Rev": "51fe59aca108dc5680109e7b2051cbdcfa5a253c"
+			"Comment": "v0.9.0-15-g219c8cb",
+			"Rev": "219c8cb75c258c552e999735be6df753ffc7afdc"
+		},
+		{
+			"ImportPath": "github.com/andrew-d/go-termutil",
+			"Rev": "009166a695a2f516c749a26b4ac1f183d89aa336"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/aws",
@@ -66,6 +70,10 @@
 			"Rev": "33e0aa1cb7c019ccc3fbe049a8262a6403d30504"
 		},
 		{
+			"ImportPath": "github.com/davecgh/go-spew/spew",
+			"Rev": "5215b55f46b2b919f50a1df0eaa5886afe4e3b3d"
+		},
+		{
 			"ImportPath": "github.com/docker/docker/pkg/ioutils",
 			"Comment": "v1.4.1-4831-g0f5c9d3",
 			"Rev": "0f5c9d301b9b1cca66b3ea0f9dec3b5317d3686d"
@@ -92,8 +100,8 @@
 		},
 		{
 			"ImportPath": "github.com/gogo/protobuf/proto",
-			"Comment": "v0.1-108-g9dc5109",
-			"Rev": "9dc510915846dd5a05607d3b5bf41f5ca5cce972"
+			"Comment": "v0.1-125-g82d16f7",
+			"Rev": "82d16f734d6d871204a3feb1a73cb220cc92574c"
 		},
 		{
 			"ImportPath": "github.com/jmespath/go-jmespath",
@@ -102,27 +110,64 @@
 		},
 		{
 			"ImportPath": "github.com/layer-x/layerx-commons/lxerrors",
-			"Rev": "a620f1ae3617288069cbb05d4d793a2b920dc487"
+			"Rev": "ab757bbdcda051659ca8cf736515e115afecbe36"
+		},
+		{
+			"ImportPath": "github.com/layer-x/layerx-commons/lxexec",
+			"Rev": "ab757bbdcda051659ca8cf736515e115afecbe36"
 		},
 		{
 			"ImportPath": "github.com/layer-x/layerx-commons/lxfileutils",
-			"Rev": "a620f1ae3617288069cbb05d4d793a2b920dc487"
+			"Rev": "ab757bbdcda051659ca8cf736515e115afecbe36"
 		},
 		{
 			"ImportPath": "github.com/layer-x/layerx-commons/lxhttpclient",
-			"Rev": "a620f1ae3617288069cbb05d4d793a2b920dc487"
+			"Rev": "ab757bbdcda051659ca8cf736515e115afecbe36"
 		},
 		{
 			"ImportPath": "github.com/layer-x/layerx-commons/lxlog",
-			"Rev": "a620f1ae3617288069cbb05d4d793a2b920dc487"
+			"Rev": "ab757bbdcda051659ca8cf736515e115afecbe36"
 		},
 		{
 			"ImportPath": "github.com/layer-x/layerx-commons/lxmartini",
-			"Rev": "a620f1ae3617288069cbb05d4d793a2b920dc487"
+			"Rev": "ab757bbdcda051659ca8cf736515e115afecbe36"
 		},
 		{
 			"ImportPath": "github.com/pborman/uuid",
-			"Rev": "ca53cad383cad2479bbba7f7a1a05797ec1386e4"
+			"Comment": "v1.0-11-gc55201b",
+			"Rev": "c55201b036063326c5b1b89ccfe45a184973d073"
+		},
+		{
+			"ImportPath": "github.com/pmezard/go-difflib/difflib",
+			"Rev": "792786c7400a136282c1664665ae0a8db921c6c2"
+		},
+		{
+			"ImportPath": "github.com/stretchr/testify/assert",
+			"Comment": "v1.1.3-4-g1f4a164",
+			"Rev": "1f4a1643a57e798696635ea4c126e9127adb7d3c"
+		},
+		{
+			"ImportPath": "github.com/vmware/govmomi",
+			"Comment": "v0.4.0-3-gfa68e42",
+			"Rev": "fa68e4245eccc0fa569cdbe41b0ad84f1162edb9"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "b6d7b1396ec874c3b00f6c84cd4301a17c56c8ed"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "833a04a10549a95dc34458c195cbad61bbb6cb4d"
+		},
+		{
+			"ImportPath": "gopkg.in/airbrake/gobrake.v2",
+			"Comment": "v2.0.2",
+			"Rev": "e5efbe565a5a63d8aafee7efa2f4fdd7f42b7bd3"
+		},
+		{
+			"ImportPath": "gopkg.in/gemnasium/logrus-airbrake-hook.v2",
+			"Comment": "v2.0.0",
+			"Rev": "31e6fd4bd5a98d8ee7673d24bc54ec73c31810dd"
 		}
 	]
 }
