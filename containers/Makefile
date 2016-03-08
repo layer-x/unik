@@ -7,7 +7,7 @@ $(eval platform = $(word 3, $(words)))
 docker build -t $@ -f $(folder)/$(framework)/Dockerfile.$(platform) $(folder)/$(framework)
 endef
 
-.PHONY: all build rumpcompiler-base-common rumpcompiler-base-hw rumpcompiler-base-xen rumpcompiler-go-hw rumpcompiler-go-xen rumpcdebugger-gdb-hw
+.PHONY: all build rumpstager rumpcompiler-base-common rumpcompiler-base-hw rumpcompiler-base-xen rumpcompiler-go-hw rumpcompiler-go-xen rumpcdebugger-gdb-hw
 
 all: build
 
@@ -26,8 +26,10 @@ rumpcompiler-go-hw: rumpcompiler-base-hw
 rumpcompiler-go-xen: rumpcompiler-base-xen
 	$(buildcontainer)
 
-
 rumpcdebugger-gdb-hw: rumpcompiler-base-xen
 	$(buildcontainer)
 
-build: rumpcompiler-base-hw rumpcompiler-base-xen rumpcompiler-go-hw rumpcompiler-go-xen rumpcdebugger-gdb-hw
+rumpstager:
+ docker build -t $@ $@
+
+build: rumpstager rumpcompiler-base-hw rumpcompiler-base-xen rumpcompiler-go-hw rumpcompiler-go-xen rumpcdebugger-gdb-hw
