@@ -7,6 +7,7 @@ import (
 "github.com/layer-x/layerx-commons/lxlog"
 "github.com/Sirupsen/logrus"
 	"github.com/layer-x/unik/pkg/daemon/vsphere/vsphere_utils"
+	"os"
 )
 
 const VSPHERE_UNIKERNEL_FOLDER = "unik"
@@ -22,9 +23,18 @@ func ListUnikernels(creds Creds) ([]*types.Unikernel, error) {
 		return nil, lxerrors.New("reading unikernel directory", err)
 	}
 	unikernels := []*types.Unikernel{}
-	for _, dir := range unikernelDirs {
-		unikernelFolder := VSPHERE_UNIKERNEL_FOLDER+"/"+dir.Name()
-		metadata, err := readFile(unikernelFolder+"/unikernel-metadata.json")
+	for _, unikernelName := range unikernelDirs {
+		unikernelFolder := VSPHERE_UNIKERNEL_FOLDER+"/"+ unikernelName
+		unikernelDir, err := ioutil.TempDir(os.TempDir(), unikernelName +"-src-dir")
+		if err != nil {
+			return nil, lxerrors.New("creating temporary directory "+unikernelName+"-src-dir", err)
+		}
+		defer func() {
+			os.RemoveAll(unikernelDir)
+		}()
+
+		err = vsphereClient.DownloadFile(unikernelFolder+"/metadata.json", unikernelDir+"/metadata.json")
+		metadata, err := readFile(unikernelFolder+"/metadata.json")
 		if err != nil {
 			return nil, lxerrors.New("reading unikernel metadata file "+unikernelFolder+"/unikernel-metadata.json", err)
 		}

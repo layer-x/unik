@@ -51,24 +51,20 @@ func BuildUnikernel(creds Creds, unikernelName, force string, uploadedTar multip
 		}
 	}
 
-	unikernelPath, err := filepath.Abs("./test_outputs/" + "unikernels/" + unikernelName + "/")
+	unikernelDir, err := ioutil.TempDir(os.TempDir(), unikernelName+"-src-dir")
 	if err != nil {
-		return lxerrors.New("getting absolute path for ./test_outputs/" + "unikernels/" + unikernelName + "/", err)
-	}
-	err = os.MkdirAll(unikernelPath, 0777)
-	if err != nil {
-		return lxerrors.New("making directory", err)
+		return lxerrors.New("creating temporary directory "+unikernelName+"-src-dir", err)
 	}
 	//clean up artifacts even if we fail
 	defer func() {
-		err = os.RemoveAll(unikernelPath)
+		err = os.RemoveAll(unikernelDir)
 		if err != nil {
 			panic(lxerrors.New("cleaning up unikernel files", err))
 		}
-		lxlog.Infof(logrus.Fields{"files": unikernelPath}, "cleaned up files")
+		lxlog.Infof(logrus.Fields{"files": unikernelDir}, "cleaned up files")
 	}()
-	lxlog.Infof(logrus.Fields{"path": unikernelPath, "unikernel_name": unikernelName}, "created output directory for unikernel")
-	savedTar, err := os.OpenFile(unikernelPath + filepath.Base(handler.Filename), os.O_CREATE | os.O_RDWR, 0666)
+	lxlog.Infof(logrus.Fields{"path": unikernelDir, "unikernel_name": unikernelName}, "created output directory for unikernel")
+	savedTar, err := os.OpenFile(unikernelDir + filepath.Base(handler.Filename), os.O_CREATE | os.O_RDWR, 0666)
 	if err != nil {
 		return lxerrors.New("creating empty file for copying to", err)
 	}
@@ -78,25 +74,25 @@ func BuildUnikernel(creds Creds, unikernelName, force string, uploadedTar multip
 		return lxerrors.New("copying uploaded file to disk", err)
 	}
 	lxlog.Infof(logrus.Fields{"bytes": bytesWritten}, "file written to disk")
-	err = lxfileutils.Untar(savedTar.Name(), unikernelPath)
+	err = lxfileutils.Untar(savedTar.Name(), unikernelDir)
 	if err != nil {
 		lxlog.Warnf(logrus.Fields{"saved tar name":savedTar.Name()}, "failed to untar using gzip, trying again without")
-		err = lxfileutils.UntarNogzip(savedTar.Name(), unikernelPath)
+		err = lxfileutils.UntarNogzip(savedTar.Name(), unikernelDir)
 		if err != nil {
 			return lxerrors.New("untarring saved tar", err)
 		}
 	}
-	lxlog.Infof(logrus.Fields{"path": unikernelPath, "unikernel_name": unikernelName}, "unikernel tarball untarred")
-	err = capstan.GenerateCapstanFile(unikernelPath)
+	lxlog.Infof(logrus.Fields{"path": unikernelDir, "unikernel_name": unikernelName}, "unikernel tarball untarred")
+	err = capstan.GenerateCapstanFile(unikernelDir)
 	if err != nil {
-		lxerrors.New("generating capstan file from " + unikernelPath + "/pom.xml", err)
+		lxerrors.New("generating capstan file from " + unikernelDir + "/pom.xml", err)
 	}
-	lxlog.Infof(logrus.Fields{"path": unikernelPath + "/Capstanfile"}, "generated java Capstanfile")
+	lxlog.Infof(logrus.Fields{"path": unikernelDir + "/Capstanfile"}, "generated java Capstanfile")
 
 	buildUnikernelCommand := exec.Command("docker", "run",
 		"--rm",
 		"--privileged",
-		"-v", unikernelPath + ":/unikernel",
+		"-v", unikernelDir + ":/unikernel",
 		"-e", "UNIKERNEL_NAME=" + unikernelName,
 		"osvcompiler",
 	)
@@ -112,7 +108,7 @@ func BuildUnikernel(creds Creds, unikernelName, force string, uploadedTar multip
 		return lxerrors.New("creating datastore folder to contain unikernel image", err)
 	}
 
-	err = vsphereClient.ImportVmdk(unikernelPath + "/program.vmdk", datastoreFolder)
+	err = vsphereClient.ImportVmdk(unikernelDir + "/program.vmdk", datastoreFolder)
 	if err != nil {
 		return lxerrors.New("importing program.vmdk to datastore folder", err)
 	}
@@ -128,11 +124,11 @@ func BuildUnikernel(creds Creds, unikernelName, force string, uploadedTar multip
 	if err != nil {
 		return lxerrors.New("marshalling unikernel metadata", err)
 	}
-	err = writeFile(unikernelPath + "/metadata.json", metadataBytes)
+	err = writeFile(unikernelDir + "/metadata.json", metadataBytes)
 	if err != nil {
 		return lxerrors.New("writing metadata.json", err)
 	}
-	err = vsphereClient.UploadFile(unikernelPath + "/metadata.json", datastoreFolder + "/metadata.json")
+	err = vsphereClient.UploadFile(unikernelDir + "/metadata.json", datastoreFolder + "/metadata.json")
 	if err != nil {
 		return lxerrors.New("uploading metadata.json", err)
 	}

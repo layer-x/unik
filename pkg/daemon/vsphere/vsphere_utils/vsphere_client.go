@@ -138,14 +138,13 @@ func (vc *VsphereClient) Rmdir(folder string) error {
 
 func (vc *VsphereClient) ImportVmdk(vmdkPath, folder string) error {
 	vmdkFolder := filepath.Dir(vmdkPath)
-	vmdkFilename := filepath.Base(vmdkPath)
-	cmd := exec.Command("docker", "run", "--rm", "-v", vmdkFolder+":/unikernel",
+	cmd := exec.Command("docker", "run", "--rm", "-v", vmdkFolder+":"+vmdkFolder,
 		"vsphere-client",
 		"govc",
 		"import.vmdk",
 		"-k",
 		"-u", vc.c.URL().String(),
-		"/unikernel"+vmdkFilename,
+		vmdkPath,
 		folder,
 	)
 	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
@@ -158,16 +157,35 @@ func (vc *VsphereClient) ImportVmdk(vmdkPath, folder string) error {
 }
 
 func (vc *VsphereClient) UploadFile(srcFile, dest string) error {
-	vmdkFolder := filepath.Dir(srcFile)
-	vmdkFilename := filepath.Base(srcFile)
-	cmd := exec.Command("docker", "run", "--rm", "-v", vmdkFolder+":/unikernel",
+	srcDir := filepath.Dir(srcFile)
+	cmd := exec.Command("docker", "run", "--rm", "-v", srcDir +":"+srcDir,
 		"vsphere-client",
 		"govc",
 		"datastore.upload",
 		"-k",
 		"-u", vc.c.URL().String(),
-		src,
+		srcFile,
 		dest,
+	)
+	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
+	lxlog.LogCommand(cmd, true)
+	err := cmd.Run()
+	if err != nil {
+		return lxerrors.New("failed running govc datastore.upload", err)
+	}
+	return nil
+}
+
+func (vc *VsphereClient) DownloadFile(remoteFile, localFile string) error {
+	localDir := filepath.Dir(localFile)
+	cmd := exec.Command("docker", "run", "--rm", "-v", localDir +":"+ localDir,
+		"vsphere-client",
+		"govc",
+		"datastore.upload",
+		"-k",
+		"-u", vc.c.URL().String(),
+		remoteFile,
+		localFile,
 	)
 	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
 	lxlog.LogCommand(cmd, true)
