@@ -14,6 +14,8 @@ import (
 	"github.com/layer-x/unik/containers/rumpstager/model"
 )
 
+const SizeInGigs = 1
+
 func stage_aws(appName, kernelPath string, volumes map[string]Volume, c model.RumpConfig) {
 
 	deviceToSnapId := make(map[string]ec2.EbsBlockDevice)
@@ -39,7 +41,7 @@ func stage_aws(appName, kernelPath string, volumes map[string]Volume, c model.Ru
 		defer func() { availableDevices <- imgFile }()
 
 		snapshot := workOnVolume(imgFile, func(imgFile string) error {
-			return createBootImage(imgFile, kernelPath, toRumpJson(addAwsNet(c)))
+			return createBootImageOnBlockDevice(device.BlockDevice(imgFile), device.GigaBytes(SizeInGigs), kernelPath, toRumpJson(addAwsNet(c)))
 		})
 
 		results <- map[string]ec2.Snapshot{"/": snapshot}
@@ -199,7 +201,7 @@ func getAwsVolume() ec2.Volume {
 	checkErr(err)
 
 	volume, err := ec2svc.CreateVolume(&ec2.CreateVolumeInput{AvailabilityZone: aws.String(az),
-		Size: aws.Int64(1),
+		Size: aws.Int64(SizeInGigs),
 	})
 
 	checkErr(err)

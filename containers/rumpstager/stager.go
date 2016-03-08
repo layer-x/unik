@@ -64,30 +64,39 @@ func createSparseFile(filename string, size device.DiskSize) error {
 
 func createBootImage(rootFile, progPath, jsonConfig string) error {
 
-	size := device.GigaBytes(1)
-	sizeInSectors, err := device.ToSectors(size)
-	if err != nil {
-		checkErr(err)
-	}
-	err = createSparseFile(rootFile, size)
-	if err != nil {
-		checkErr(err)
-	}
+	return createBootImageWithSize(rootFile, device.GigaBytes(1), progPath, jsonConfig)
+}
 
-	/*	sectorsSize, err := device.ToSectors(size)
-		if err != nil {
-			return
-		}
-	*/
-	rootLo := device.NewLoDevice(rootFile)
+func createBootImageWithSize(rootFile string, size device.DiskSize, progPath, jsonConfig string) error {
+
+	err := createSparseFile(rootFile, size.ToBytes())
+	if err != nil {
+		checkErr(err)
+	}
+	return createBootImageOnFile(rootFile, size, progPath, jsonConfig)
+}
+
+func createBootImageOnFile(imgFile string, size device.DiskSize, progPath, jsonConfig string) error {
+
+	rootLo := device.NewLoDevice(imgFile)
 	rootLodName, err := rootLo.Acquire()
 	if err != nil {
 		checkErr(err)
 	}
 	defer rootLo.Release()
 
+	return createBootImageOnBlockDevice(rootLodName, size, progPath, jsonConfig)
+}
+
+func createBootImageOnBlockDevice(deviceName device.BlockDevice, size device.DiskSize, progPath, jsonConfig string) error {
+
+	sizeInSectors, err := device.ToSectors(size)
+	if err != nil {
+		checkErr(err)
+	}
+
 	grubDiskName := "hda"
-	rootBlkDev := device.NewDevice(0, sizeInSectors, rootLodName, grubDiskName)
+	rootBlkDev := device.NewDevice(0, sizeInSectors, deviceName, grubDiskName)
 	rootDevice, err := rootBlkDev.Acquire()
 	if err != nil {
 		checkErr(err)
