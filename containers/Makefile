@@ -7,7 +7,12 @@ $(eval platform = $(word 3, $(words)))
 docker build -t $@ -f $(folder)/$(framework)/Dockerfile.$(platform) $(folder)/$(framework)
 endef
 
-.PHONY: all build rumpstager rumpcompiler-base-common rumpcompiler-base-hw rumpcompiler-base-xen rumpcompiler-go-hw rumpcompiler-go-xen rumpcdebugger-gdb-hw
+define buildsimplecontainer
+docker build -t $@ $@
+endef
+
+
+.PHONY: all build rumpstager rumpcompiler-base-common rumpcompiler-base-hw rumpcompiler-base-xen rumpcompiler-go-hw rumpcompiler-go-xen rumpcdebugger-gdb-hw vsphere-client
 
 all: build
 
@@ -30,6 +35,9 @@ rumpdebugger-gdb-hw: rumpcompiler-base-xen
 	$(buildcontainer)
 
 rumpstager:
-	docker build -t $@ $@
+	$(buildsimplecontainer)
 
-build: rumpstager rumpcompiler-base-hw rumpcompiler-base-xen rumpcompiler-go-hw rumpcompiler-go-xen rumpcdebugger-gdb-hw
+vsphere-client:
+	$(buildsimplecontainer)
+
+build: rumpstager rumpcompiler-base-hw rumpcompiler-base-xen rumpcompiler-go-hw rumpcompiler-go-xen rumpcdebugger-gdb-hw vsphere-client
