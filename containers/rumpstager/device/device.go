@@ -149,6 +149,10 @@ func (m *MsDosPartioner) MakePart(partType string, start, size DiskSize) error {
 	_, err := runParted(m.Device, "mkpart", partType, start.ToPartedFormat(), size.ToPartedFormat())
 	return err
 }
+func (m *MsDosPartioner) MakePartTillEnd(partType string, start DiskSize) error {
+	_, err := runParted(m.Device, "mkpart", partType, start.ToPartedFormat(), "100%")
+	return err
+}
 
 type DiskLabelPartioner struct {
 	Device string

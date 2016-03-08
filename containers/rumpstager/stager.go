@@ -31,7 +31,10 @@ kernel /boot/program.bin {{.JsonConfig}}
 
 const DeviceMapFile = `(hd0) {{.GrubDevice}}
 `
+
 const ProgramName = "program.bin"
+
+const DefaultDeviceFilePrefix = "/dev/ld"
 
 func checkErr(err error) {
 	if err != nil {
@@ -63,45 +66,48 @@ func createSparseFile(filename string, size device.DiskSize) error {
 }
 
 func createBootImage(rootFile, progPath, jsonConfig string) error {
-
-	return createBootImageWithSize(rootFile, device.GigaBytes(1), progPath, jsonConfig)
-}
-
-func createBootImageWithSize(rootFile string, size device.DiskSize, progPath, jsonConfig string) error {
-	// add 10 mb for boot related stuff and align wit secotrs.
-
-	finalSize := size.ToBytes() + device.MegaBytes(10).ToBytes()
-
-	finalSize = finalSize - (finalSize % device.SectorSize)
-
-	err := createSparseFile(rootFile, finalSize)
+	size, err := shell.GetDirSize(progPath)
 	if err != nil {
 		checkErr(err)
 	}
-	return createBootImageOnFile(rootFile, device.Bytes(finalSize), progPath, jsonConfig)
+
+	// round up size to sectors
+	size = ((size + device.SectorSize) / device.SectorSize) * device.SectorSize
+
+	size = size + int64(device.MegaBytes(5).ToBytes())
+	return createBootImageWithSize(rootFile, progPath, jsonConfig, device.Bytes(size))
 }
 
-func createBootImageOnFile(imgFile string, size device.DiskSize, progPath, jsonConfig string) error {
+func createBootImageWithSize(rootFile, progPath, jsonConfig string, size device.DiskSize) error {
+	err := createSparseFile(rootFile, size)
+	if err != nil {
+		checkErr(err)
+	}
 
-	rootLo := device.NewLoDevice(imgFile)
+	return createBootImageOnFile(rootFile, size, progPath, jsonConfig)
+}
+
+func createBootImageOnFile(rootFile string, sizeOfFile device.DiskSize, progPath, jsonConfig string) error {
+
+	sizeInSectors, err := device.ToSectors(sizeOfFile)
+	if err != nil {
+		checkErr(err)
+	}
+
+	/*	sectorsSize, err := device.ToSectors(size)
+		if err != nil {
+			return
+		}
+	*/
+	rootLo := device.NewLoDevice(rootFile)
 	rootLodName, err := rootLo.Acquire()
 	if err != nil {
 		checkErr(err)
 	}
 	defer rootLo.Release()
 
-	return createBootImageOnBlockDevice(rootLodName, size, progPath, jsonConfig)
-}
-
-func createBootImageOnBlockDevice(deviceName device.BlockDevice, size device.DiskSize, progPath, jsonConfig string) error {
-
-	sizeInSectors, err := device.ToSectors(size)
-	if err != nil {
-		checkErr(err)
-	}
-
 	grubDiskName := "hda"
-	rootBlkDev := device.NewDevice(0, sizeInSectors, deviceName, grubDiskName)
+	rootBlkDev := device.NewDevice(0, sizeInSectors, rootLodName, grubDiskName)
 	rootDevice, err := rootBlkDev.Acquire()
 	if err != nil {
 		checkErr(err)
@@ -110,7 +116,7 @@ func createBootImageOnBlockDevice(deviceName device.BlockDevice, size device.Dis
 
 	p := &device.MsDosPartioner{rootDevice.Name()}
 	p.MakeTable()
-	p.MakePart("primary", device.MegaBytes(2), device.MegaBytes(100))
+	p.MakePartTillEnd("primary", device.MegaBytes(2))
 	parts, err := device.ListParts(rootDevice)
 
 	if err != nil {
@@ -466,11 +472,14 @@ func main() {
 	buildcontextdir := flag.String("d", "/unikernel", "build context. relative volume names are relative to that")
 	programName := flag.String("p", "program.bin", "unikernel to build to the image")
 	appName := flag.String("a", "newapp", "new app name to register (in aws)")
+	network := flag.String("net", "dhcp", "net type")
 	var mode Mode = Single
 	flag.Var(&mode, "m", "mode: single,multi,aws")
 
 	flag.Parse()
 
+	DeviceFilePrefix := DefaultDeviceFilePrefix
+	DeviceFilePrefix = "/dev/sd"
 	// fix relative names
 	if !path.IsAbs(*programName) {
 		*programName = path.Join(*buildcontextdir, *programName)
@@ -507,7 +516,7 @@ func main() {
 
 				blk := model.Blk{
 					Source:     "dev",
-					Path:       fmt.Sprintf("/dev/ld1%c", 'a'+i),
+					Path:       fmt.Sprintf(DeviceFilePrefix+"1%c", 'a'+i),
 					FSType:     "blk",
 					MountPoint: mntPoint,
 				}
@@ -527,7 +536,7 @@ func main() {
 				i++
 				blk := model.Blk{
 					Source:     "dev",
-					Path:       fmt.Sprintf("/dev/ld%da", 1+i),
+					Path:       fmt.Sprintf(DeviceFilePrefix+"%da", 1+i),
 					FSType:     "blk",
 					MountPoint: mntPoint,
 				}
@@ -557,11 +566,15 @@ func main() {
 		if mode != AWS {
 
 			imgFile := path.Join(*buildcontextdir, "root.img")
+			var addNet func(model.RumpConfig) model.RumpConfig
 
-			size, err := shell.GetDirSize(imgFile)
-			checkErr(err)
+			if *network == "dhcp" {
+				addNet = addVmwareNet
+			} else {
+				addNet = addStaticNet
+			}
 
-			err = createBootImageWithSize(imgFile, device.Bytes(size), *programName, toRumpJson(addStaticNet(c)))
+			err := createBootImageWithSize(imgFile, *programName, toRumpJson(addNet(c)), device.MegaBytes(100))
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -569,6 +582,19 @@ func main() {
 		}
 	}
 
+}
+
+func addVmwareNet(c model.RumpConfig) model.RumpConfig {
+
+	// vmware uses e1000 crards handled by wm driver.
+
+	c.Net = &model.Net{
+		If:     "wm0",
+		Type:   "inet",
+		Method: model.DHCP,
+	}
+
+	return c
 }
 
 func addStaticNet(c model.RumpConfig) model.RumpConfig {

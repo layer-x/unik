@@ -41,7 +41,7 @@ func stage_aws(appName, kernelPath string, volumes map[string]Volume, c model.Ru
 		defer func() { availableDevices <- imgFile }()
 
 		snapshot := workOnVolume(imgFile, func(imgFile string) error {
-			return createBootImageOnBlockDevice(device.BlockDevice(imgFile), device.GigaBytes(SizeInGigs), kernelPath, toRumpJson(addAwsNet(c)))
+			return createBootImageOnFile(imgFile, device.GigaBytes(SizeInGigs), kernelPath, toRumpJson(addAwsNet(c)))
 		})
 
 		results <- map[string]ec2.Snapshot{"/": snapshot}
