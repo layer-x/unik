@@ -6,13 +6,18 @@ import (
 "encoding/json"
 "github.com/layer-x/layerx-commons/lxlog"
 "github.com/Sirupsen/logrus"
+	"github.com/layer-x/unik/pkg/daemon/vsphere/vsphere_utils"
 )
 
-const VSPHERE_UNIKERNEL_FOLDER = "./vsphere_unikernel_folder"
+const VSPHERE_UNIKERNEL_FOLDER = "unik"
 
-func ListUnikernels() ([]*types.Unikernel, error) {
-	lxlog.Debugf(logrus.Fields{"path": VSPHERE_UNIKERNEL_FOLDER}, "reading unikernel list from disk")
-	unikernelDirs, err := ioutil.ReadDir(VSPHERE_UNIKERNEL_FOLDER)
+func ListUnikernels(creds Creds) ([]*types.Unikernel, error) {
+	vsphereClient, err := vsphere_utils.NewVsphereClient(creds.url)
+	if err != nil {
+		return nil, lxerrors.New("initiating vsphere client connection", err)
+	}
+	lxlog.Debugf(logrus.Fields{"path": VSPHERE_UNIKERNEL_FOLDER}, "reading unikernel list from datastore")
+	unikernelDirs, err := vsphereClient.Ls(VSPHERE_UNIKERNEL_FOLDER)
 	if err != nil {
 		return nil, lxerrors.New("reading unikernel directory", err)
 	}

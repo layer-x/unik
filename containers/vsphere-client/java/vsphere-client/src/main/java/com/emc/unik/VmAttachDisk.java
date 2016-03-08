@@ -61,8 +61,8 @@ public class VmAttachDisk {
         VirtualDisk vd = new VirtualDisk();
         vd.setCapacityInKB(-1);
         vd.setKey(0);
-        vd.setUnitNumber(0);
-        vd.setControllerKey(cKey);
+        vd.setUnitNumber(new Integer(0));
+        vd.setControllerKey(new Integer(cKey));
         VirtualDiskFlatVer2BackingInfo diskfileBacking =
                 new VirtualDiskFlatVer2BackingInfo();
         diskfileBacking.setFileName(fileName);

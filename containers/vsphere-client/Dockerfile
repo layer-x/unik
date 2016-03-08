@@ -1,13 +1,10 @@
 FROM ubuntu
 
-COPY ./java $HOME/java
-
 ENV GOPATH=$HOME/go
 ENV GOBIN=$GOPATH/bin
 ENV PATH=$GOBIN:/usr/local/go/bin:$PATH
 
-RUN apt-get update
-RUN apt-get install -y maven curl git openjdk-7-jdk
+RUN apt-get update && apt-get install -y maven curl git openjdk-7-jdk
 RUN curl https://storage.googleapis.com/golang/go1.5.2.linux-amd64.tar.gz | sudo tar xz -C /usr/local && sudo mv /usr/local/go /usr/local/go1.5 && sudo ln -s /usr/local/go1.5 /usr/local/go
 RUN mkdir -p $GOPATH/src/github.com/vmware
 RUN cd $GOPATH/src/github.com/vmware && \
@@ -15,7 +12,8 @@ RUN cd $GOPATH/src/github.com/vmware && \
     cd govmomi/govc && \
     go get ./... && \
     go install
-RUN cd $HOME/java/vsphere-client && \
+ADD java /java
+RUN cd /java/vsphere-client && \
     mvn package && \
     cp target/vsphere-client-1.0-SNAPSHOT-jar-with-dependencies.jar /vsphere-client.jar
 
