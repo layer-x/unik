@@ -19,7 +19,7 @@ cat >>  /opt/rumprun/src-netbsd/sys/rump/dev/lib/libpci/PCI.ioconf <<EOF
     ppb*    at pci? dev ? function ?
 EOF
 
-sed -i -e 's/SRCS+=	pci.c/SRCS+=	ppb.c ci.c' /opt/rumprun/src-netbsd/sys/rump/dev/lib/libpci/Makefile
+sed -i -e 's/SRCS+=	pci.c/SRCS+=	ppb.c pci.c/' /opt/rumprun/src-netbsd/sys/rump/dev/lib/libpci/Makefile
 
 
 ./build-rr.sh -d $DESTDIR -o ./obj $PLATFORM build -- $BUILDRUMP_EXTRA && \
