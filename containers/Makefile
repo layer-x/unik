@@ -26,10 +26,10 @@ rumpcompiler-go-hw: rumpcompiler-base-hw
 rumpcompiler-go-xen: rumpcompiler-base-xen
 	$(buildcontainer)
 
-rumpcdebugger-gdb-hw: rumpcompiler-base-xen
+rumpdebugger-gdb-hw: rumpcompiler-base-xen
 	$(buildcontainer)
 
 rumpstager:
- docker build -t $@ $@
+	docker build -t $@ $@
 
 build: rumpstager rumpcompiler-base-hw rumpcompiler-base-xen rumpcompiler-go-hw rumpcompiler-go-xen rumpcdebugger-gdb-hw
