@@ -68,12 +68,17 @@ func createBootImage(rootFile, progPath, jsonConfig string) error {
 }
 
 func createBootImageWithSize(rootFile string, size device.DiskSize, progPath, jsonConfig string) error {
+	// add 10 mb for boot related stuff and align wit secotrs.
 
-	err := createSparseFile(rootFile, size.ToBytes())
+	finalSize := size.ToBytes() + device.MegaBytes(10).ToBytes()
+
+	finalSize = finalSize - (finalSize % device.SectorSize)
+
+	err := createSparseFile(rootFile, finalSize)
 	if err != nil {
 		checkErr(err)
 	}
-	return createBootImageOnFile(rootFile, size, progPath, jsonConfig)
+	return createBootImageOnFile(rootFile, device.Bytes(finalSize), progPath, jsonConfig)
 }
 
 func createBootImageOnFile(imgFile string, size device.DiskSize, progPath, jsonConfig string) error {
@@ -271,8 +276,8 @@ func createSingleVolume(rootFile string, folder Volume) error {
 	checkErr(err)
 
 	// take a spare sizde and down to sector size
-	size = (device.SECTOR_SIZE + size + size/10 + int64(ext2Overhead))
-	size &^= (device.SECTOR_SIZE - 1)
+	size = (device.SectorSize + size + size/10 + int64(ext2Overhead))
+	size &^= (device.SectorSize - 1)
 	// 10% buffer.. aligned to 512
 	sizeVolume := device.Bytes(size)
 	_, err = device.ToSectors(device.Bytes(size))
@@ -330,7 +335,7 @@ func createPartitionedVolumes(imgFile string, volums map[string]Volume) ([]strin
 		totalSize += sizes[mntPoint]
 		orderedKeys = append(orderedKeys, mntPoint)
 	}
-	sizeVolume := device.Bytes((device.SECTOR_SIZE + totalSize + totalSize/10) &^ (device.SECTOR_SIZE - 1))
+	sizeVolume := device.Bytes((device.SectorSize + totalSize + totalSize/10) &^ (device.SectorSize - 1))
 	sizeVolume += device.MegaBytes(4).ToBytes()
 
 	log.WithFields(log.Fields{"imgFile": imgFile, "size": sizeVolume.ToPartedFormat()}).Debug("Creating image file")
@@ -552,7 +557,11 @@ func main() {
 		if mode != AWS {
 
 			imgFile := path.Join(*buildcontextdir, "root.img")
-			err := createBootImage(imgFile, *programName, toRumpJson(addStaticNet(c)))
+
+			size, err := shell.GetDirSize(imgFile)
+			checkErr(err)
+
+			err = createBootImageWithSize(imgFile, device.Bytes(size), *programName, toRumpJson(addStaticNet(c)))
 			if err != nil {
 				log.Fatal(err)
 			}

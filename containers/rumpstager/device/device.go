@@ -53,22 +53,22 @@ func (s GigaBytes) ToBytes() Bytes {
 
 type Sectors int64
 
-const SECTOR_SIZE = 512
+const SectorSize = 512
 
 func (s Sectors) ToPartedFormat() string {
 	return fmt.Sprintf("%ds", uint64(s))
 }
 
 func (s Sectors) ToBytes() Bytes {
-	return Bytes(s * SECTOR_SIZE)
+	return Bytes(s * SectorSize)
 }
 
 func ToSectors(b DiskSize) (Sectors, error) {
 	inBytes := b.ToBytes()
-	if inBytes%SECTOR_SIZE != 0 {
+	if inBytes%SectorSize != 0 {
 		return 0, errors.New("can't convert to sectors")
 	}
-	return Sectors(inBytes / SECTOR_SIZE), nil
+	return Sectors(inBytes / SectorSize), nil
 }
 
 type BlockDevice string
