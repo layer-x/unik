@@ -1,4 +1,4 @@
-FROM uvgroovy/rump-xen-base
+FROM rumpcompiler-base-xen
 
 ENV GOROOT=/usr/local/go
 ENV PATH=$PATH:$GOROOT/bin
