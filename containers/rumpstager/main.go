@@ -105,8 +105,8 @@ func main() {
 	programName := flag.String("p", "program.bin", "unikernel to build to the image")
 	appName := flag.String("a", "newapp", "new app name to register (in aws)")
 	//	network := flag.String("net", "dhcp", "net type")
-	var mode Mode
-	flag.Var(&mode, "m", "mode: single,multi,aws,vmware")
+	var mode Mode = "single"
+	flag.Var(&mode, "mode", "mode: single,multi,aws,vmware")
 
 	flag.Parse()
 

@@ -1,6 +1,7 @@
 package stagers
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -116,9 +117,9 @@ func (s *AWSStager) Stage(appName, kernelPath string, volumes map[string]model.V
 				snap, err := s.copyToAws(dev, localFolder)
 				if err != nil {
 					log.WithField("err", err).Error("Failed creating a volume")
-				} else {
-					results <- map[string]ec2.Snapshot{mntPoint: *snap}
+					return
 				}
+				results <- map[string]ec2.Snapshot{mntPoint: *snap}
 
 			}(mntPoint, localFolder)
 		} else {
@@ -142,7 +143,8 @@ func (s *AWSStager) Stage(appName, kernelPath string, volumes map[string]model.V
 
 	// +! for root volume
 	if len(deviceToSnapId) != (len(mountToDevice)) {
-		log.WithFields(log.Fields{"deviceToSnapId": deviceToSnapId, "mountToDevice": mountToDevice}).Panic("Not all volumes created")
+		log.WithFields(log.Fields{"deviceToSnapId": deviceToSnapId, "mountToDevice": mountToDevice}).Error("Not all volumes created")
+		return errors.New("Not all volumes created for AWS")
 	}
 
 	/// all should be ready for aws
@@ -214,6 +216,8 @@ func (s *AWSStager) copyToAws(imgFile string, localFolder model.Volume) (*ec2.Sn
 func (s *AWSStager) getAwsVolume() (*ec2.Volume, error) {
 	az, err := s.meta.GetMetadata("placement/availability-zone")
 	if err != nil {
+		log.WithField("err", err).Error("GetMetada AZ failed")
+
 		return nil, err
 	}
 	volume, err := s.ec2svc.CreateVolume(&ec2.CreateVolumeInput{AvailabilityZone: aws.String(az),
@@ -233,6 +237,7 @@ func (s *AWSStager) attachVol(vol ec2.Volume, file string) error {
 
 	instid, err := s.meta.GetMetadata("instance-id")
 	if err != nil {
+		log.WithField("err", err).Error("Get metadata instance-id")
 		return err
 	}
 	params := &ec2.AttachVolumeInput{
@@ -242,19 +247,25 @@ func (s *AWSStager) attachVol(vol ec2.Volume, file string) error {
 	}
 	_, err = s.ec2svc.AttachVolume(params)
 	if err != nil {
+		log.WithField("err", err).Error("Failed attaching a volume")
 		return err
 	}
 
 	volIn := &ec2.DescribeVolumesInput{VolumeIds: []*string{vol.VolumeId}}
 	err = s.ec2svc.WaitUntilVolumeInUse(volIn)
 	if err != nil {
+		log.WithField("err", err).Error("Failed waiting for a volume")
 		return err
 	}
 
 	isFile := waitForFile(file, 3*time.Minute)
 	if !isFile {
-		s.dettachVol(vol)
-		log.WithFields(log.Fields{"file": file}).Panic("Can't attach volume!")
+		log.WithFields(log.Fields{"file": file}).Error("Can't attach volume!")
+		err := s.dettachVol(vol)
+		if err != nil {
+			log.WithField("err", err).Error("Error detaching volume")
+		}
+		return errors.New("File was not created")
 	}
 
 	log.WithFields(log.Fields{"vol": *vol.VolumeId, "dev": file}).Debug("Volume attached")
