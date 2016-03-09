@@ -13,26 +13,62 @@ const DefaultDeviceFilePrefix = "/dev/ld"
 
 func init() {
 
-	awsStager := &SingleVolumeStager{DefaultDeviceFilePrefix, "."}
-	registerStager("aws", awsStager)
+	stager := &QEmuVolumeStager{DefaultDeviceFilePrefix, ".", true}
+	registerStager("single", stager)
+
+	stager = &QEmuVolumeStager{DefaultDeviceFilePrefix, ".", false}
+	registerStager("multi", stager)
 
 }
 
-type SingleVolumeStager struct {
+type QEmuVolumeStager struct {
 	DeviceFilePrefix string
 	buildDir         string
+	single           bool
 }
 
-func (s *SingleVolumeStager) Stage(appName, kernelPath string, volumes map[string]model.Volume, c model.RumpConfig) error {
+func (s *QEmuVolumeStager) Stage(appName, kernelPath string, volumes map[string]model.Volume, c model.RumpConfig) error {
 
-	err := s.createVolumes(volumes, &c)
+	var err error
+	if s.single {
+		err = s.CreateVolumesSingle(volumes, &c)
+
+	} else {
+		err = s.CreateVolumesMulti(volumes, &c)
+
+	}
 	if err != nil {
 		return err
 	}
-	return s.createRoot(kernelPath, c)
+	return s.CreateRoot(kernelPath, c)
 }
 
-func (s *SingleVolumeStager) createVolumes(volumes map[string]model.Volume, c *model.RumpConfig) error {
+func (s *QEmuVolumeStager) CreateVolumesMulti(volumes map[string]model.Volume, c *model.RumpConfig) error {
+	var i int
+
+	for mntPoint, localFolder := range volumes {
+
+		imgFile := path.Join(s.buildDir, fmt.Sprintf("data%02d.img", i))
+		err := utils.CreateSingleVolume(imgFile, localFolder)
+		if err != nil {
+			return err
+		}
+		i++
+		blk := model.Blk{
+			Source:     "dev",
+			Path:       fmt.Sprintf(s.DeviceFilePrefix+"%da", 1+i),
+			FSType:     "blk",
+			MountPoint: mntPoint,
+		}
+
+		c.Blk = append(c.Blk, blk)
+		fmt.Printf("image file %s\n", imgFile)
+
+	}
+	return nil
+}
+
+func (s *QEmuVolumeStager) CreateVolumesSingle(volumes map[string]model.Volume, c *model.RumpConfig) error {
 	imgFile := path.Join(s.buildDir, "data.img")
 	orderedMntPoints, err := utils.CreatePartitionedVolumes(imgFile, volumes)
 	if err != nil {
@@ -57,7 +93,7 @@ func (s *SingleVolumeStager) createVolumes(volumes map[string]model.Volume, c *m
 	return nil
 }
 
-func (s *SingleVolumeStager) createRoot(kernelPath string, c model.RumpConfig) error {
+func (s *QEmuVolumeStager) CreateRoot(kernelPath string, c model.RumpConfig) error {
 
 	imgFile := path.Join(s.buildDir, "root.img")
 
