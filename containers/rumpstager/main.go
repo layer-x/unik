@@ -87,6 +87,16 @@ func (m *Mode) Set(value string) error {
 	return nil
 }
 
+func getModes() string {
+	keys := make([]string, 0, len(stagers.Stagers))
+	for k := range stagers.Stagers {
+		keys = append(keys, k)
+	}
+
+	return strings.Join(keys, ", ")
+
+}
+
 // while this looks like a go program
 // it is actually a sophisticated bash script
 func main() {
@@ -106,7 +116,7 @@ func main() {
 	appName := flag.String("a", "newapp", "new app name to register (in aws)")
 	//	network := flag.String("net", "dhcp", "net type")
 	var mode Mode = "single"
-	flag.Var(&mode, "mode", "mode: single,multi,aws,vmware")
+	flag.Var(&mode, "mode", getModes())
 
 	flag.Parse()
 
