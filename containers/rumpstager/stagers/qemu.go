@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/layer-x/unik/containers/rumpstager/device"
 	"github.com/layer-x/unik/containers/rumpstager/model"
 	"github.com/layer-x/unik/containers/rumpstager/utils"
@@ -105,6 +106,8 @@ func (s *QEmuVolumeStager) CreateRoot(kernelPath string, c model.RumpConfig) err
 			c = addStaticNet(c)
 		}
 	}
+
+	log.WithFields(log.Fields{"iface": c.Net.If, "args": c.Cmdline}).Debug("create boot image")
 
 	jsonString, err := utils.ToRumpJson(c)
 	if err != nil {

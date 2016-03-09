@@ -210,7 +210,8 @@ func (s *AWSStager) workOnVolume(deviceFile string, workFunc func(string) error)
 	}
 
 	snapInput := &ec2.CreateSnapshotInput{
-		VolumeId: vol.VolumeId,
+		VolumeId:    vol.VolumeId,
+		Description: aws.String("Unik snapshot"),
 	}
 
 	snapshot, err := s.ec2svc.CreateSnapshot(snapInput)
