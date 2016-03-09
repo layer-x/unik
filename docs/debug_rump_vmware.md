@@ -7,7 +7,7 @@
 - [qemu if up](https://gist.github.com/EmbeddedAndroid/6572715#file-qemu-ifup) might be needed to bridge on mac. didn't work for me but whatever, also may need "sudo ifconfig tap0 10.0.1.12/24 up"
 - GDB [cheatsheet](http://darkdust.net/files/GDB%20Cheat%20Sheet.pdf)
 - Explanation on netbsd [drivers](http://cholla.mmto.org/computers/netbsd/driver.html)
-
+- Similar [IDE Issue](https://github.com/rumpkernel/rumprun/issues/24#issuecomment-108382809)
 # Modified go build container
 change "go/src/runtime/string1.go" of modified rump-go
 
@@ -72,7 +72,7 @@ create src-netbsd/sys/rump/dev/lib/libpci_scsi and two files:
 
     RUMPTOP=${TOPRUMP}
 
-    .PATH:	${RUMPTOP}/../dev/pci ${RUMPTOP}/../dev/ic
+    .PATH:	${RUMPTOP}/../dev/pci ${RUMPTOP}/../dev/ ${RUMPTOP}/../dev/ic
 
     LIB=	rumpdev_pci_scsi
     COMMENT=PCI SCSI controller drivers
@@ -80,7 +80,7 @@ create src-netbsd/sys/rump/dev/lib/libpci_scsi and two files:
     IOCONF=	PCI_SCSI.ioconf
     RUMP_COMPONENT=ioconf
 
-    SRCS+= mpt.c mpt_pci.c mpt_netbsd.c
+    SRCS+= bio.c mpt_pci.c mpt_netbsd.c mpt.c
 
     CPPFLAGS+= -I${RUMPTOP}/librump/rumpkern -I${RUMPTOP}/../dev
 

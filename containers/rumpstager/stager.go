@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -10,29 +9,14 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"text/template"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/andrew-d/go-termutil"
 	"github.com/layer-x/unik/containers/rumpstager/device"
 	"github.com/layer-x/unik/containers/rumpstager/model"
-	"github.com/layer-x/unik/containers/rumpstager/shell"
+	_ "github.com/layer-x/unik/containers/rumpstager/stagers"
+	"github.com/layer-x/unik/containers/rumpstager/utils"
 )
-
-const GrubTemplate = `default=0
-fallback=1
-timeout=1
-hiddenmenu
-
-title Unik
-root {{.RootDrive}}
-kernel /boot/program.bin {{.JsonConfig}}
-`
-
-const DeviceMapFile = `(hd0) {{.GrubDevice}}
-`
-
-const ProgramName = "program.bin"
 
 const DefaultDeviceFilePrefix = "/dev/ld"
 
@@ -47,182 +31,11 @@ func checkErr(err error) {
 	}
 }
 
-func createSparseFile(filename string, size device.DiskSize) error {
-	fd, err := os.Create(filename)
-	if err != nil {
-		checkErr(err)
-	}
-	defer fd.Close()
-
-	_, err = fd.Seek(int64(size.ToBytes())-1, 0)
-	if err != nil {
-		checkErr(err)
-	}
-	_, err = fd.Write([]byte{0})
-	if err != nil {
-		checkErr(err)
-	}
-	return nil
-}
-
-func createBootImage(rootFile, progPath, jsonConfig string) error {
-	size, err := shell.GetDirSize(progPath)
-	if err != nil {
-		checkErr(err)
-	}
-
-	// round up size to sectors
-	size = ((size + device.SectorSize) / device.SectorSize) * device.SectorSize
-
-	size = size + int64(device.MegaBytes(5).ToBytes())
-	return createBootImageWithSize(rootFile, progPath, jsonConfig, device.Bytes(size))
-}
-
-func createBootImageWithSize(rootFile, progPath, jsonConfig string, size device.DiskSize) error {
-	err := createSparseFile(rootFile, size)
-	if err != nil {
-		checkErr(err)
-	}
-
-	return createBootImageOnFile(rootFile, size, progPath, jsonConfig)
-}
-
-func createBootImageOnFile(rootFile string, sizeOfFile device.DiskSize, progPath, jsonConfig string) error {
-
-	sizeInSectors, err := device.ToSectors(sizeOfFile)
-	if err != nil {
-		checkErr(err)
-	}
-
-	/*	sectorsSize, err := device.ToSectors(size)
-		if err != nil {
-			return
-		}
-	*/
-	rootLo := device.NewLoDevice(rootFile)
-	rootLodName, err := rootLo.Acquire()
-	if err != nil {
-		checkErr(err)
-	}
-	defer rootLo.Release()
-
-	grubDiskName := "hda"
-	rootBlkDev := device.NewDevice(0, sizeInSectors, rootLodName, grubDiskName)
-	rootDevice, err := rootBlkDev.Acquire()
-	if err != nil {
-		checkErr(err)
-	}
-	defer rootBlkDev.Release()
-
-	p := &device.MsDosPartioner{rootDevice.Name()}
-	p.MakeTable()
-	p.MakePartTillEnd("primary", device.MegaBytes(2))
-	parts, err := device.ListParts(rootDevice)
-
-	if err != nil {
-		checkErr(err)
-	}
-
-	if len(parts) < 1 {
-		log.Panic("No parts created")
-	}
-
-	part := parts[0]
-	if dmPart, ok := part.(*device.DeviceMapperDevice); ok {
-		dmPart.DeviceName = grubDiskName + "1"
-	}
-
-	// get the block device
-	bootDevice, err := part.Acquire()
-	if err != nil {
-		checkErr(err)
-	}
-	defer part.Release()
-	bootLabel := "boot"
-	// format the device and mount and copy
-	err = shell.RunLogCommand("mkfs", "-L", bootLabel, "-I", "128", "-t", "ext2", bootDevice.Name())
-	if err != nil {
-		checkErr(err)
-	}
-
-	mntPoint, err := device.Mount(bootDevice)
-	if err != nil {
-		checkErr(err)
-	}
-	defer device.Umount(mntPoint)
-
-	grubPath := path.Join(mntPoint, "boot", "grub")
-	os.MkdirAll(grubPath, 0777)
-
-	// copy program.bin.. skip that for now
-	kernelDst := path.Join(mntPoint, "boot", ProgramName)
-	log.WithFields(log.Fields{"src": progPath, "dst": kernelDst}).Debug("copying file")
-	err = shell.CopyFile(progPath, kernelDst)
-	if err != nil {
-		checkErr(err)
-	}
-
-	err = writeBootTemplate(path.Join(grubPath, "menu.lst"), "(hd0,0)", jsonConfig)
-	if err != nil {
-		checkErr(err)
-	}
-
-	err = writeBootTemplate(path.Join(grubPath, "grub.conf"), "(hd0,0)", jsonConfig)
-	if err != nil {
-		checkErr(err)
-	}
-
-	err = writeDeviceMap(path.Join(grubPath, "device.map"), rootDevice.Name())
-	if err != nil {
-		checkErr(err)
-	}
-
-	err = shell.RunLogCommand("grub-install", "--no-floppy", "--root-directory="+mntPoint, rootDevice.Name())
-	if err != nil {
-		checkErr(err)
-	}
-	return nil
-}
-
-func writeDeviceMap(fname, rootDevice string) error {
-	f, err := os.Create(fname)
-	if err != nil {
-		checkErr(err)
-	}
-	defer f.Close()
-
-	t := template.Must(template.New("devicemap").Parse(DeviceMapFile))
-
-	log.WithFields(log.Fields{"device": rootDevice, "file": fname}).Debug("Writing device map")
-	t.Execute(f, struct {
-		GrubDevice string
-	}{rootDevice})
-
-	return nil
-}
-func writeBootTemplate(fname, rootDrive, jsonConfig string) error {
-	f, err := os.Create(fname)
-	if err != nil {
-		checkErr(err)
-	}
-	defer f.Close()
-
-	t := template.Must(template.New("grub").Parse(GrubTemplate))
-
-	t.Execute(f, struct {
-		RootDrive  string
-		JsonConfig string
-	}{rootDrive, jsonConfig})
-
-	return nil
-
-}
-
-type volumemap map[string]Volume
+type volumemap map[string]model.Volume
 
 func (m volumemap) String() string {
 
-	return fmt.Sprintf("%v", (map[string]Volume)(m))
+	return fmt.Sprintf("%v", (map[string]model.Volume)(m))
 }
 
 // The second method is Set(value string) error
@@ -251,164 +64,9 @@ func (m volumemap) Set(value string) error {
 	if len(volparts) >= 3 {
 		name = volparts[2]
 	}
-	m[mntpoint] = Volume{values[0], size, name}
+	m[mntpoint] = model.Volume{values[0], size, name}
 
 	return nil
-}
-
-func formatDeviceAndCopyContents(folder string, dev device.BlockDevice) {
-	err := shell.RunLogCommand("mkfs", "-I", "128", "-t", "ext2", dev.Name())
-	if err != nil {
-		checkErr(err)
-	}
-
-	mntPoint, err := device.Mount(dev)
-	if err != nil {
-		checkErr(err)
-	}
-	defer device.Umount(mntPoint)
-
-	shell.CopyDir(folder, mntPoint)
-
-}
-
-func getTempImageFile() string {
-	return "/tmp/root"
-}
-
-func createSingleVolume(rootFile string, folder Volume) error {
-	ext2Overhead := device.MegaBytes(2).ToBytes()
-	size, err := shell.GetDirSize(folder.Path)
-	checkErr(err)
-
-	// take a spare sizde and down to sector size
-	size = (device.SectorSize + size + size/10 + int64(ext2Overhead))
-	size &^= (device.SectorSize - 1)
-	// 10% buffer.. aligned to 512
-	sizeVolume := device.Bytes(size)
-	_, err = device.ToSectors(device.Bytes(size))
-	if err != nil {
-		checkErr(err)
-	}
-	err = createSparseFile(rootFile, sizeVolume)
-	if err != nil {
-		checkErr(err)
-	}
-
-	return copyToImgFile(folder.Path, rootFile)
-}
-
-func copyToImgFile(folder, imgfile string) error {
-
-	imgLo := device.NewLoDevice(imgfile)
-	imgLodName, err := imgLo.Acquire()
-	if err != nil {
-		checkErr(err)
-	}
-	defer imgLo.Release()
-
-	formatDeviceAndCopyContents(folder, imgLodName)
-
-	return nil
-}
-
-func copyToPart(folder string, part device.Part) error {
-
-	imgLodName, err := part.Acquire()
-	if err != nil {
-		checkErr(err)
-	}
-	defer part.Release()
-	formatDeviceAndCopyContents(folder, imgLodName)
-
-	return nil
-}
-
-func createPartitionedVolumes(imgFile string, volums map[string]Volume) ([]string, error) {
-	sizes := make(map[string]device.Bytes)
-	var orderedKeys []string
-	var totalSize device.Bytes
-
-	ext2Overhead := device.MegaBytes(2).ToBytes()
-	firstPartFffest := device.MegaBytes(2).ToBytes()
-
-	for mntPoint, localDir := range volums {
-		cursize, err := shell.GetDirSize(localDir.Path)
-		if err != nil {
-			checkErr(err)
-		}
-		sizes[mntPoint] = device.Bytes(cursize) + ext2Overhead
-		totalSize += sizes[mntPoint]
-		orderedKeys = append(orderedKeys, mntPoint)
-	}
-	sizeVolume := device.Bytes((device.SectorSize + totalSize + totalSize/10) &^ (device.SectorSize - 1))
-	sizeVolume += device.MegaBytes(4).ToBytes()
-
-	log.WithFields(log.Fields{"imgFile": imgFile, "size": sizeVolume.ToPartedFormat()}).Debug("Creating image file")
-	err := createSparseFile(imgFile, sizeVolume)
-	if err != nil {
-		checkErr(err)
-	}
-
-	imgLo := device.NewLoDevice(imgFile)
-	imgLodName, err := imgLo.Acquire()
-	if err != nil {
-		checkErr(err)
-	}
-	defer imgLo.Release()
-
-	p := &device.DiskLabelPartioner{imgLodName.Name()}
-
-	p.MakeTable()
-	var start device.Bytes = firstPartFffest
-	for _, mntPoint := range orderedKeys {
-		end := start + sizes[mntPoint]
-		log.WithFields(log.Fields{"start": start, "end": end}).Debug("Creating partition")
-		err := p.MakePart("ext2", start, end)
-		checkErr(err)
-		curParts, err := device.ListParts(imgLodName)
-		checkErr(err)
-		start = curParts[len(curParts)-1].Offset().ToBytes() + curParts[len(curParts)-1].Size().ToBytes()
-	}
-
-	parts, err := device.ListParts(imgLodName)
-
-	log.WithFields(log.Fields{"parts": parts, "volsize": sizes}).Debug("Creating volumes")
-	for i, mntPoint := range orderedKeys {
-		localDir := volums[mntPoint].Path
-
-		copyToPart(localDir, parts[i])
-	}
-
-	return orderedKeys, nil
-}
-
-func toRumpJson(c model.RumpConfig) string {
-
-	blk := c.Blk
-	c.Blk = nil
-
-	jsonConfig, err := json.Marshal(c)
-	checkErr(err)
-
-	blks := ""
-	for _, b := range blk {
-
-		blkjson, err := json.Marshal(b)
-		checkErr(err)
-		blks += fmt.Sprintf("\"blk\": %s,", string(blkjson))
-	}
-	var jsonString string
-	if len(blks) > 0 {
-
-		jsonString = string(jsonConfig[:len(jsonConfig)-1]) + "," + blks[:len(blks)-1] + "}"
-
-	} else {
-		jsonString = string(jsonConfig)
-	}
-
-	return jsonString
-
 }
 
 type Mode int
@@ -448,12 +106,6 @@ func (m *Mode) Set(value string) error {
 	return errors.New("not a valid type")
 }
 
-type Volume struct {
-	Path string
-	Size int64
-	Name string
-}
-
 // while this looks like a go program
 // it is actually a sophisticated bash script
 func main() {
@@ -461,11 +113,11 @@ func main() {
 	log.SetLevel(log.DebugLevel)
 
 	var conf struct {
-		Volumes map[string]Volume
+		Volumes map[string]model.Volume
 		Cmdline string
 	}
 
-	conf.Volumes = make(map[string]Volume)
+	conf.Volumes = make(map[string]model.Volume)
 	flag.Var(volumemap(conf.Volumes), "v", "volumes localdir:remotedir")
 	flag.StringVar(&conf.Cmdline, "args", "", "arguments for kernel")
 	dryrun := flag.Bool("n", false, "dry run - dont do anything")
@@ -498,9 +150,9 @@ func main() {
 	var c model.RumpConfig
 	c.Cmdline = conf.Cmdline
 	if c.Cmdline == "" {
-		c.Cmdline = ProgramName
+		c.Cmdline = utils.ProgramName
 	} else {
-		c.Cmdline = ProgramName + " " + c.Cmdline
+		c.Cmdline = utils.ProgramName + " " + c.Cmdline
 	}
 
 	var orderedMntPoints []string
@@ -508,7 +160,7 @@ func main() {
 		switch mode {
 		case Single:
 			imgFile := path.Join(*buildcontextdir, "data.img")
-			orderedMntPoints, _ = createPartitionedVolumes(imgFile, conf.Volumes)
+			orderedMntPoints, _ = utils.CreatePartitionedVolumes(imgFile, conf.Volumes)
 			fmt.Printf("image file %s\n", imgFile)
 
 			// add mntpoints by order
@@ -530,7 +182,7 @@ func main() {
 			for mntPoint, localFolder := range conf.Volumes {
 
 				imgFile := path.Join(*buildcontextdir, fmt.Sprintf("data%02d.img", i))
-				err := createSingleVolume(imgFile, localFolder)
+				err := utils.CreateSingleVolume(imgFile, localFolder)
 				checkErr(err)
 
 				i++
@@ -574,7 +226,7 @@ func main() {
 				addNet = addStaticNet
 			}
 
-			err := createBootImageWithSize(imgFile, *programName, toRumpJson(addNet(c)), device.MegaBytes(100))
+			err := utils.CreateBootImageWithSize(imgFile, *programName, toRumpJson(addNet(c)), device.MegaBytes(100))
 			if err != nil {
 				log.Fatal(err)
 			}

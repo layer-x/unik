@@ -1,4 +1,4 @@
-package main
+package stager
 
 import (
 	"fmt"
@@ -15,47 +15,37 @@ import (
 	"github.com/layer-x/unik/containers/rumpstager/utils"
 )
 
-type iterfce interface {
-	Stage(appName, kernelPath string, volumes map[string]model.Volume, c model.RumpConfig)
+var awsStager Stager
+
+func init() {
+	var awsSession = session.New()
+	var meta = ec2metadata.New(awsSession)
+	var ec2svc *ec2.EC2
+
+	region, err := meta.Region()
+	if err == nil {
+		ec2svc = ec2.New(awsSession, &aws.Config{Region: aws.String(region)})
+
+		awsStager = &AWSStager{awsSession, meta, ec2svc}
+	} else {
+		log.Debug("No AWS")
+	}
+
+}
+
+type AWSStager struct {
+	AWSSession *session.Session
+	meta       *ec2metadata.EC2Metadata
+	ec2svc     *ec2.EC2
 }
 
 const SizeInGigs = 1
 
-func stage_aws(appName, kernelPath string, volumes map[string]model.Volume, c model.RumpConfig) {
-
-	deviceToSnapId := make(map[string]ec2.EbsBlockDevice)
-
-	var wg sync.WaitGroup
-	allDevices := []string{"/dev/xvdf", "/dev/xvdg"}
-	availableDevices := make(chan string, len(allDevices))
-	results := make(chan map[string]ec2.Snapshot)
-	for _, d := range allDevices {
-		availableDevices <- d
-	}
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		imgFile := <-availableDevices
-		defer func() { availableDevices <- imgFile }()
-
-		snapshot, err := workOnVolume(imgFile, func(imgFile string) error {
-			return utils.CreateBootImageOnFile(imgFile, device.GigaBytes(SizeInGigs), kernelPath, toRumpJson(addAwsNet(c)))
-		})
-
-		if err != nil {
-			log.WithField("err", err).Error("Failed  CreateBootImageOnFile")
-			return
-		}
-
-		results <- map[string]ec2.Snapshot{"/": *snapshot}
-
-	}()
-
-	mountToDevice := make(map[string]string)
-	mountToDevice["/"] = "/dev/sda1"
+func updateConfig(volumes map[string]model.Volume, c model.RumpConfig) (model.RumpConfig, map[string]string) {
 	var volIndex int
-	for mntPoint, localFolder := range volumes {
+	mountToDevice := make(map[string]string)
+
+	for mntPoint := range volumes {
 
 		volIndex++
 		deviceMapped := fmt.Sprintf("sd%c1", 'a'+volIndex)
@@ -68,6 +58,53 @@ func stage_aws(appName, kernelPath string, volumes map[string]model.Volume, c mo
 		mountToDevice[mntPoint] = "/dev/" + deviceMapped
 
 		c.Blk = append(c.Blk, blk)
+	}
+	return c, mountToDevice
+
+}
+
+func (stgr *AWSStager) Stage(appName, kernelPath string, volumes map[string]model.Volume, c model.RumpConfig) error {
+
+	deviceToSnapId := make(map[string]ec2.EbsBlockDevice)
+
+	var wg sync.WaitGroup
+	allDevices := []string{"/dev/xvdf", "/dev/xvdg"}
+	availableDevices := make(chan string, len(allDevices))
+	results := make(chan map[string]ec2.Snapshot)
+	for _, d := range allDevices {
+		availableDevices <- d
+	}
+
+	c, mountToDevice := updateConfig(volumes, c)
+	mountToDevice["/"] = "/dev/sda1"
+
+	jsonString, err := utils.ToRumpJson(addAwsNet(c))
+	if err != nil {
+		return err
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		imgFile := <-availableDevices
+		defer func() { availableDevices <- imgFile }()
+
+		snapshot, err := workOnVolume(imgFile, func(imgFile string) error {
+			return utils.CreateBootImageOnFile(imgFile, device.GigaBytes(SizeInGigs), kernelPath, jsonString)
+		})
+
+		if err != nil {
+			log.WithField("err", err).Error("Failed  CreateBootImageOnFile")
+			return
+		}
+
+		results <- map[string]ec2.Snapshot{"/": *snapshot}
+
+	}()
+
+	for _, blk := range c.Blk {
+		mntPoint := blk.MountPoint
+		localFolder := volumes[mntPoint]
 
 		if localFolder.Path != "" {
 			wg.Add(1)
@@ -111,7 +148,7 @@ func stage_aws(appName, kernelPath string, volumes map[string]model.Volume, c mo
 
 	/// all should be ready for aws
 	registerImage(appName, deviceToSnapId)
-
+	return nil
 }
 
 func addAwsNet(c model.RumpConfig) model.RumpConfig {
@@ -128,14 +165,18 @@ func addAwsNet(c model.RumpConfig) model.RumpConfig {
 
 func workOnVolume(deviceFile string, workFunc func(string) error) (*ec2.Snapshot, error) {
 
-	vol := getAwsVolume()
-	err := func() error {
-		err := attachVol(vol, deviceFile)
+	vol, err := getAwsVolume()
+	if err != nil {
+		return nil, err
+	}
+
+	err = func() error {
+		err := attachVol(*vol, deviceFile)
 		if err != nil {
 			return err
 		}
 
-		defer dettachVol(vol)
+		defer dettachVol(*vol)
 
 		err = workFunc(deviceFile)
 		if err != nil {
@@ -151,6 +192,7 @@ func workOnVolume(deviceFile string, workFunc func(string) error) (*ec2.Snapshot
 	snapInput := &ec2.CreateSnapshotInput{
 		VolumeId: vol.VolumeId,
 	}
+
 	snapshot, err := ec2svc.CreateSnapshot(snapInput)
 	if err != nil {
 		return nil, err
@@ -167,13 +209,13 @@ func workOnVolume(deviceFile string, workFunc func(string) error) (*ec2.Snapshot
 
 func copyToAws(imgFile string, localFolder model.Volume) (*ec2.Snapshot, error) {
 
-	vol := getAwsVolume()
-	err := func() error {
-		err := attachVol(vol, imgFile)
+	vol, err := getAwsVolume()
+	err = func() error {
+		err := attachVol(*vol, imgFile)
 		if err != nil {
 			return err
 		}
-		defer dettachVol(vol)
+		defer dettachVol(*vol)
 
 		return utils.CopyToImgFile(localFolder.Path, imgFile)
 
@@ -185,63 +227,58 @@ func copyToAws(imgFile string, localFolder model.Volume) (*ec2.Snapshot, error) 
 		VolumeId: vol.VolumeId,
 	}
 	snapshot, err := ec2svc.CreateSnapshot(snapInput)
-	checkErr(err)
-
+	if err != nil {
+		return nil, err
+	}
 	snapDesc := &ec2.DescribeSnapshotsInput{
 		SnapshotIds: []*string{snapshot.SnapshotId},
 	}
 	err = ec2svc.WaitUntilSnapshotCompleted(snapDesc)
-	checkErr(err)
-
+	if err != nil {
+		return nil, err
+	}
 	return snapshot, nil
 }
 
-var awsSession = session.New()
-var meta = ec2metadata.New(awsSession)
-var ec2svc *ec2.EC2
-
-func init() {
-	region, err := meta.Region()
-	if err == nil {
-		ec2svc = ec2.New(awsSession, &aws.Config{Region: aws.String(region)})
-	} else {
-		log.Debug("No AWS")
-	}
-
-}
-
-func getAwsVolume() ec2.Volume {
+func getAwsVolume() (*ec2.Volume, error) {
 	az, err := meta.GetMetadata("placement/availability-zone")
-	checkErr(err)
-
+	if err != nil {
+		return nil, err
+	}
 	volume, err := ec2svc.CreateVolume(&ec2.CreateVolumeInput{AvailabilityZone: aws.String(az),
 		Size: aws.Int64(SizeInGigs),
 	})
 
-	checkErr(err)
-
+	if err != nil {
+		return nil, err
+	}
 	volIn := &ec2.DescribeVolumesInput{VolumeIds: []*string{volume.VolumeId}}
 	err = ec2svc.WaitUntilVolumeAvailable(volIn)
 	log.WithField("vol", *volume.VolumeId).Debug("Volume created")
-	return *volume
+	return volume, nil
 }
 
 func attachVol(vol ec2.Volume, file string) error {
 
 	instid, err := meta.GetMetadata("instance-id")
-	checkErr(err)
-
+	if err != nil {
+		return err
+	}
 	params := &ec2.AttachVolumeInput{
 		Device:     aws.String(file),
 		InstanceId: aws.String(instid),
 		VolumeId:   vol.VolumeId,
 	}
 	_, err = ec2svc.AttachVolume(params)
-	checkErr(err)
+	if err != nil {
+		return err
+	}
 
 	volIn := &ec2.DescribeVolumesInput{VolumeIds: []*string{vol.VolumeId}}
 	err = ec2svc.WaitUntilVolumeInUse(volIn)
-	checkErr(err)
+	if err != nil {
+		return err
+	}
 
 	isFile := waitForFile(file, 3*time.Minute)
 	if !isFile {
@@ -272,7 +309,9 @@ func dettachVol(vol ec2.Volume) error {
 	log.WithFields(log.Fields{"vol": *vol.VolumeId}).Debug("dettaching Volume")
 
 	_, err := ec2svc.DetachVolume(params)
-	checkErr(err)
+	if err != nil {
+		return err
+	}
 	log.WithFields(log.Fields{"vol": *vol.VolumeId}).Debug("Volume detached")
 	return err
 }
@@ -301,10 +340,12 @@ func getBlockDeviceMapping(snapmapping map[string]ec2.EbsBlockDevice) []*ec2.Blo
 	return mapping
 }
 
-func registerImage(appName string, snapmapping map[string]ec2.EbsBlockDevice) {
+func registerImage(appName string, snapmapping map[string]ec2.EbsBlockDevice) error {
 
 	region, err := meta.Region()
-	checkErr(err)
+	if err != nil {
+		return err
+	}
 
 	const AWSTIME = "Monday 02-Jan-06 15-04-05 MST"
 
@@ -334,21 +375,26 @@ func registerImage(appName string, snapmapping map[string]ec2.EbsBlockDevice) {
 	log.WithFields(logparams).Debug("Registering image")
 
 	imageout, err := ec2svc.RegisterImage(params)
-	checkErr(err)
-
+	if err != nil {
+		return err
+	}
 	fmt.Println("registered image! ", *imageout.ImageId)
 
 	for _, v := range snapmapping {
 		if v.SnapshotId != nil {
 			err = addTag(*v.SnapshotId, "UNIKERNEL_ID", *imageout.ImageId)
-			checkErr(err)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	err = addTag(*imageout.ImageId, "UNIKERNEL_APP_NAME", appName)
-	checkErr(err)
+	if err != nil {
+		return err
+	}
 	log.Debug("Created tags")
-
+	return nil
 }
 
 func addTag(id, key, value string) error {

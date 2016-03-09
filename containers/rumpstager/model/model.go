@@ -28,3 +28,9 @@ type RumpConfig struct {
 	Net     *Net   `json:"net,omitempty"`
 	Blk     []Blk  `json:"blk,omitempty"`
 }
+
+type Volume struct {
+	Path string
+	Size int64
+	Name string
+}
