@@ -174,14 +174,9 @@ func (s *AWSStager) workOnVolume(deviceFile string, workFunc func(string) error)
 		if err != nil {
 			return err
 		}
-
 		defer s.dettachVol(*vol)
 
-		err = workFunc(deviceFile)
-		if err != nil {
-			return err
-		}
-		return nil
+		return workFunc(deviceFile)
 	}()
 
 	if err != nil {
@@ -194,6 +189,7 @@ func (s *AWSStager) workOnVolume(deviceFile string, workFunc func(string) error)
 
 	snapshot, err := s.ec2svc.CreateSnapshot(snapInput)
 	if err != nil {
+		log.WithField("err", err).Error("CreateSnapshot errored")
 		return nil, err
 	}
 	snapDesc := &ec2.DescribeSnapshotsInput{
@@ -201,6 +197,7 @@ func (s *AWSStager) workOnVolume(deviceFile string, workFunc func(string) error)
 	}
 	err = s.ec2svc.WaitUntilSnapshotCompleted(snapDesc)
 	if err != nil {
+		log.WithField("err", err).Error("WaitUntilSnapshotCompleted errored")
 		return nil, err
 	}
 	return snapshot, nil
@@ -208,35 +205,10 @@ func (s *AWSStager) workOnVolume(deviceFile string, workFunc func(string) error)
 
 func (s *AWSStager) copyToAws(imgFile string, localFolder model.Volume) (*ec2.Snapshot, error) {
 
-	vol, err := s.getAwsVolume()
-	err = func() error {
-		err := s.attachVol(*vol, imgFile)
-		if err != nil {
-			return err
-		}
-		defer s.dettachVol(*vol)
+	return s.workOnVolume(imgFile, func(deviceFile string) error {
+		return utils.CopyToImgFile(localFolder.Path, deviceFile)
+	})
 
-		return utils.CopyToImgFile(localFolder.Path, imgFile)
-
-	}()
-	if err != nil {
-		return nil, err
-	}
-	snapInput := &ec2.CreateSnapshotInput{
-		VolumeId: vol.VolumeId,
-	}
-	snapshot, err := s.ec2svc.CreateSnapshot(snapInput)
-	if err != nil {
-		return nil, err
-	}
-	snapDesc := &ec2.DescribeSnapshotsInput{
-		SnapshotIds: []*string{snapshot.SnapshotId},
-	}
-	err = s.ec2svc.WaitUntilSnapshotCompleted(snapDesc)
-	if err != nil {
-		return nil, err
-	}
-	return snapshot, nil
 }
 
 func (s *AWSStager) getAwsVolume() (*ec2.Volume, error) {

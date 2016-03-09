@@ -106,7 +106,7 @@ func main() {
 	appName := flag.String("a", "newapp", "new app name to register (in aws)")
 	//	network := flag.String("net", "dhcp", "net type")
 	var mode Mode
-	flag.Var(&mode, "m", "mode: single,multi,aws")
+	flag.Var(&mode, "m", "mode: single,multi,aws,vmware")
 
 	flag.Parse()
 
