@@ -12,7 +12,7 @@ docker build -t $@ $@
 endef
 
 
-.PHONY: all build rumpstager rumpcompiler-base-common rumpcompiler-base-hw rumpcompiler-base-xen rumpcompiler-go-hw rumpcompiler-go-xen rumpcdebugger-gdb-hw vsphere-client
+.PHONY: all build rumpstager rumpcompiler-base-common rumpcompiler-base-hw rumpcompiler-base-xen rumpcompiler-go-hw rumpcompiler-go-xen rumpcdebugger-gdb-hw vsphere-client osvcompiler
 
 all: build
 
@@ -40,4 +40,7 @@ rumpstager:
 vsphere-client:
 	$(buildsimplecontainer)
 
-build: rumpstager rumpcompiler-base-hw rumpcompiler-base-xen rumpcompiler-go-hw rumpcompiler-go-xen rumpcdebugger-gdb-hw vsphere-client
+osvcompiler:
+	$(buildsimplecontainer)
+
+build: rumpstager rumpcompiler-base-hw rumpcompiler-base-xen rumpcompiler-go-hw rumpcompiler-go-xen rumpcdebugger-gdb-hw vsphere-client osvcompiler
