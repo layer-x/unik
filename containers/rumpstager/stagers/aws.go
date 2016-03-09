@@ -46,7 +46,7 @@ func updateConfig(volumes map[string]model.Volume, c model.RumpConfig) (model.Ru
 	mountToDevice := make(map[string]string)
 
 	for mntPoint := range volumes {
-
+		// start from sdb; sda is for root.
 		volIndex++
 		deviceMapped := fmt.Sprintf("sd%c1", 'a'+volIndex)
 		blk := model.Blk{
@@ -63,10 +63,12 @@ func updateConfig(volumes map[string]model.Volume, c model.RumpConfig) (model.Ru
 
 }
 
-type VolToSnapshot struct {
-	MntPoint string
-	Snapshot ec2.Snapshot
+type VolToDevice struct {
+	MntPoint    string
+	BlockDevice ec2.EbsBlockDevice
 }
+
+const AWDRootDevice = "/dev/sda1"
 
 func (s *AWSStager) Stage(appName, kernelPath string, volumes map[string]model.Volume, c model.RumpConfig) error {
 
@@ -74,26 +76,52 @@ func (s *AWSStager) Stage(appName, kernelPath string, volumes map[string]model.V
 
 	deviceToSnapId := make(map[string]ec2.EbsBlockDevice)
 
+	// update config with the voumes. this is also assigns aws block devices
+	c, mountToDevice := updateConfig(volumes, c)
+	// add the root to the device map
+	mountToDevice["/"] = AWDRootDevice
+	c = addAwsNet(c)
+
+	results, err := s.createVolumes(kernelPath, volumes, c)
+	if err != nil {
+		return err
+	}
+	// convert the point points to the block devices created during configuration
+	for res := range results {
+		log.WithFields(log.Fields{"snap": res.BlockDevice.SnapshotId, "mntPoint": res.MntPoint, "dev": mountToDevice[res.MntPoint]}).Debug("Adding result to map")
+		deviceToSnapId[mountToDevice[res.MntPoint]] = res.BlockDevice
+	}
+
+	if len(deviceToSnapId) != (len(mountToDevice)) {
+		log.WithFields(log.Fields{"deviceToSnapId": deviceToSnapId, "mountToDevice": mountToDevice}).Error("Not all volumes created")
+		return errors.New("Not all volumes created for AWS")
+	}
+
+	/// all should be ready for aws
+	s.registerImage(appName, deviceToSnapId)
+	return nil
+}
+
+func (s *AWSStager) createVolumes(kernelPath string, volumes map[string]model.Volume, c model.RumpConfig) (<-chan VolToDevice, error) {
+
+	jsonString, err := utils.ToRumpJson(c)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make(chan VolToDevice)
+
 	// going to build in parallel. these are the devices we can use:
+	// we could potentially add more (according to aws documentation) if two is not fast enough
 	allDevices := []string{"/dev/xvdf", "/dev/xvdg"}
 
 	// add them all the to the available channel, as no one uses them now.
 	availableDevices := make(chan string, len(allDevices))
-	results := make(chan VolToSnapshot)
 	for _, d := range allDevices {
 		availableDevices <- d
 	}
 
-	// update config with the voumes. this is also assigns aws block devices
-	c, mountToDevice := updateConfig(volumes, c)
-	// add the root to the device map
-	mountToDevice["/"] = "/dev/sda1"
-
-	jsonString, err := utils.ToRumpJson(addAwsNet(c))
-	if err != nil {
-		return err
-	}
-
+	// wait group for all the volume creation workers.
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -109,7 +137,7 @@ func (s *AWSStager) Stage(appName, kernelPath string, volumes map[string]model.V
 			log.WithField("err", err).Error("Failed  CreateBootImageOnFile")
 			return
 		}
-		results <- VolToSnapshot{"/", *snapshot}
+		results <- VolToDevice{"/", ec2.EbsBlockDevice{SnapshotId: snapshot.SnapshotId}}
 	}()
 
 	// go over the volumes and created them.
@@ -128,11 +156,13 @@ func (s *AWSStager) Stage(appName, kernelPath string, volumes map[string]model.V
 					log.WithField("err", err).Error("Failed creating a volume")
 					return
 				}
-				results <- VolToSnapshot{mntPoint, *snap}
+				results <- VolToDevice{mntPoint, ec2.EbsBlockDevice{SnapshotId: snap.SnapshotId}}
 
 			}(mntPoint, localFolder)
 		} else {
-			deviceToSnapId[mountToDevice[mntPoint]] = ec2.EbsBlockDevice{VolumeSize: aws.Int64(localFolder.Size)}
+			go func() {
+				results <- VolToDevice{mntPoint, ec2.EbsBlockDevice{VolumeSize: aws.Int64(localFolder.Size)}}
+			}()
 		}
 
 	}
@@ -143,20 +173,7 @@ func (s *AWSStager) Stage(appName, kernelPath string, volumes map[string]model.V
 		close(results)
 	}()
 
-	// convert the point points to the block devices created during configuration
-	for res := range results {
-		log.WithFields(log.Fields{"snap": res.Snapshot.SnapshotId, "mntPoint": res.MntPoint, "dev": mountToDevice[res.MntPoint]}).Debug("Adding result to map")
-		deviceToSnapId[mountToDevice[res.MntPoint]] = ec2.EbsBlockDevice{SnapshotId: res.Snapshot.SnapshotId}
-	}
-
-	if len(deviceToSnapId) != (len(mountToDevice)) {
-		log.WithFields(log.Fields{"deviceToSnapId": deviceToSnapId, "mountToDevice": mountToDevice}).Error("Not all volumes created")
-		return errors.New("Not all volumes created for AWS")
-	}
-
-	/// all should be ready for aws
-	s.registerImage(appName, deviceToSnapId)
-	return nil
+	return results, nil
 }
 
 func addAwsNet(c model.RumpConfig) model.RumpConfig {
@@ -344,7 +361,7 @@ func (s *AWSStager) registerImage(appName string, snapmapping map[string]ec2.Ebs
 		BlockDeviceMappings: getBlockDeviceMapping(snapmapping),
 		Description:         aws.String("Unik"),
 		KernelId:            aws.String(kernelIdMap[region]),
-		RootDeviceName:      aws.String("/dev/sda1"),
+		RootDeviceName:      aws.String(AWDRootDevice),
 		VirtualizationType:  aws.String("paravirtual"),
 	}
 
