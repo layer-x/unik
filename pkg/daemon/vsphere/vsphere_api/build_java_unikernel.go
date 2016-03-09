@@ -1,26 +1,38 @@
 package vsphere_api
 import (
 	"mime/multipart"
-"github.com/Sirupsen/logrus"
-"github.com/layer-x/layerx-commons/lxlog"
+	"github.com/Sirupsen/logrus"
+	"github.com/layer-x/layerx-commons/lxlog"
 	"encoding/json"
 	"github.com/layer-x/layerx-commons/lxerrors"
-"github.com/layer-x/unik/pkg/types"
-"time"
-"io/ioutil"
+	"github.com/layer-x/unik/pkg/types"
+	"time"
+	"io/ioutil"
 	"os"
 	"path/filepath"
-	"github.com/layer-x/layerx-commons/lxexec"
-"strings"
-"github.com/layer-x/layerx-commons/lxfileutils"
-"io"
-"os/exec"
+	"strings"
+	"github.com/layer-x/layerx-commons/lxfileutils"
+	"io"
+	"os/exec"
+	"github.com/layer-x/unik/pkg/daemon/osv/capstan"
+	"github.com/layer-x/unik/pkg/daemon/vsphere/vsphere_utils"
 )
 
-const DEFAULT_OVA_NAME = "unikernel.ova"
+func BuildUnikernel(creds Creds, unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
+	unikernelId := unikernelName //vsphere specific
+	datastoreFolder := VSPHERE_UNIKERNEL_FOLDER + "/" + unikernelId
+	vsphereClient, err := vsphere_utils.NewVsphereClient(creds.url)
+	if err != nil {
+		return lxerrors.New("initiating vsphere client connection", err)
+	}
+	defer func() {
+		if err != nil {
+			lxlog.Errorf(logrus.Fields{"error": err}, "error encountered, cleaning up unikernel artifacts")
+			vsphereClient.Rmdir(datastoreFolder)
+		}
+	}()
 
-func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
-	unikernels, err := ListUnikernels()
+	unikernels, err := ListUnikernels(creds)
 	if err != nil {
 		return lxerrors.New("could not retrieve list of unikernels", err)
 	}
@@ -29,7 +41,7 @@ func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, han
 			if strings.ToLower(force) == "true" {
 				lxlog.Warnf(logrus.Fields{"unikernelName": unikernelName, "ami": unikernel.Id},
 					"deleting unikernel before building new unikernel")
-				err = DeleteUnikernel(unikernel.Id, true)
+				err = DeleteUnikernel(creds, unikernel.Id, true)
 				if err != nil {
 					return lxerrors.New("could not delete unikernel", err)
 				}
@@ -39,24 +51,20 @@ func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, han
 		}
 	}
 
-	unikernelPath, err := filepath.Abs("./test_outputs/" + "unikernels/" + unikernelName + "/")
+	unikernelDir, err := ioutil.TempDir(os.TempDir(), unikernelName+"-src-dir")
 	if err != nil {
-		return lxerrors.New("getting absolute path for ./test_outputs/"+"unikernels/"+unikernelName+"/", err)
-	}
-	err = os.MkdirAll(unikernelPath, 0777)
-	if err != nil {
-		return lxerrors.New("making directory", err)
+		return lxerrors.New("creating temporary directory "+unikernelName+"-src-dir", err)
 	}
 	//clean up artifacts even if we fail
 	defer func() {
-		err = os.RemoveAll(unikernelPath)
+		err = os.RemoveAll(unikernelDir)
 		if err != nil {
 			panic(lxerrors.New("cleaning up unikernel files", err))
 		}
-		lxlog.Infof(logrus.Fields{"files": unikernelPath}, "cleaned up files")
+		lxlog.Infof(logrus.Fields{"files": unikernelDir}, "cleaned up files")
 	}()
-	lxlog.Infof(logrus.Fields{"path": unikernelPath, "unikernel_name": unikernelName}, "created output directory for unikernel")
-	savedTar, err := os.OpenFile(unikernelPath+filepath.Base(handler.Filename), os.O_CREATE|os.O_RDWR, 0666)
+	lxlog.Infof(logrus.Fields{"path": unikernelDir, "unikernel_name": unikernelName}, "created output directory for unikernel")
+	savedTar, err := os.OpenFile(unikernelDir + filepath.Base(handler.Filename), os.O_CREATE | os.O_RDWR, 0666)
 	if err != nil {
 		return lxerrors.New("creating empty file for copying to", err)
 	}
@@ -66,70 +74,69 @@ func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, han
 		return lxerrors.New("copying uploaded file to disk", err)
 	}
 	lxlog.Infof(logrus.Fields{"bytes": bytesWritten}, "file written to disk")
-	err = lxfileutils.Untar(savedTar.Name(), unikernelPath)
+	err = lxfileutils.Untar(savedTar.Name(), unikernelDir)
 	if err != nil {
 		lxlog.Warnf(logrus.Fields{"saved tar name":savedTar.Name()}, "failed to untar using gzip, trying again without")
-		err = lxfileutils.UntarNogzip(savedTar.Name(), unikernelPath)
+		err = lxfileutils.UntarNogzip(savedTar.Name(), unikernelDir)
 		if err != nil {
 			return lxerrors.New("untarring saved tar", err)
 		}
 	}
-	lxlog.Infof(logrus.Fields{"path": unikernelPath, "unikernel_name": unikernelName}, "unikernel tarball untarred")
+	lxlog.Infof(logrus.Fields{"path": unikernelDir, "unikernel_name": unikernelName}, "unikernel tarball untarred")
+	err = capstan.GenerateCapstanFile(unikernelDir)
+	if err != nil {
+		lxerrors.New("generating capstan file from " + unikernelDir + "/pom.xml", err)
+	}
+	lxlog.Infof(logrus.Fields{"path": unikernelDir + "/Capstanfile"}, "generated java Capstanfile")
+
 	buildUnikernelCommand := exec.Command("docker", "run",
 		"--rm",
 		"--privileged",
-		"-v", unikernelPath+":/opt/code/",
-		"-v", "/dev:/dev",
-		"-e", "UNIKERNEL_APP_NAME="+unikernelName,
-		"-e", "UNIKERNELFILE=/opt/code/rumprun-program_xen.bin.ec2dir",
-		"golang_unikernel_builder")
+		"-v", unikernelDir + ":/unikernel",
+		"-e", "UNIKERNEL_NAME=" + unikernelName,
+		"osvcompiler",
+	)
 	lxlog.LogCommand(buildUnikernelCommand, true)
 	err = buildUnikernelCommand.Run()
 	if err != nil {
 		return lxerrors.New("building unikernel failed", err)
 	}
 	lxlog.Infof(logrus.Fields{"unikernel_name": unikernelName}, "unikernel image created")
-	return nil
 
+	err = vsphereClient.Mkdir(datastoreFolder)
+	if err != nil {
+		return lxerrors.New("creating datastore folder to contain unikernel image", err)
+	}
 
-	unikernelFolder := VSPHERE_UNIKERNEL_FOLDER+"/"+unikernelName
-	lxlog.Debugf(logrus.Fields{"path": unikernelFolder}, "saving unikernerl to folder")
+	err = vsphereClient.ImportVmdk(unikernelDir + "/program.vmdk", datastoreFolder)
+	if err != nil {
+		return lxerrors.New("importing program.vmdk to datastore folder", err)
+	}
+
 	unikernelMetadata := &types.Unikernel{
-		Id: unikernelName,
+		Id: unikernelId, //same as unikernel name
 		UnikernelName: unikernelName,
 		CreationDate: time.Now().String(),
 		Created: time.Now().Unix(),
-		Path: unikernelFolder,
+		Path: datastoreFolder + "/program.vmdk",
 	}
-	annotationBytes, err := json.Marshal(unikernelMetadata)
+	metadataBytes, err := json.Marshal(unikernelMetadata)
 	if err != nil {
 		return lxerrors.New("marshalling unikernel metadata", err)
 	}
-
-	lxlog.Debugf(logrus.Fields{"metadata": string(annotationBytes)}, "saving uniknel metadata to folder")
-	err = writeFile(unikernelFolder+"/unikernel-metadata.json", annotationBytes)
+	err = writeFile(unikernelDir + "/metadata.json", metadataBytes)
 	if err != nil {
-		return lxerrors.New("writing unikernel metadata", err)
+		return lxerrors.New("writing metadata.json", err)
+	}
+	err = vsphereClient.UploadFile(unikernelDir + "/metadata.json", datastoreFolder + "/metadata.json")
+	if err != nil {
+		return lxerrors.New("uploading metadata.json", err)
 	}
 
-	//TODO: copy output file instead of osv base
-	unikernelOvaPath := OSV_APPLIANCE_PATH
-
-	destinationPath := unikernelFolder+"/"+DEFAULT_OVA_NAME
-
-	if force {
-		_, err = lxexec.RunCommand("cp", unikernelOvaPath, destinationPath)
-		if err != nil {
-			return lxerrors.New("copying output ova to destination "+destinationPath, err)
-		}
-	} else {
-		_, err = lxexec.RunCommand("cp", "-r", unikernelOvaPath, destinationPath)
-		if err != nil {
-			return lxerrors.New("copying output ova to destination "+destinationPath, err)
-		}
-	}
+	lxlog.Infof(logrus.Fields{"unikernel": unikernelMetadata}, "saved unikernel metadata")
 	return nil
 }
+
 
 func writeFile(path, data []byte) error {
 	err := ioutil.WriteFile(path, data, 0777)

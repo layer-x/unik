@@ -12,6 +12,7 @@ import (
 	"github.com/layer-x/layerx-commons/lxlog"
 "github.com/Sirupsen/logrus"
 	"path/filepath"
+	"strings"
 )
 
 type VsphereClient struct {
@@ -57,6 +58,7 @@ func (vc *VsphereClient) Vms() ([]mo.VirtualMachine, error) {
 
 func (vc *VsphereClient) CreateVm(vmName string) error {
 	cmd := exec.Command("docker", "run", "--rm",
+		"vsphere-client",
 		"govc",
 		"vm.create",
 		"-k",
@@ -79,6 +81,7 @@ func (vc *VsphereClient) CreateVm(vmName string) error {
 
 func (vc *VsphereClient) DestroyVm(vmName string) error {
 	cmd := exec.Command("docker", "run", "--rm",
+		"vsphere-client",
 		"govc",
 		"vm.destroy",
 		"-k",
@@ -97,8 +100,27 @@ func (vc *VsphereClient) DestroyVm(vmName string) error {
 	return nil
 }
 
+func (vc *VsphereClient) Mkdir(folder string) error {
+	cmd := exec.Command("docker", "run", "--rm",
+		"vsphere-client",
+		"govc",
+		"datastore.mkdir",
+		"-k",
+		"-u", vc.c.URL().String(),
+		folder,
+	)
+	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
+	lxlog.LogCommand(cmd, true)
+	err := cmd.Run()
+	if err != nil {
+		return lxerrors.New("failed running govc datastore.mkdir "+folder, err)
+	}
+	return nil
+}
+
 func (vc *VsphereClient) Rmdir(folder string) error {
 	cmd := exec.Command("docker", "run", "--rm",
+		"vsphere-client",
 		"govc",
 		"datastore.rm",
 		"-k",
@@ -114,15 +136,15 @@ func (vc *VsphereClient) Rmdir(folder string) error {
 	return nil
 }
 
-func (vc *VsphereClient) UploadVmdk(vmdkPath, folder string) error {
+func (vc *VsphereClient) ImportVmdk(vmdkPath, folder string) error {
 	vmdkFolder := filepath.Dir(vmdkPath)
-	vmdkFilename := filepath.Base(vmdkPath)
-	cmd := exec.Command("docker", "run", "--rm", "-v", vmdkFolder+":/unikernel",
+	cmd := exec.Command("docker", "run", "--rm", "-v", vmdkFolder+":"+vmdkFolder,
+		"vsphere-client",
 		"govc",
 		"import.vmdk",
 		"-k",
 		"-u", vc.c.URL().String(),
-		"/unikernel"+vmdkFilename,
+		vmdkPath,
 		folder,
 	)
 	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
@@ -132,4 +154,87 @@ func (vc *VsphereClient) UploadVmdk(vmdkPath, folder string) error {
 		return lxerrors.New("failed running govc import.vmdk "+folder, err)
 	}
 	return nil
+}
+
+func (vc *VsphereClient) UploadFile(srcFile, dest string) error {
+	srcDir := filepath.Dir(srcFile)
+	cmd := exec.Command("docker", "run", "--rm", "-v", srcDir +":"+srcDir,
+		"vsphere-client",
+		"govc",
+		"datastore.upload",
+		"-k",
+		"-u", vc.c.URL().String(),
+		srcFile,
+		dest,
+	)
+	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
+	lxlog.LogCommand(cmd, true)
+	err := cmd.Run()
+	if err != nil {
+		return lxerrors.New("failed running govc datastore.upload", err)
+	}
+	return nil
+}
+
+func (vc *VsphereClient) DownloadFile(remoteFile, localFile string) error {
+	localDir := filepath.Dir(localFile)
+	cmd := exec.Command("docker", "run", "--rm", "-v", localDir +":"+ localDir,
+		"vsphere-client",
+		"govc",
+		"datastore.upload",
+		"-k",
+		"-u", vc.c.URL().String(),
+		remoteFile,
+		localFile,
+	)
+	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
+	lxlog.LogCommand(cmd, true)
+	err := cmd.Run()
+	if err != nil {
+		return lxerrors.New("failed running govc datastore.upload", err)
+	}
+	return nil
+}
+
+func (vc *VsphereClient) Copy(src, dest string) error {
+	cmd := exec.Command("docker", "run", "--rm",
+		"vsphere-client",
+		"govc",
+		"datastore.cp",
+		"-k",
+		"-u", vc.c.URL().String(),
+		src,
+		dest,
+	)
+	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
+	lxlog.LogCommand(cmd, true)
+	err := cmd.Run()
+	if err != nil {
+		return lxerrors.New("failed running govc datastore.cp "+src+" "+dest, err)
+	}
+	return nil
+}
+
+func (vc *VsphereClient) Ls(dir string) ([]string, error) {
+	cmd := exec.Command("docker", "run", "--rm",
+		"vsphere-client",
+		"govc",
+		"datastore.ls",
+		"-k",
+		"-u", vc.c.URL().String(),
+		dir,
+	)
+	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
+	out, err := cmd.Output()
+	if err != nil {
+		return lxerrors.New("failed running govc datastore.ls "+dir, err)
+	}
+	split := strings.Split(string(out), "\n")
+	contents := []string{}
+	for _, content := range split {
+		if content != "" {
+			contents = append(contents, content)
+		}
+	}
+	return contents, nil
 }

@@ -11,7 +11,7 @@ import (
 
 func RunUnikInstance(creds Creds, unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {
 	instanceIds := []string{}
-	unikernels, err := ListUnikernels()
+	unikernels, err := ListUnikernels(creds)
 	if err != nil {
 		return instanceIds, lxerrors.New("could not retrieve unikernel list", err)
 	}

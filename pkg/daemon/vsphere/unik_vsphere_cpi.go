@@ -32,7 +32,7 @@ func (cpi *UnikVsphereCPI) AttachVolume(volumeNameOrId, unikInstanceId, deviceNa
 }
 
 func (cpi *UnikVsphereCPI) BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
-	return vsphere_api.BuildUnikernel(unikernelName, force, uploadedTar, handler)
+	return vsphere_api.BuildUnikernel(cpi.creds, unikernelName, force, uploadedTar, handler)
 }
 
 func (cpi *UnikVsphereCPI) CreateVolume(volumeName string, size int) (*types.Volume, error) {
@@ -52,7 +52,7 @@ func (cpi *UnikVsphereCPI) DeleteArtifactsForUnikernel(unikernelName string) err
 }
 
 func (cpi *UnikVsphereCPI) DeleteUnikernel(unikernelId string, force bool) error {
-	return lxerrors.New("method not implemented", nil)
+	return vsphere_api.DeleteUnikernel(cpi.creds, unikernelId, force)
 }
 
 func (cpi *UnikVsphereCPI) DeleteUnikernelByName(unikernelName string, force bool) error {
@@ -84,7 +84,7 @@ func (cpi *UnikVsphereCPI) ListUnikInstances() ([]*types.UnikInstance, error) {
 }
 
 func (cpi *UnikVsphereCPI) ListUnikernels() ([]*types.Unikernel, error) {
-	return vsphere_api.ListUnikernels()
+	return vsphere_api.ListUnikernels(cpi.creds)
 }
 
 func (cpi *UnikVsphereCPI) ListVolumes() ([]*types.Volume, error) {
