@@ -18,8 +18,6 @@ import (
 	"github.com/layer-x/unik/containers/rumpstager/utils"
 )
 
-const DefaultDeviceFilePrefix = "/dev/ld"
-
 func checkErr(err error) {
 	if err != nil {
 

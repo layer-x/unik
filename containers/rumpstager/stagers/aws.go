@@ -1,4 +1,4 @@
-package stager
+package stagers
 
 import (
 	"fmt"
@@ -15,8 +15,6 @@ import (
 	"github.com/layer-x/unik/containers/rumpstager/utils"
 )
 
-var awsStager Stager
-
 func init() {
 	var awsSession = session.New()
 	var meta = ec2metadata.New(awsSession)
@@ -26,7 +24,8 @@ func init() {
 	if err == nil {
 		ec2svc = ec2.New(awsSession, &aws.Config{Region: aws.String(region)})
 
-		awsStager = &AWSStager{awsSession, meta, ec2svc}
+		awsStager := &AWSStager{awsSession, meta, ec2svc}
+		registerStager("aws", awsStager)
 	} else {
 		log.Debug("No AWS")
 	}
@@ -63,7 +62,7 @@ func updateConfig(volumes map[string]model.Volume, c model.RumpConfig) (model.Ru
 
 }
 
-func (stgr *AWSStager) Stage(appName, kernelPath string, volumes map[string]model.Volume, c model.RumpConfig) error {
+func (s *AWSStager) Stage(appName, kernelPath string, volumes map[string]model.Volume, c model.RumpConfig) error {
 
 	deviceToSnapId := make(map[string]ec2.EbsBlockDevice)
 
@@ -89,7 +88,7 @@ func (stgr *AWSStager) Stage(appName, kernelPath string, volumes map[string]mode
 		imgFile := <-availableDevices
 		defer func() { availableDevices <- imgFile }()
 
-		snapshot, err := workOnVolume(imgFile, func(imgFile string) error {
+		snapshot, err := s.workOnVolume(imgFile, func(imgFile string) error {
 			return utils.CreateBootImageOnFile(imgFile, device.GigaBytes(SizeInGigs), kernelPath, jsonString)
 		})
 
@@ -114,7 +113,7 @@ func (stgr *AWSStager) Stage(appName, kernelPath string, volumes map[string]mode
 				dev := <-availableDevices
 				defer func() { availableDevices <- dev }()
 
-				snap, err := copyToAws(dev, localFolder)
+				snap, err := s.copyToAws(dev, localFolder)
 				if err != nil {
 					log.WithField("err", err).Error("Failed creating a volume")
 				} else {
@@ -147,7 +146,7 @@ func (stgr *AWSStager) Stage(appName, kernelPath string, volumes map[string]mode
 	}
 
 	/// all should be ready for aws
-	registerImage(appName, deviceToSnapId)
+	s.registerImage(appName, deviceToSnapId)
 	return nil
 }
 
@@ -163,20 +162,20 @@ func addAwsNet(c model.RumpConfig) model.RumpConfig {
 	return c
 }
 
-func workOnVolume(deviceFile string, workFunc func(string) error) (*ec2.Snapshot, error) {
+func (s *AWSStager) workOnVolume(deviceFile string, workFunc func(string) error) (*ec2.Snapshot, error) {
 
-	vol, err := getAwsVolume()
+	vol, err := s.getAwsVolume()
 	if err != nil {
 		return nil, err
 	}
 
 	err = func() error {
-		err := attachVol(*vol, deviceFile)
+		err := s.attachVol(*vol, deviceFile)
 		if err != nil {
 			return err
 		}
 
-		defer dettachVol(*vol)
+		defer s.dettachVol(*vol)
 
 		err = workFunc(deviceFile)
 		if err != nil {
@@ -193,29 +192,29 @@ func workOnVolume(deviceFile string, workFunc func(string) error) (*ec2.Snapshot
 		VolumeId: vol.VolumeId,
 	}
 
-	snapshot, err := ec2svc.CreateSnapshot(snapInput)
+	snapshot, err := s.ec2svc.CreateSnapshot(snapInput)
 	if err != nil {
 		return nil, err
 	}
 	snapDesc := &ec2.DescribeSnapshotsInput{
 		SnapshotIds: []*string{snapshot.SnapshotId},
 	}
-	err = ec2svc.WaitUntilSnapshotCompleted(snapDesc)
+	err = s.ec2svc.WaitUntilSnapshotCompleted(snapDesc)
 	if err != nil {
 		return nil, err
 	}
 	return snapshot, nil
 }
 
-func copyToAws(imgFile string, localFolder model.Volume) (*ec2.Snapshot, error) {
+func (s *AWSStager) copyToAws(imgFile string, localFolder model.Volume) (*ec2.Snapshot, error) {
 
-	vol, err := getAwsVolume()
+	vol, err := s.getAwsVolume()
 	err = func() error {
-		err := attachVol(*vol, imgFile)
+		err := s.attachVol(*vol, imgFile)
 		if err != nil {
 			return err
 		}
-		defer dettachVol(*vol)
+		defer s.dettachVol(*vol)
 
 		return utils.CopyToImgFile(localFolder.Path, imgFile)
 
@@ -226,26 +225,26 @@ func copyToAws(imgFile string, localFolder model.Volume) (*ec2.Snapshot, error) 
 	snapInput := &ec2.CreateSnapshotInput{
 		VolumeId: vol.VolumeId,
 	}
-	snapshot, err := ec2svc.CreateSnapshot(snapInput)
+	snapshot, err := s.ec2svc.CreateSnapshot(snapInput)
 	if err != nil {
 		return nil, err
 	}
 	snapDesc := &ec2.DescribeSnapshotsInput{
 		SnapshotIds: []*string{snapshot.SnapshotId},
 	}
-	err = ec2svc.WaitUntilSnapshotCompleted(snapDesc)
+	err = s.ec2svc.WaitUntilSnapshotCompleted(snapDesc)
 	if err != nil {
 		return nil, err
 	}
 	return snapshot, nil
 }
 
-func getAwsVolume() (*ec2.Volume, error) {
-	az, err := meta.GetMetadata("placement/availability-zone")
+func (s *AWSStager) getAwsVolume() (*ec2.Volume, error) {
+	az, err := s.meta.GetMetadata("placement/availability-zone")
 	if err != nil {
 		return nil, err
 	}
-	volume, err := ec2svc.CreateVolume(&ec2.CreateVolumeInput{AvailabilityZone: aws.String(az),
+	volume, err := s.ec2svc.CreateVolume(&ec2.CreateVolumeInput{AvailabilityZone: aws.String(az),
 		Size: aws.Int64(SizeInGigs),
 	})
 
@@ -253,14 +252,14 @@ func getAwsVolume() (*ec2.Volume, error) {
 		return nil, err
 	}
 	volIn := &ec2.DescribeVolumesInput{VolumeIds: []*string{volume.VolumeId}}
-	err = ec2svc.WaitUntilVolumeAvailable(volIn)
+	err = s.ec2svc.WaitUntilVolumeAvailable(volIn)
 	log.WithField("vol", *volume.VolumeId).Debug("Volume created")
 	return volume, nil
 }
 
-func attachVol(vol ec2.Volume, file string) error {
+func (s *AWSStager) attachVol(vol ec2.Volume, file string) error {
 
-	instid, err := meta.GetMetadata("instance-id")
+	instid, err := s.meta.GetMetadata("instance-id")
 	if err != nil {
 		return err
 	}
@@ -269,20 +268,20 @@ func attachVol(vol ec2.Volume, file string) error {
 		InstanceId: aws.String(instid),
 		VolumeId:   vol.VolumeId,
 	}
-	_, err = ec2svc.AttachVolume(params)
+	_, err = s.ec2svc.AttachVolume(params)
 	if err != nil {
 		return err
 	}
 
 	volIn := &ec2.DescribeVolumesInput{VolumeIds: []*string{vol.VolumeId}}
-	err = ec2svc.WaitUntilVolumeInUse(volIn)
+	err = s.ec2svc.WaitUntilVolumeInUse(volIn)
 	if err != nil {
 		return err
 	}
 
 	isFile := waitForFile(file, 3*time.Minute)
 	if !isFile {
-		dettachVol(vol)
+		s.dettachVol(vol)
 		log.WithFields(log.Fields{"file": file}).Panic("Can't attach volume!")
 	}
 
@@ -301,14 +300,14 @@ func waitForFile(file string, dur time.Duration) bool {
 	return res
 }
 
-func dettachVol(vol ec2.Volume) error {
+func (s *AWSStager) dettachVol(vol ec2.Volume) error {
 
 	params := &ec2.DetachVolumeInput{
 		VolumeId: vol.VolumeId,
 	}
 	log.WithFields(log.Fields{"vol": *vol.VolumeId}).Debug("dettaching Volume")
 
-	_, err := ec2svc.DetachVolume(params)
+	_, err := s.ec2svc.DetachVolume(params)
 	if err != nil {
 		return err
 	}
@@ -340,9 +339,9 @@ func getBlockDeviceMapping(snapmapping map[string]ec2.EbsBlockDevice) []*ec2.Blo
 	return mapping
 }
 
-func registerImage(appName string, snapmapping map[string]ec2.EbsBlockDevice) error {
+func (s *AWSStager) registerImage(appName string, snapmapping map[string]ec2.EbsBlockDevice) error {
 
-	region, err := meta.Region()
+	region, err := s.meta.Region()
 	if err != nil {
 		return err
 	}
@@ -374,7 +373,7 @@ func registerImage(appName string, snapmapping map[string]ec2.EbsBlockDevice) er
 
 	log.WithFields(logparams).Debug("Registering image")
 
-	imageout, err := ec2svc.RegisterImage(params)
+	imageout, err := s.ec2svc.RegisterImage(params)
 	if err != nil {
 		return err
 	}
@@ -382,14 +381,14 @@ func registerImage(appName string, snapmapping map[string]ec2.EbsBlockDevice) er
 
 	for _, v := range snapmapping {
 		if v.SnapshotId != nil {
-			err = addTag(*v.SnapshotId, "UNIKERNEL_ID", *imageout.ImageId)
+			err = s.addTag(*v.SnapshotId, "UNIKERNEL_ID", *imageout.ImageId)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
-	err = addTag(*imageout.ImageId, "UNIKERNEL_APP_NAME", appName)
+	err = s.addTag(*imageout.ImageId, "UNIKERNEL_APP_NAME", appName)
 	if err != nil {
 		return err
 	}
@@ -397,7 +396,7 @@ func registerImage(appName string, snapmapping map[string]ec2.EbsBlockDevice) er
 	return nil
 }
 
-func addTag(id, key, value string) error {
+func (s *AWSStager) addTag(id, key, value string) error {
 
 	tagInput := &ec2.CreateTagsInput{
 		Resources: []*string{aws.String(id)},
@@ -408,6 +407,6 @@ func addTag(id, key, value string) error {
 			},
 		},
 	}
-	_, err := ec2svc.CreateTags(tagInput)
+	_, err := s.ec2svc.CreateTags(tagInput)
 	return err
 }
