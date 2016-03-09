@@ -29,17 +29,18 @@ type QEmuVolumeStager struct {
 
 func (s *QEmuVolumeStager) Stage(appName, kernelPath string, volumes map[string]model.Volume, c model.RumpConfig) error {
 
-	var err error
-	if s.single {
-		err = s.CreateVolumesSingle(volumes, &c)
-
-	} else {
-		err = s.CreateVolumesMulti(volumes, &c)
-
+	if len(volumes) > 0 {
+		var err error
+		if s.single {
+			err = s.CreateVolumesSingle(volumes, &c)
+		} else {
+			err = s.CreateVolumesMulti(volumes, &c)
+		}
+		if err != nil {
+			return err
+		}
 	}
-	if err != nil {
-		return err
-	}
+
 	return s.CreateRoot(kernelPath, c)
 }
 
