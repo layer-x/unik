@@ -11,41 +11,55 @@ import (
 
 //export gomaincaller
 func gomaincaller() {
-	// Make a channel for results and start listening
-	ipChan := make(chan string)
-	entriesCh := make(chan *mdns.ServiceEntry, 4)
-	go func() {
-		for entry := range entriesCh {
-			ipChan <- entry.AddrV4.String()
-		}
-	}()
-	var unikEndpoint string
-	// Start the lookup
-	err := mdns.Lookup("_unik._tcp", entriesCh)
-	if err != nil {
-		//assume we are running on aws
-		unikEndpoint = "http://169.254.169.254/latest/user-data"
-	} else {
-		unikEndpoint = "http://"+<- ipChan+"/bootstrap"
-	}
-
 	var instanceData UnikInstanceData
 
-	resp, err := http.Get(unikEndpoint)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-	err = json.Unmarshal(data, &instanceData)
-	if err != nil {
-		panic(err)
-	}
-	for key, value := range instanceData.Env {
-		os.Setenv(key, value)
+	resp, err := http.Get("http://169.254.169.254/latest/user-data")
+	if err != nil { //if AWS user-data doesnt work, try multicast
+		// Make a channel for results and start listening
+		ipChan := make(chan string)
+		entriesCh := make(chan *mdns.ServiceEntry, 4)
+		go func() {
+			for entry := range entriesCh {
+				ipChan <- entry.AddrV4.String()
+			}
+		}()
+		// Start the lookup
+		err := mdns.Lookup("_unik._tcp", entriesCh)
+		if err == nil {
+			var instanceData UnikInstanceData
+
+			resp, err := http.Get("http://"+<- ipChan+"/bootstrap")
+			if err != nil {
+				panic(err)
+			}
+			defer resp.Body.Close()
+			data, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				panic(err)
+			}
+			err = json.Unmarshal(data, &instanceData)
+			if err != nil {
+				panic(err)
+			}
+			for key, value := range instanceData.Env {
+				os.Setenv(key, value)
+			}
+		} else {
+			panic("expected mdns to work, but failed")
+		}
+	} else {
+		defer resp.Body.Close()
+		data, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			panic(err)
+		}
+		err = json.Unmarshal(data, &instanceData)
+		if err != nil {
+			panic(err)
+		}
+		for key, value := range instanceData.Env {
+			os.Setenv(key, value)
+		}
 	}
 
 	main()
