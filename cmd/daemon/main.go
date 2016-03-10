@@ -13,6 +13,9 @@ import (
 func main() {
 	debugMode := flag.String("debug", "false", "enable verbose/debug mode")
 	provider := flag.String("provider", "ec2", "cloud provider to use")
+	vsphereUrl := flag.String("vsphere-url", "", "url endpoint for vsphere")
+	vsphereUser := flag.String("vsphere-user", "", "user for vsphere")
+	vspherePass := flag.String("vsphere-pass", "", "password for vsphere")
 	flag.Parse()
 	if *debugMode == "true" {
 		lxlog.ActiveDebugMode()
@@ -35,8 +38,24 @@ func main() {
 		os.Exit(-1);
 	}
 
+	opts := []string{}
+
 	//make sure we don't attempt to multicast on a public cloud
-	if *provider != "ec2" {
+	if *provider == "vsphere" {
+		if *vsphereUrl == "" {
+			lxlog.Errorf(logrus.Fields{}, "vsphere url must be set")
+			os.Exit(-1);
+		}
+		if *vsphereUser == "" {
+			lxlog.Errorf(logrus.Fields{}, "vsphere user must be set")
+			os.Exit(-1);
+		}
+		if *vspherePass == "" {
+			lxlog.Errorf(logrus.Fields{}, "vsphere pass must be set")
+			os.Exit(-1);
+		}
+		opts = append(opts, *vsphereUrl, *vsphereUser, *vspherePass)
+
 		lxlog.Infof(logrus.Fields{"host": host},"Starting unik discovery service")
 		info := []string{"Unik"}
 		service, err := mdns.NewMDNSService(host, "_unik._tcp", "", "", 8000, nil, info)
@@ -53,6 +72,6 @@ func main() {
 		lxlog.Infof(logrus.Fields{"server": server},"Started unik discovery service")
 	}
 
-	unikDaemon := daemon.NewUnikDaemon(*provider)
+	unikDaemon := daemon.NewUnikDaemon(*provider, opts...)
 	unikDaemon.Start(3000)
 }

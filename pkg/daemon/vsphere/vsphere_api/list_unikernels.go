@@ -8,6 +8,7 @@ import (
 "github.com/Sirupsen/logrus"
 	"github.com/layer-x/unik/pkg/daemon/vsphere/vsphere_utils"
 	"os"
+	"github.com/layer-x/layerx-commons/lxfileutils"
 )
 
 const VSPHERE_UNIKERNEL_FOLDER = "unik"
@@ -34,7 +35,7 @@ func ListUnikernels(creds Creds) ([]*types.Unikernel, error) {
 		}()
 
 		err = vsphereClient.DownloadFile(unikernelFolder+"/metadata.json", unikernelDir+"/metadata.json")
-		metadata, err := readFile(unikernelFolder+"/metadata.json")
+		metadata, err := lxfileutils.ReadFile(unikernelFolder+"/metadata.json")
 		if err != nil {
 			return nil, lxerrors.New("reading unikernel metadata file "+unikernelFolder+"/unikernel-metadata.json", err)
 		}
@@ -47,12 +48,4 @@ func ListUnikernels(creds Creds) ([]*types.Unikernel, error) {
 	}
 	lxlog.Debugf(logrus.Fields{"count": len(unikernels)}, "read unikernels")
 	return unikernels, nil
-}
-
-func readFile(path string) ([]byte, error) {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	return data, nil
 }

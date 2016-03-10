@@ -42,7 +42,7 @@ Vagrant.configure(2) do |config|
     v.tags["Name"] = "UnikBackend"
     require_relative 'get_profile_arn.rb'
     v.iam_instance_profile_arn = get_profile_arn region
-
+    v.block_device_mapping = [{ 'DeviceName' => '/dev/sda1', 'Ebs.VolumeSize' => 50 }]
     override.vm.provision "shell" do |s|
        s.path =  "scripts/provision.sh"
      end
@@ -60,7 +60,7 @@ Vagrant.configure(2) do |config|
   # the path on the guest to mount the folder. And the optional third
   # argument is a set of non-required options.
   # config.vm.synced_folder "../data", "/vagrant_data"
-  config.vm.synced_folder "../", "/home/vagrant/go/src/github.com/layer-x/unik", type: "rsync",
+  config.vm.synced_folder "../../", "/home/vagrant/go/src/github.com/layer-x/unik", type: "rsync",
     rsync__exclude: ".git/"
 
   # Define a Vagrant Push strategy for pushing to Atlas. Other push strategies

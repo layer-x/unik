@@ -89,6 +89,20 @@ func BuildUnikernel(creds Creds, unikernelName, force string, uploadedTar multip
 	}
 	lxlog.Infof(logrus.Fields{"path": unikernelDir + "/Capstanfile"}, "generated java Capstanfile")
 
+	//create java-wrapper dir
+	javaWrapperDir, err := ioutil.TempDir(os.TempDir(), unikernelName+"-java-wrapper-dir")
+	if err != nil {
+		return lxerrors.New("creating temporary directory "+unikernelName+"-java-wrapper-dir", err)
+	}
+	//clean up artifacts even if we fail
+	defer func() {
+		err = os.RemoveAll(javaWrapperDir)
+		if err != nil {
+			panic(lxerrors.New("cleaning up java-wrapper files", err))
+		}
+		lxlog.Infof(logrus.Fields{"files": javaWrapperDir}, "cleaned up files")
+	}()
+
 	buildUnikernelCommand := exec.Command("docker", "run",
 		"--rm",
 		"--privileged",
@@ -124,7 +138,7 @@ func BuildUnikernel(creds Creds, unikernelName, force string, uploadedTar multip
 	if err != nil {
 		return lxerrors.New("marshalling unikernel metadata", err)
 	}
-	err = writeFile(unikernelDir + "/metadata.json", metadataBytes)
+	err = lxfileutils.WriteFile(unikernelDir + "/metadata.json", metadataBytes)
 	if err != nil {
 		return lxerrors.New("writing metadata.json", err)
 	}
@@ -137,23 +151,3 @@ func BuildUnikernel(creds Creds, unikernelName, force string, uploadedTar multip
 	return nil
 }
 
-
-func writeFile(path, data []byte) error {
-	err := ioutil.WriteFile(path, data, 0777)
-	if err != nil {
-		err := os.MkdirAll(filepath.Dir(path), 0777)
-		if err != nil {
-			return err
-		}
-		f, err := os.Create(path)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		_, err = f.Write(data)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}

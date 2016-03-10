@@ -17,6 +17,7 @@ export GOPATH=/home/vagrant/go
 export GOBIN=$GOPATH/bin
 export PATH=$GOBIN:/usr/local/go/bin:$PATH
 pushd $GOPATH/src/github.com/layer-x/unik/cmd/daemon/
+export GO15VENDOREXPERIMENT=1
 go build -o unikd .
 echo "STARTING UNIK!"
 echo "(sudo -E unikd -u $USERNAME -p $PASSWORD &) > /home/vagrant/unik.log 2>&1"

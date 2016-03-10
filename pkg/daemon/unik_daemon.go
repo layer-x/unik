@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 "github.com/layer-x/unik/pkg/daemon/ec2"
+"github.com/layer-x/unik/pkg/daemon/vsphere"
 "github.com/layer-x/unik/pkg/daemon/docker_api"
 )
 
@@ -23,11 +24,22 @@ type UnikDaemon struct {
 	cpi UnikCPI
 }
 
-func NewUnikDaemon(provider string) *UnikDaemon {
+func NewUnikDaemon(provider string, opts ... string) *UnikDaemon {
 	var cpi UnikCPI
 	switch provider{
 	case "ec2":
 		cpi = ec2.NewUnikEC2CPI()
+		break
+	case "vsphere":
+		if len(opts) != 3 {
+			panic("invalid number of arguments: "+strings.Join(opts, ","))
+		}
+		vsphereUrl := opts[0]
+		vsphereUser := opts[1]
+		vspherePass := opts[2]
+		vsphereCpi := vsphere.NewUnikVsphereCPI(vsphereUrl, vsphereUser, vspherePass)
+		vsphereCpi.ListenForMacAddr(3001)
+		cpi = vsphereCpi
 		break
 	default:
 		panic("Unrecognized provider "+provider)
@@ -376,16 +388,6 @@ func (d *UnikDaemon) registerHandlers() {
 			lxlog.Infof(logrus.Fields{"volume": volumeName}, "volume detached")
 			return volumeName, nil
 		})
-	})
-
-	d.server.Get("/bootstrap", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		splitAddr := strings.Split(req.RemoteAddr, ":")
-		if len(splitAddr) < 1 {
-			lxlog.Errorf(logrus.Fields{"req.RemoteAddr": req.RemoteAddr}, "could not parse remote addr into ip/port combination")
-			return
-		}
-		instanceIp := splitAddr[0]
-		lxlog.Infof(logrus.Fields{"Ip": instanceIp}, "Instance registered with mDNS")
 	})
 }
 

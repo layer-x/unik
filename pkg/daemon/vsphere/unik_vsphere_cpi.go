@@ -1,4 +1,5 @@
-package ec2
+package vsphere
+
 import (
 	"mime/multipart"
 	"github.com/layer-x/unik/pkg/types"
@@ -8,25 +9,69 @@ import (
 	"net/url"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/layerx-commons/lxlog"
-"github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
+	"github.com/layer-x/layerx-commons/lxmartini"
+	"net/http"
+	"fmt"
+	"encoding/json"
+	"github.com/layer-x/layerx-commons/lxfileutils"
+	"os"
 )
 
-type UnikVsphereCPI struct{
-	creds vsphere_api.Creds
+type UnikVsphereCPI struct {
+	creds    vsphere_api.Creds
+	macIpMap map[string]string
 }
 
 func NewUnikVsphereCPI(rawUrl, user, password string) *UnikVsphereCPI {
-	rawUrl = "https://"+user+":"+password+"@"+strings.TrimSuffix(strings.TrimPrefix(strings.TrimPrefix(rawUrl, "http://"), "https://"), "/sdk")+"/sdk"
+	rawUrl = "https://" + user + ":" + password + "@" + strings.TrimSuffix(strings.TrimPrefix(strings.TrimPrefix(rawUrl, "http://"), "https://"), "/sdk") + "/sdk"
 	u, err := url.Parse(rawUrl)
 	if err != nil {
-		lxlog.Fatalf(logrus.Fields{"raw-url": rawUrl, "err": err},"parsing provided url")
+		lxlog.Fatalf(logrus.Fields{"raw-url": rawUrl, "err": err}, "parsing provided url")
+	}
+	var macIpMap map[string]string
+	instanceData, err := lxfileutils.ReadFile(os.Getenv("HOME") + "/.unikd/intance_data.json")
+	if err == nil {
+		err = json.Unmarshal(instanceData, &macIpMap)
+	}
+	if err != nil {
+		macIpMap = make(map[string]string)
 	}
 	return &UnikVsphereCPI{
 		creds: vsphere_api.Creds{
 			url: u,
 		},
+		macIpMap: macIpMap,
 	}
 }
+
+func (cpi *UnikVsphereCPI) ListenForMacAddr(port int) {
+	m := lxmartini.QuietMartini()
+	m.Get("/bootstrap", func(res http.ResponseWriter, req *http.Request) {
+		splitAddr := strings.Split(req.RemoteAddr, ":")
+		if len(splitAddr) < 1 {
+			lxlog.Errorf(logrus.Fields{"req.RemoteAddr": req.RemoteAddr}, "could not parse remote addr into ip/port combination")
+			return
+		}
+		instanceIp := splitAddr[0]
+		macAddress := req.URL.Query().Get("mac_address")
+		lxlog.Infof(logrus.Fields{"Ip": instanceIp, "mac-address": macAddress}, "Instance registered with mDNS")
+		cpi.macIpMap[macAddress] = instanceIp
+
+		macIpMapData, err := json.Marshal(cpi.macIpMap)
+		if err != nil {
+			lxlog.Errorf(logrus.Fields{"err": err}, "could not marshal mac ip map to json")
+			return
+		}
+		err = lxfileutils.WriteFile(os.Getenv("HOME") + "/.unikd/intance_data.json", macIpMapData)
+		if err != nil {
+			lxlog.Errorf(logrus.Fields{"err": err}, "could not marshal mac ip map to json")
+			return
+		}
+	})
+	go m.RunOnAddr(fmt.Sprintf(":%v", port))
+}
+
 func (cpi *UnikVsphereCPI) AttachVolume(volumeNameOrId, unikInstanceId, deviceName string) error {
 	return lxerrors.New("method not implemented", nil)
 }
