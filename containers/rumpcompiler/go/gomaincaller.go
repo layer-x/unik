@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"github.com/hashicorp/mdns"
+	"net"
 )
 
 //export gomaincaller
@@ -15,6 +16,21 @@ func gomaincaller() {
 
 	resp, err := http.Get("http://169.254.169.254/latest/user-data")
 	if err != nil { //if AWS user-data doesnt work, try multicast
+		//get MAC Addr (needed for vsphere)
+		ifaces, err := net.Interfaces()
+		if err != nil {
+			panic("retrieving network interfaces" + err.Error())
+		}
+		macAddress := ""
+		for _, iface := range ifaces {
+			if iface.Name != "lo" {
+				macAddress = iface.HardwareAddr.String()
+			}
+		}
+		if macAddress == "" {
+			panic("could not find mac address")
+		}
+
 		// Make a channel for results and start listening
 		ipChan := make(chan string)
 		entriesCh := make(chan *mdns.ServiceEntry, 4)
@@ -24,11 +40,10 @@ func gomaincaller() {
 			}
 		}()
 		// Start the lookup
-		err := mdns.Lookup("_unik._tcp", entriesCh)
+		err = mdns.Lookup("_unik._tcp", entriesCh)
 		if err == nil {
 			var instanceData UnikInstanceData
-
-			resp, err := http.Get("http://"+<- ipChan+"/bootstrap")
+			resp, err := http.Get("http://"+<- ipChan+":3001/bootstrap?mac_address="+macAddress)
 			if err != nil {
 				panic(err)
 			}
@@ -45,7 +60,7 @@ func gomaincaller() {
 				os.Setenv(key, value)
 			}
 		} else {
-			panic("expected mdns to work, but failed")
+			panic("expected mdns to work, but failed:" + err.Error())
 		}
 	} else {
 		defer resp.Body.Close()
