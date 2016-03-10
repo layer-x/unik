@@ -5,7 +5,7 @@ Turns baked rump unikernels to VM images.
 
 To run (from the folder where the unikernel is):
 
-    docker run --rm -v /dev:/dev --privileged -v $PWD/:/unikernel/ rumpstager -mode vmware
+    docker run --rm -v /dev:/dev --privileged -v $PWD/:/unikernel/ rumpstager -mode vmware|aws
 
 ## rumpcompiler
 
