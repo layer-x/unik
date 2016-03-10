@@ -1,4 +1,4 @@
-package main
+package api
 import (
 	"github.com/vmware/photon-controller-go-sdk/photon"
 	"github.com/layer-x/layerx-commons/lxerrors"
