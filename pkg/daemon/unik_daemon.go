@@ -385,7 +385,7 @@ func (d *UnikDaemon) registerHandlers() {
 			return
 		}
 		instanceIp := splitAddr[0]
-
+		lxlog.Infof(logrus.Fields{"Ip": instanceIp}, "Instance registered with mDNS")
 	})
 }
 

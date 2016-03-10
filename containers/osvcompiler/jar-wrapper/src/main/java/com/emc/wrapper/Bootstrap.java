@@ -1,17 +1,19 @@
 package com.emc.wrapper;
 
 
+import com.google.gson.Gson;
+import com.sun.jna.Library;
+import com.sun.jna.Native;
+
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
+import java.net.*;
 import java.util.HashMap;
 
 public class Bootstrap {
     public static void bootstrap() {
         UnikListener unikListener = new UnikListener();
-        String unikEndpoint = "";
+        String unikIp = "";
+        String macAddress = "";
         try {
             unikListener.Listen();
         } catch (IOException ex) {
@@ -20,20 +22,89 @@ public class Bootstrap {
             System.exit(-1);
         }
         try {
-            unikEndpoint = "http://"+unikListener.GetUnikIp()+":3000/connect";
+            unikIp = unikListener.GetUnikIp();
         } catch (InterruptedException ex) {
             System.err.println("failed while waiting for unik ip addr");
             ex.printStackTrace();
             System.exit(-1);
         }
 
-        if (unikEndpoint.equals("")) {
+        if (unikIp.equals("")) {
             System.err.println("failed while waiting for unik ip addr");
             System.exit(-1);
         }
 
         try {
-            URL url = new URL(unikEndpoint);
+            macAddress = getMacAddress();
+        } catch (UnknownHostException ex){
+            System.err.println("failed retrieving mac addr");
+            ex.printStackTrace();
+            System.exit(-1);
+        } catch (SocketException ex){
+            System.err.println("failed retrieving mac addr");
+            ex.printStackTrace();
+            System.exit(-1);
+        }
+
+        if (macAddress.equals("")) {
+            System.err.println("failed to retrieve my own mac addr");
+            System.exit(-1);
+        }
+
+        String response = "";
+        //register with unik
+        try {
+            response = getHTML("http://" + unikIp + ":3001/bootstrap?mac_address="+macAddress);
+        } catch (MalformedURLException ex) {
+            ex.printStackTrace();
+            System.err.println("Malformed UNIK url");
+            System.exit(-1);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            System.err.println("IOException");
+            System.exit(-1);
+        }
+        //boostrap env
+        Gson gson = new Gson();
+        UnikInstance unikInstance = gson.fromJson(response, UnikInstance.class);
+
+        if (unikInstance.UnikInstanceData != null && unikInstance.UnikInstanceData.Env != null) {
+            LibC libc = (LibC) Native.loadLibrary("c", LibC.class);
+            for (String key: unikInstance.UnikInstanceData.Env.keySet()){
+                String value = unikInstance.UnikInstanceData.Env.get(key);
+                int result = libc.setenv(key, value, 1);
+                System.out.println("set "+key+"="+value+": "+result);
+            }
+        }
+
+        //connect logs
+        try {
+            URL url = new URL(unikIp);
+            URLConnection connection = url.openConnection();
+            connection.setDoOutput(true);
+            OutputStream unikOutputStream = connection.getOutputStream();
+
+            MultiOutputStream multiOut = new MultiOutputStream(System.out, unikOutputStream);
+            MultiOutputStream multiErr = new MultiOutputStream(System.err, unikOutputStream);
+
+            PrintStream stdout = new PrintStream(multiOut);
+            PrintStream stderr = new PrintStream(multiErr);
+
+            System.setOut(stdout);
+            System.setErr(stderr);
+        } catch (MalformedURLException ex) {
+            ex.printStackTrace();
+            System.err.println("Malformed UNIK url");
+            System.exit(-1);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            System.err.println("IOException");
+            System.exit(-1);
+        }
+
+        //open up for logs
+        try {
+            URL url = new URL("http://" + unikIp + ":3001/connect_logs?mac_address="+macAddress);
             URLConnection connection = url.openConnection();
             connection.setDoOutput(true);
             OutputStream unikOutputStream = connection.getOutputStream();
@@ -69,6 +140,30 @@ public class Bootstrap {
         }
         rd.close();
         return result.toString();
+    }
+
+    public static String getMacAddress() throws UnknownHostException, SocketException {
+        InetAddress ip = InetAddress.getLocalHost();
+        System.out.println("Current IP address : " + ip.getHostAddress());
+
+        NetworkInterface network = NetworkInterface.getByInetAddress(ip);
+
+        byte[] mac = network.getHardwareAddress();
+
+        System.out.print("Current MAC address : ");
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < mac.length; i++) {
+            sb.append(String.format("%02X%s", mac[i], (i < mac.length - 1) ? "-" : ""));
+        }
+        System.out.println(sb.toString());
+        return sb.toString();
+    }
+
+
+    public interface LibC extends Library {
+        public int setenv(String name, String value, int overwrite);
+        public int unsetenv(String name);
     }
 
     public static class UnikInstance {
