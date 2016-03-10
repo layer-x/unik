@@ -377,6 +377,16 @@ func (d *UnikDaemon) registerHandlers() {
 			return volumeName, nil
 		})
 	})
+
+	d.server.Get("/bootstrap", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		splitAddr := strings.Split(req.RemoteAddr, ":")
+		if len(splitAddr) < 1 {
+			lxlog.Errorf(logrus.Fields{"req.RemoteAddr": req.RemoteAddr}, "could not parse remote addr into ip/port combination")
+			return
+		}
+		instanceIp := splitAddr[0]
+
+	})
 }
 
 func (d *UnikDaemon) addDockerHandlers() {
