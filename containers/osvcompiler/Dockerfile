@@ -10,13 +10,31 @@ RUN mkdir -p $GOPATH/src/github.com/cloudius-systems
 RUN cd $GOPATH/src/github.com/cloudius-systems
 RUN git clone https://github.com/layer-x/capstan
 RUN cd capstan && ./install
+ADD jar-wrapper /jar-wrapper
+RUN cd /java/vsphere-client && \
+    mvn package && \
+    cp target/vsphere-client-1.0-SNAPSHOT-jar-with-dependencies.jar /vsphere-client.jar
 
-#Run this container with -v path-to-root-src:/unikernel -e UNIKERNEL_NAME=<unikernel_name> --privileged (path must also contain the GENERATED capstanfile)
 
+#Run this container with
+#   docker run --rm --privileged \
+#    -v path-to-src:/unikernel \
+#    -v path-to-java-wrapper:/java-wrapper \ (java-wrapper must also contain the GENERATED capstanfile)
+#       -e GROUP_ID=<groupid> \
+#       -e ARTIFACT_ID=<artifactid> \
+#       -e VERSION=<version> \
+#   osvcompiler
+
+VOLUME /java-wrapper
 VOLUME /unikernel
-WORKDIR /unikernel
 
-CMD capstan build -p qemu program && \
+CMD cd /unikernel && \
+    mvn package && \
+    mvn install:install-file -Dfile=target/$ARTIFACT_ID-$VERSION-jar-with-dependencies.jar -DgroupId=$GROUP_ID \
+        -DartifactId=$ARTIFACT_ID -Dversion=$VERSION -Dpackaging=jar && \
+    cd /java-wrapper && \
+    mvn package && \
+    capstan build -p qemu program && \
     qemu-img create -f qcow2 -o backing_file=$HOME/.capstan/repository/program/program.qemu ./program.qcow2 && \
     qemu-img convert -O vmdk ./program.qcow2 ./program.vmdk && \
     qemu-img convert -O raw ./program.qcow2 ./program.raw && \

@@ -43,9 +43,9 @@
 
 
     <dependency>
-      <groupId>io.osv</groupId>
-      <artifactId>capstan-example-java</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <groupId>REPLACE_WITH_GROUPID</groupId>
+      <artifactId>REPLACE_WITH_ARTIFACTID</artifactId>
+      <version>REPLACE_WITH_VERSION</version>
     </dependency>
   </dependencies>
 
