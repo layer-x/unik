@@ -63,6 +63,15 @@ To src-netbsd/sys/rump/dev/lib/libpci/Makefile add **"ppb.c"** to the list of so
 rebuild.
 
 # WORK IN PROGRESS - Add scsi controller support to rump:
+How to run QEMU to reproduce issue:
+
+    qemu-system-x86_64 -drive file=root.img,format=raw,if=scsi -device pci-bridge,chassis_nr=2  -device e1000,netdev=mynet0,mac=54:54:00:55:55:55,bus=pci.1,addr=1 -netdev user,id=mynet0,net=192.168.76.0/24,dhcpstart=192.168.76.9 -curses -s -S
+
+from vmware you need the mpt driver. to find that out you need to compile pcictl from source (the one in netbsd7 doesn't show the drivers) on netbsd. and then run
+(assuming the newly compiled binary is in /usr/src/usr.sbin/pcictl/pcictl):
+
+    /usr/src/usr.sbin/pcictl/pcictl /dev/pci0 list -N | grep SCSI
+
 create src-netbsd/sys/rump/dev/lib/libpci_scsi and two files:
 
 ## Makefile:
@@ -96,6 +105,7 @@ create src-netbsd/sys/rump/dev/lib/libpci_scsi and two files:
 
     include "conf/files"
     include "dev/pci/files.pci"
+    include "dev/files.dev"
 
 
     pseudo-device   bio
