@@ -6,6 +6,7 @@
 - [official RPi cross compilers](https://github.com/raspberrypi/tools)
 - Links from mailing list:
  - https://www.freelists.org/post/rumpkernel-users/rumpkernel-on-RPi,10
+ - https://www.freelists.org/post/rumpkernel-users/Rumprun-for-Raspberry-Pi,1
 
 # build env
 
@@ -25,9 +26,8 @@ In docker shell:
     git fetch origin2
     git checkout raspberrypi
     git submodule update
-    export CC=/opt/raspberrypi-tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/arm-linux-gnueabihf-gcc
-    ./build-rr.sh -d $DESTDIR -b pi -o ./obj $PLATFORM  build -- -F ACFLAGS=-march=armv6k
     export PATH=/opt/raspberrypi-tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/:$PATH
+    env CC=arm-linux-gnueabihf-gcc  ./build-rr.sh -d $DESTDIR -b pi -o ./obj $PLATFORM  build -- -F ACFLAGS=-march=armv6k
     ./build-rr.sh -d $DESTDIR -b pi -o ./obj $PLATFORM  build -- -F ACFLAGS=-march=armv6k
 
 
