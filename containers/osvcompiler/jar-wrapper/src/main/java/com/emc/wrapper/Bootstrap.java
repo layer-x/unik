@@ -66,12 +66,12 @@ public class Bootstrap {
         }
         //boostrap env
         Gson gson = new Gson();
-        UnikInstance unikInstance = gson.fromJson(response, UnikInstance.class);
+        UnikInstanceData unikInstanceData = gson.fromJson(response, UnikInstanceData.class);
 
-        if (unikInstance.UnikInstanceData != null && unikInstance.UnikInstanceData.Env != null) {
+        if (unikInstanceData.Env != null) {
             LibC libc = (LibC) Native.loadLibrary("c", LibC.class);
-            for (String key: unikInstance.UnikInstanceData.Env.keySet()){
-                String value = unikInstance.UnikInstanceData.Env.get(key);
+            for (String key: unikInstanceData.Env.keySet()){
+                String value = unikInstanceData.Env.get(key);
                 int result = libc.setenv(key, value, 1);
                 System.out.println("set "+key+"="+value+": "+result);
             }
@@ -79,7 +79,7 @@ public class Bootstrap {
 
         //connect logs
         try {
-            URL url = new URL(unikIp);
+            URL url = new URL("http://" + unikIp + ":3001/connect_logs/"+macAddress);
             URLConnection connection = url.openConnection();
             connection.setDoOutput(true);
             OutputStream unikOutputStream = connection.getOutputStream();
@@ -164,12 +164,6 @@ public class Bootstrap {
     public interface LibC extends Library {
         public int setenv(String name, String value, int overwrite);
         public int unsetenv(String name);
-    }
-
-    public static class UnikInstance {
-        public String UnikInstanceID;
-        public String UnikInstanceName;
-        public UnikInstanceData UnikInstanceData;
     }
 
     public static class UnikInstanceData {

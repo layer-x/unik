@@ -11,6 +11,7 @@ type UnikEC2CPI struct{}
 func NewUnikEC2CPI() *UnikEC2CPI {
 	return &UnikEC2CPI{}
 }
+
 func (cpi *UnikEC2CPI) AttachVolume(volumeNameOrId, unikInstanceId, deviceName string) error {
 	return ec2api.AttachVolume(volumeNameOrId, unikInstanceId, deviceName)
 }
