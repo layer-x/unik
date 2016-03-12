@@ -3,7 +3,6 @@ import (
 	"mime/multipart"
 	"github.com/Sirupsen/logrus"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"encoding/json"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/unik/pkg/types"
 	"time"
@@ -14,11 +13,12 @@ import (
 	"github.com/layer-x/layerx-commons/lxfileutils"
 	"io"
 	"os/exec"
-	"github.com/layer-x/unik/pkg/daemon/osv/capstan"
+	"github.com/layer-x/unik/pkg/daemon/osv"
 	"github.com/layer-x/unik/pkg/daemon/vsphere/vsphere_utils"
+	"github.com/layer-x/unik/pkg/daemon/state"
 )
 
-func BuildUnikernel(creds Creds, unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
+func BuildUnikernel(unikState *state.UnikState, creds Creds, unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
 	unikernelId := unikernelName //vsphere specific
 	datastoreFolder := VSPHERE_UNIKERNEL_FOLDER + "/" + unikernelId
 	vsphereClient, err := vsphere_utils.NewVsphereClient(creds.url)
@@ -83,11 +83,6 @@ func BuildUnikernel(creds Creds, unikernelName, force string, uploadedTar multip
 		}
 	}
 	lxlog.Infof(logrus.Fields{"path": unikernelDir, "unikernel_name": unikernelName}, "unikernel tarball untarred")
-	err = capstan.GenerateCapstanFile(unikernelDir)
-	if err != nil {
-		lxerrors.New("generating capstan file from " + unikernelDir + "/pom.xml", err)
-	}
-	lxlog.Infof(logrus.Fields{"path": unikernelDir + "/Capstanfile"}, "generated java Capstanfile")
 
 	//create java-wrapper dir
 	javaWrapperDir, err := ioutil.TempDir(os.TempDir(), unikernelName+"-java-wrapper-dir")
@@ -103,11 +98,20 @@ func BuildUnikernel(creds Creds, unikernelName, force string, uploadedTar multip
 		lxlog.Infof(logrus.Fields{"files": javaWrapperDir}, "cleaned up files")
 	}()
 
+	artifactId, groupId, version, err := osv.WrapJavaApplication(javaWrapperDir, unikernelDir)
+	if err != nil {
+		lxerrors.New("generating java wrapper application " + unikernelDir, err)
+	}
+	lxlog.Infof(logrus.Fields{"artifactId": artifactId, "groupid": groupId, "version": version}, "generated java wrapper")
+
 	buildUnikernelCommand := exec.Command("docker", "run",
 		"--rm",
 		"--privileged",
 		"-v", unikernelDir + ":/unikernel",
-		"-e", "UNIKERNEL_NAME=" + unikernelName,
+		"-v", javaWrapperDir + ":/jar-wrapper",
+		"-e", "GROUP_ID=" + groupId,
+		"-e", "ARTIFACT_ID=" + artifactId,
+		"-e", "VERSION=" + version,
 		"osvcompiler",
 	)
 	lxlog.LogCommand(buildUnikernelCommand, true)
@@ -122,32 +126,25 @@ func BuildUnikernel(creds Creds, unikernelName, force string, uploadedTar multip
 		return lxerrors.New("creating datastore folder to contain unikernel image", err)
 	}
 
-	err = vsphereClient.ImportVmdk(unikernelDir + "/program.vmdk", datastoreFolder)
+	err = vsphereClient.ImportVmdk(javaWrapperDir + "/program.vmdk", datastoreFolder)
 	if err != nil {
 		return lxerrors.New("importing program.vmdk to datastore folder", err)
 	}
 
-	unikernelMetadata := &types.Unikernel{
+	unikState.Unikernels[unikernelId] = &types.Unikernel{
 		Id: unikernelId, //same as unikernel name
 		UnikernelName: unikernelName,
 		CreationDate: time.Now().String(),
 		Created: time.Now().Unix(),
 		Path: datastoreFolder + "/program.vmdk",
 	}
-	metadataBytes, err := json.Marshal(unikernelMetadata)
+
+	err = unikState.Save(state.DEFAULT_UNIK_STATE_FILE)
 	if err != nil {
-		return lxerrors.New("marshalling unikernel metadata", err)
-	}
-	err = lxfileutils.WriteFile(unikernelDir + "/metadata.json", metadataBytes)
-	if err != nil {
-		return lxerrors.New("writing metadata.json", err)
-	}
-	err = vsphereClient.UploadFile(unikernelDir + "/metadata.json", datastoreFolder + "/metadata.json")
-	if err != nil {
-		return lxerrors.New("uploading metadata.json", err)
+		return lxerrors.New("failed to save updated unikernel index", err)
 	}
 
-	lxlog.Infof(logrus.Fields{"unikernel": unikernelMetadata}, "saved unikernel metadata")
+	lxlog.Infof(logrus.Fields{"unikernel": unikernelId}, "saved unikernel index")
 	return nil
 }
 

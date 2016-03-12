@@ -1,4 +1,4 @@
-package capstan
+package osv
 
 import (
 	"encoding/xml"

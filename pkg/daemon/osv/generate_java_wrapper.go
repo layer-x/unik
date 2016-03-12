@@ -1,4 +1,4 @@
-package capstan
+package osv
 
 import (
 	"os/exec"
@@ -49,8 +49,8 @@ func WrapJavaApplication(javaWrapperDir, appSourceDir string) (string, string, s
 
 	err = ioutil.WriteFile(javaWrapperDir + "/src/java/com/emc/wwrapper/Wrapper.java", []byte(wrapperMainContents), 0666)
 	if err != nil {
-		return lxerrors.New("writing Wrapper class around app class", err)
+		return "", "", "", lxerrors.New("writing Wrapper class around app class", err)
 	}
 
-	return nil
+	return artifactId, groupId, version, nil
 }

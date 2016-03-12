@@ -17,6 +17,7 @@ import (
 "github.com/layer-x/unik/pkg/daemon/ec2"
 "github.com/layer-x/unik/pkg/daemon/vsphere"
 "github.com/layer-x/unik/pkg/daemon/docker_api"
+	"bufio"
 )
 
 type UnikDaemon struct {
@@ -38,7 +39,7 @@ func NewUnikDaemon(provider string, opts ... string) *UnikDaemon {
 		vsphereUser := opts[1]
 		vspherePass := opts[2]
 		vsphereCpi := vsphere.NewUnikVsphereCPI(vsphereUrl, vsphereUser, vspherePass)
-		vsphereCpi.ListenForMacAddr(3001)
+		vsphereCpi.ListenForBootstrap(3001)
 		cpi = vsphereCpi
 		break
 	default:
@@ -388,6 +389,26 @@ func (d *UnikDaemon) registerHandlers() {
 			lxlog.Infof(logrus.Fields{"volume": volumeName}, "volume detached")
 			return volumeName, nil
 		})
+	})
+
+	d.server.Any("/connect_logs/:instance_id", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		unikInstanceId := params["instance_id"]
+		lxlog.Debugf(logrus.Fields{"instance": unikInstanceId}, "logs connected from unik instance")
+		reader := bufio.NewReader(req.Body)
+		for {
+			line, err := reader.ReadBytes('\n')
+			if err != nil {
+				lxlog.Errorf(logrus.Fields{"err": err, "instance": unikInstanceId}, "could not read next line of instace's logs")
+				return
+			}
+			err = d.cpi.RecordInstanceLogs(unikInstanceId, string(line))
+			if err != nil {
+				lxlog.Errorf(logrus.Fields{"err": err, "line": string(line), "unikInstanceId": unikInstanceId}, "could record log line")
+				return
+			}
+		}
+		lxlog.Infof(logrus.Fields{"volume": unikInstanceId}, "volume detached")
+		return unikInstanceId, nil
 	})
 }
 
