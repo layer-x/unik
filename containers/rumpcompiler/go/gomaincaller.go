@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"github.com/hashicorp/mdns"
 	"net"
+	"bytes"
+	"github.com/layer-x/layerx-commons/lxstream"
+	"github.com/layer-x/unik/vendor/github.com/go-martini/martini"
 )
 
 //export gomaincaller
@@ -76,6 +79,24 @@ func gomaincaller() {
 			os.Setenv(key, value)
 		}
 	}
+
+	//make logs available via http request
+	logs := bytes.Buffer{}
+	err = lxstream.Tee(os.Stdout, &logs)
+	if err != nil {
+		panic(err)
+	}
+	err = lxstream.Tee(os.Stderr, &logs)
+	if err != nil {
+		panic(err)
+	}
+
+	//handle logs request
+	m := martini.Classic()
+	m.Get("/logs", func() string {
+		return logs.String()
+	})
+	go m.RunOnAddr(":3000")
 
 	main()
 }

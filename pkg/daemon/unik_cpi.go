@@ -22,7 +22,6 @@ type UnikCPI interface {
 	ListUnikInstances() ([]*types.UnikInstance, error)
 	ListUnikernels() ([]*types.Unikernel, error)
 	ListVolumes() ([]*types.Volume, error)
-	RecordInstanceLogs(unikInstanceId, line string) error
 	RunUnikInstance(unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error)
 	StreamLogs(unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error
 }

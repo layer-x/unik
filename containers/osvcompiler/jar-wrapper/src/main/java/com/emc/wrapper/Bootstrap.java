@@ -10,6 +10,9 @@ import java.net.*;
 import java.util.HashMap;
 
 public class Bootstrap {
+
+    public static ByteArrayOutputStream logBuffer = new ByteArrayOutputStream();
+
     public static void bootstrap() {
         UnikListener unikListener = new UnikListener();
         String unikIp = "";
@@ -102,30 +105,19 @@ public class Bootstrap {
             System.exit(-1);
         }
 
-        //open up for logs
-        try {
-            URL url = new URL("http://" + unikIp + ":3001/connect_logs?mac_address="+macAddress);
-            URLConnection connection = url.openConnection();
-            connection.setDoOutput(true);
-            OutputStream unikOutputStream = connection.getOutputStream();
+        //connect stdout to logs
+        MultiOutputStream multiOut = new MultiOutputStream(System.out, logBuffer);
+        MultiOutputStream multiErr = new MultiOutputStream(System.err, logBuffer);
 
-            MultiOutputStream multiOut = new MultiOutputStream(System.out, unikOutputStream);
-            MultiOutputStream multiErr = new MultiOutputStream(System.err, unikOutputStream);
+        PrintStream stdout = new PrintStream(multiOut);
+        PrintStream stderr = new PrintStream(multiErr);
 
-            PrintStream stdout = new PrintStream(multiOut);
-            PrintStream stderr = new PrintStream(multiErr);
+        System.setOut(stdout);
+        System.setErr(stderr);
 
-            System.setOut(stdout);
-            System.setErr(stderr);
-        } catch (MalformedURLException ex) {
-            ex.printStackTrace();
-            System.err.println("Malformed UNIK url");
-            System.exit(-1);
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            System.err.println("IOException");
-            System.exit(-1);
-        }
+        //listen to requests for logs
+        WrapperServer.ServerThread serverThread = new WrapperServer.ServerThread(new WrapperServer());
+        serverThread.start();
     }
 
     public static String getHTML(String urlToRead) throws MalformedURLException, IOException {

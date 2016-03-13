@@ -142,7 +142,3 @@ func (cpi *UnikVsphereCPI) RunUnikInstance(unikernelName, instanceName string, i
 func (cpi *UnikVsphereCPI) StreamLogs(unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error {
 	return lxerrors.New("method not implemented", nil)
 }
-
-func (cpi *UnikVsphereCPI) RecordInstanceLogs(unikInstanceId, line string) error {
-	return lxerrors.New("method not implemented", nil)
-}
