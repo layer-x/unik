@@ -6,7 +6,7 @@ import (
 	"github.com/docker/go/canonical/json"
 	"github.com/layer-x/unik/pkg/daemon/state"
 	vspheretypes "github.com/vmware/govmomi/vim25/types"
-	"github.com/layer-x/unik/vendor/github.com/layer-x/layerx-commons/lxlog"
+	"github.com/layer-x/layerx-commons/lxlog"
 	"github.com/Sirupsen/logrus"
 )
 
