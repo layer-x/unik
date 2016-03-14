@@ -6,11 +6,10 @@ import (
 	"github.com/layer-x/layerx-commons/lxerrors"
 "os/exec"
 	"io/ioutil"
-	"path/filepath"
 )
 
 
-func WriteFile(path string, data []byte) error {
+func WriteFile(path, data []byte) error {
 	err := ioutil.WriteFile(path, data, 0777)
 	if err != nil {
 		err := os.MkdirAll(filepath.Dir(path), 0777)

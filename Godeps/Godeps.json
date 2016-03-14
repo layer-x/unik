@@ -7,11 +7,11 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/layer-x/layerx-commons/lxerrors",
-			"Rev": "adebf8d9739275673e34407f3a857b30211b5c93"
+			"Rev": "2620303eb574313f8f6bb68e33c0fd26a50d4e6f"
 		},
 		{
 			"ImportPath": "github.com/layer-x/layerx-commons/lxfileutils",
-			"Rev": "adebf8d9739275673e34407f3a857b30211b5c93"
+			"Rev": "2620303eb574313f8f6bb68e33c0fd26a50d4e6f"
 		}
 	]
 }
