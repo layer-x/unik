@@ -72,7 +72,7 @@ func (vc *VsphereClient) CreateVm(vmName, annotation string) error {
 		"govc",
 		"vm.create",
 		"-k",
-		"-u", vc.c.URL().String(),
+		"-u", formatUrl(vc.c.URL()),
 		"--annotation="+annotation,
 		"--force=true",
 		"--m=512",
@@ -96,7 +96,7 @@ func (vc *VsphereClient) DestroyVm(vmName string) error {
 		"govc",
 		"vm.destroy",
 		"-k",
-		"-u", vc.c.URL().String(),
+		"-u", formatUrl(vc.c.URL()),
 		vmName,
 	)
 	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
@@ -114,7 +114,7 @@ func (vc *VsphereClient) Mkdir(folder string) error {
 		"govc",
 		"datastore.mkdir",
 		"-k",
-		"-u", vc.c.URL().String(),
+		"-u", formatUrl(vc.c.URL()),
 		folder,
 	)
 	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
@@ -132,7 +132,7 @@ func (vc *VsphereClient) Rmdir(folder string) error {
 		"govc",
 		"datastore.rm",
 		"-k",
-		"-u", vc.c.URL().String(),
+		"-u", formatUrl(vc.c.URL()),
 		folder,
 	)
 	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
@@ -151,7 +151,7 @@ func (vc *VsphereClient) ImportVmdk(vmdkPath, folder string) error {
 		"govc",
 		"import.vmdk",
 		"-k",
-		"-u", vc.c.URL().String(),
+		"-u", formatUrl(vc.c.URL()),
 		vmdkPath,
 		folder,
 	)
@@ -171,7 +171,7 @@ func (vc *VsphereClient) UploadFile(srcFile, dest string) error {
 		"govc",
 		"datastore.upload",
 		"-k",
-		"-u", vc.c.URL().String(),
+		"-u", formatUrl(vc.c.URL()),
 		srcFile,
 		dest,
 	)
@@ -191,7 +191,7 @@ func (vc *VsphereClient) DownloadFile(remoteFile, localFile string) error {
 		"govc",
 		"datastore.upload",
 		"-k",
-		"-u", vc.c.URL().String(),
+		"-u", formatUrl(vc.c.URL()),
 		remoteFile,
 		localFile,
 	)
@@ -210,7 +210,7 @@ func (vc *VsphereClient) Copy(src, dest string) error {
 		"govc",
 		"datastore.cp",
 		"-k",
-		"-u", vc.c.URL().String(),
+		"-u", formatUrl(vc.c.URL()),
 		src,
 		dest,
 	)
@@ -229,7 +229,7 @@ func (vc *VsphereClient) Ls(dir string) ([]string, error) {
 		"govc",
 		"datastore.ls",
 		"-k",
-		"-u", vc.c.URL().String(),
+		"-u", formatUrl(vc.c.URL()),
 		dir,
 	)
 	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
@@ -254,7 +254,7 @@ func (vc *VsphereClient) PowerOnVm(vmName string) error {
 		"vm.power",
 		"--on=true",
 		"-k",
-		"-u", vc.c.URL().String(),
+		"-u", formatUrl(vc.c.URL()),
 		vmName,
 	)
 	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
@@ -273,7 +273,7 @@ func (vc *VsphereClient) PowerOffVm(vmName string) error {
 		"vm.power",
 		"--off=true",
 		"-k",
-		"-u", vc.c.URL().String(),
+		"-u", formatUrl(vc.c.URL()),
 		vmName,
 	)
 	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
@@ -306,6 +306,11 @@ func (vc *VsphereClient) AttachVmdk(vmName, vmdkPath string) error {
 		return lxerrors.New("failed running govc vm.power (off)", err)
 	}
 	return nil
+}
+
+func formatUrl(url *url.URL) string {
+	password, _ := url.User.Password()
+	return "https://"+url.User.Username()+":"+password+"@"+strings.TrimPrefix(strings.TrimPrefix(url, "http://"), "https://")
 }
 
 
