@@ -4,5 +4,5 @@ import (
 )
 
 type Creds struct {
-	url *url.URL
+	URL *url.URL
 }

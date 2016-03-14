@@ -7,7 +7,7 @@ import (
 )
 
 func DeleteUnikInstance(creds Creds, unikInstanceId string) error {
-	vsphereClient, err := vsphere_utils.NewVsphereClient(creds.url)
+	vsphereClient, err := vsphere_utils.NewVsphereClient(creds.URL)
 	if err != nil {
 		return lxerrors.New("initiating vsphere client connection", err)
 	}

@@ -33,7 +33,7 @@ func WrapJavaApplication(javaWrapperDir, appSourceDir string) (string, string, s
 
 	err = ioutil.WriteFile(javaWrapperDir + "/pom.xml", []byte(wrapperPomContents), 0666)
 	if err != nil {
-		return lxerrors.New("writing pom.xml", err)
+		return "", "", "", lxerrors.New("writing pom.xml", err)
 	}
 
 	mainClassName, err := appPom.getMainClass()

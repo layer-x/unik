@@ -31,7 +31,7 @@ func BuildUnikernel(unikState *state.UnikState, creds Creds, unikernelName, forc
 		}
 	}()
 
-	unikernels, err := ListUnikernels(creds)
+	unikernels, err := ListUnikernels(unikState)
 	if err != nil {
 		return lxerrors.New("could not retrieve list of unikernels", err)
 	}

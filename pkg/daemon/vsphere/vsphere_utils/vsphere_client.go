@@ -30,7 +30,7 @@ func NewVsphereClient(u *url.URL) (*VsphereClient, error) {
 	return &VsphereClient{
 		c: c,
 		f: f,
-	}
+	}, nil
 }
 
 func (vc *VsphereClient) Vms() ([]mo.VirtualMachine, error) {
@@ -228,7 +228,7 @@ func (vc *VsphereClient) Ls(dir string) ([]string, error) {
 	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
 	out, err := cmd.Output()
 	if err != nil {
-		return lxerrors.New("failed running govc datastore.ls "+dir, err)
+		return nil, lxerrors.New("failed running govc datastore.ls "+dir, err)
 	}
 	split := strings.Split(string(out), "\n")
 	contents := []string{}
@@ -279,6 +279,7 @@ func (vc *VsphereClient) PowerOffVm(vmName string) error {
 }
 
 func (vc *VsphereClient) AttachVmdk(vmName, vmdkPath string) error {
+	password, _ := vc.c.URL().User.Password()
 	cmd := exec.Command("docker", "run", "--rm",
 		"vsphere-client",
 		"java",
@@ -287,8 +288,9 @@ func (vc *VsphereClient) AttachVmdk(vmName, vmdkPath string) error {
 		"VmAttachDisk",
 		vc.c.URL().String(),
 		vc.c.URL().User.Username(),
-		vc.c.URL().User.Password(),
+		password,
 		vmName,
+		"200", //TODO: is this right?
 	)
 	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
 	lxlog.LogCommand(cmd, true)

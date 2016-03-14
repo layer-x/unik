@@ -34,7 +34,7 @@ func NewUnikVsphereCPI(rawUrl, user, password string) *UnikVsphereCPI {
 	}
 	return &UnikVsphereCPI{
 		creds: vsphere_api.Creds{
-			url: u,
+			URL: u,
 		},
 		unikState: unikState,
 	}
@@ -112,7 +112,7 @@ func (cpi *UnikVsphereCPI) GetUnikInstanceByPrefixOrName(unikInstanceIdPrefixOrN
 }
 
 func (cpi *UnikVsphereCPI) GetVolumeByIdOrName(volumeIdOrName string) (*types.Volume, error) {
-	return lxerrors.New("method not implemented", nil)
+	return nil, lxerrors.New("method not implemented", nil)
 }
 
 func (cpi *UnikVsphereCPI) GetLogs(unikInstanceId string) (string, error) {
@@ -128,7 +128,7 @@ func (cpi *UnikVsphereCPI) ListUnikernels() ([]*types.Unikernel, error) {
 }
 
 func (cpi *UnikVsphereCPI) ListVolumes() ([]*types.Volume, error) {
-	return lxerrors.New("method not implemented", nil)
+	return nil, lxerrors.New("method not implemented", nil)
 }
 
 func (cpi *UnikVsphereCPI) RunUnikInstance(unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {

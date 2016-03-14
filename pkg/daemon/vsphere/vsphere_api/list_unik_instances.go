@@ -11,9 +11,9 @@ import (
 )
 
 func ListUnikInstances(unikState *state.UnikState, creds Creds) ([]*types.UnikInstance, error) {
-	client, err := vsphere_utils.NewVsphereClient(creds.url)
+	client, err := vsphere_utils.NewVsphereClient(creds.URL)
 	if err != nil {
-		return nil, lxerrors.New("creating new vsphere client ", err.Error())
+		return nil, lxerrors.New("creating new vsphere client ", err)
 	}
 	vms, err := client.Vms()
 	if err != nil {
@@ -45,12 +45,12 @@ func ListUnikInstances(unikState *state.UnikState, creds Creds) ([]*types.UnikIn
 			break
 		}
 		//we use mac address as the vm id
-		if vm.Config != nil && vm.Config.Hardware != nil && vm.Config.Hardware.Device != nil {
+		if vm.Config != nil && vm.Config.Hardware.Device != nil {
 			FindEthLoop:
 			for _, device := range vm.Config.Hardware.Device {
 				switch device.(type){
-				case vspheretypes.VirtualEthernetCard:
-					eth := device.(vspheretypes.VirtualEthernetCard)
+				case *vspheretypes.VirtualVmxnet:
+					eth := device.(*vspheretypes.VirtualVmxnet)
 					unikInstance.VMID = eth.MacAddress
 					break FindEthLoop
 				default:

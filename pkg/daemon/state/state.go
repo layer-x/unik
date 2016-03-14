@@ -11,7 +11,7 @@ import (
 	"os"
 )
 
-const (
+var (
 	DEFAULT_UNIK_STATE_FOLDER = os.Getenv("HOME") + ".unikd/"
 	DEFAULT_UNIK_STATE_FILE = DEFAULT_UNIK_STATE_FOLDER + "state.json"
 )

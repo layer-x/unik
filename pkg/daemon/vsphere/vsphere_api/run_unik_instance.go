@@ -28,7 +28,7 @@ func RunUnikInstance(unikState *state.UnikState, creds Creds, unikernelName, ins
 		return instanceIds, lxerrors.New("could not find a unikernel with name "+unikernelName, nil)
 	}
 
-	vsphereClient, err := vsphere_utils.NewVsphereClient(creds.url)
+	vsphereClient, err := vsphere_utils.NewVsphereClient(creds.URL)
 	if err != nil {
 		return instanceIds, lxerrors.New("initiating vsphere client connection", err)
 	}
@@ -39,7 +39,7 @@ func RunUnikInstance(unikState *state.UnikState, creds Creds, unikernelName, ins
 		Tags: tags,
 		Env:  env,
 	}
-	for i := 0; i < instances; i ++ {
+	for i := int64(0); i < instances; i ++ {
 		unikInstanceId := unikernelName + "_" + uuid.New()
 		if instanceName == "" {
 			instanceName = unikInstanceId
@@ -50,7 +50,7 @@ func RunUnikInstance(unikState *state.UnikState, creds Creds, unikernelName, ins
 			UnikInstanceID: unikInstanceId,
 			UnikInstanceName: instanceName,
 			UnikernelName: unikernelName,
-			Created: time.Now().Unix(),
+			Created: time.Now(),
 			UnikInstanceData: unikInstanceData,
 		}
 		annotationBytes, err := json.Marshal(unikInstanceMetadata)
@@ -67,7 +67,7 @@ func RunUnikInstance(unikState *state.UnikState, creds Creds, unikernelName, ins
 
 		err = vsphereClient.ImportVmdk(targetUnikernel.Path, remoteVmdkCopy)
 		if err != nil {
-			return lxerrors.New("importing program.vmdk to datastore folder", err)
+			return instanceIds, lxerrors.New("importing program.vmdk to datastore folder", err)
 		}
 
 		err = vsphereClient.AttachVmdk(instanceName, remoteVmdkCopy)
