@@ -10,7 +10,7 @@ import (
 	"net"
 	"bytes"
 	"github.com/layer-x/layerx-commons/lxstream"
-	"github.com/layer-x/unik/vendor/github.com/go-martini/martini"
+	"github.com/go-martini/martini"
 )
 
 //export gomaincaller

@@ -14,97 +14,6 @@ public class Bootstrap {
     public static ByteArrayOutputStream logBuffer = new ByteArrayOutputStream();
 
     public static void bootstrap() {
-        UnikListener unikListener = new UnikListener();
-        String unikIp = "";
-        String macAddress = "";
-        try {
-            unikListener.Listen();
-        } catch (IOException ex) {
-            System.err.println("failed to listen for unik ip addr");
-            ex.printStackTrace();
-            System.exit(-1);
-        }
-        try {
-            unikIp = unikListener.GetUnikIp();
-        } catch (InterruptedException ex) {
-            System.err.println("failed while waiting for unik ip addr");
-            ex.printStackTrace();
-            System.exit(-1);
-        }
-
-        if (unikIp.equals("")) {
-            System.err.println("failed while waiting for unik ip addr");
-            System.exit(-1);
-        }
-
-        try {
-            macAddress = getMacAddress();
-        } catch (UnknownHostException ex){
-            System.err.println("failed retrieving mac addr");
-            ex.printStackTrace();
-            System.exit(-1);
-        } catch (SocketException ex){
-            System.err.println("failed retrieving mac addr");
-            ex.printStackTrace();
-            System.exit(-1);
-        }
-
-        if (macAddress.equals("")) {
-            System.err.println("failed to retrieve my own mac addr");
-            System.exit(-1);
-        }
-
-        String response = "";
-        //register with unik
-        try {
-            response = getHTML("http://" + unikIp + ":3001/bootstrap?mac_address="+macAddress);
-        } catch (MalformedURLException ex) {
-            ex.printStackTrace();
-            System.err.println("Malformed UNIK url");
-            System.exit(-1);
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            System.err.println("IOException");
-            System.exit(-1);
-        }
-        //boostrap env
-        Gson gson = new Gson();
-        UnikInstanceData unikInstanceData = gson.fromJson(response, UnikInstanceData.class);
-
-        if (unikInstanceData.Env != null) {
-            LibC libc = (LibC) Native.loadLibrary("c", LibC.class);
-            for (String key: unikInstanceData.Env.keySet()){
-                String value = unikInstanceData.Env.get(key);
-                int result = libc.setenv(key, value, 1);
-                System.out.println("set "+key+"="+value+": "+result);
-            }
-        }
-
-        //connect logs
-        try {
-            URL url = new URL("http://" + unikIp + ":3001/connect_logs/"+macAddress);
-            URLConnection connection = url.openConnection();
-            connection.setDoOutput(true);
-            OutputStream unikOutputStream = connection.getOutputStream();
-
-            MultiOutputStream multiOut = new MultiOutputStream(System.out, unikOutputStream);
-            MultiOutputStream multiErr = new MultiOutputStream(System.err, unikOutputStream);
-
-            PrintStream stdout = new PrintStream(multiOut);
-            PrintStream stderr = new PrintStream(multiErr);
-
-            System.setOut(stdout);
-            System.setErr(stderr);
-        } catch (MalformedURLException ex) {
-            ex.printStackTrace();
-            System.err.println("Malformed UNIK url");
-            System.exit(-1);
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            System.err.println("IOException");
-            System.exit(-1);
-        }
-
         //connect stdout to logs
         MultiOutputStream multiOut = new MultiOutputStream(System.out, logBuffer);
         MultiOutputStream multiErr = new MultiOutputStream(System.err, logBuffer);
@@ -118,6 +27,90 @@ public class Bootstrap {
         //listen to requests for logs
         WrapperServer.ServerThread serverThread = new WrapperServer.ServerThread(new WrapperServer());
         serverThread.start();
+
+        String response = "";
+
+        //register with unik
+        try {
+            response = getHTML("http://169.254.169.254/latest/user-data");
+        } catch (MalformedURLException ex) {
+            ex.printStackTrace();
+            System.err.println("Malformed EC2 userdata url");
+            System.exit(-1);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            System.err.println("IOException");
+        }
+
+        //if not running on ec2
+        if (response.equals("")) {
+            UnikListener unikListener = new UnikListener();
+            String unikIp = "";
+            String macAddress = "";
+            try {
+                unikListener.Listen();
+            } catch (IOException ex) {
+                System.err.println("failed to listen for unik ip addr");
+                ex.printStackTrace();
+                System.exit(-1);
+            }
+            try {
+                unikIp = unikListener.GetUnikIp();
+            } catch (InterruptedException ex) {
+                System.err.println("failed while waiting for unik ip addr");
+                ex.printStackTrace();
+                System.exit(-1);
+            }
+
+            if (unikIp.equals("")) {
+                System.err.println("failed while waiting for unik ip addr");
+                System.exit(-1);
+            }
+
+            try {
+                macAddress = getMacAddress();
+            } catch (UnknownHostException ex){
+                System.err.println("failed retrieving mac addr");
+                ex.printStackTrace();
+                System.exit(-1);
+            } catch (SocketException ex){
+                System.err.println("failed retrieving mac addr");
+                ex.printStackTrace();
+                System.exit(-1);
+            }
+
+            if (macAddress.equals("")) {
+                System.err.println("failed to retrieve my own mac addr");
+                System.exit(-1);
+            }
+
+            //register with unik
+            try {
+                response = getHTML("http://" + unikIp + ":3001/bootstrap?mac_address="+macAddress);
+            } catch (MalformedURLException ex) {
+                ex.printStackTrace();
+                System.err.println("Malformed UNIK url");
+                System.exit(-1);
+            } catch (IOException ex) {
+                ex.printStackTrace();
+                System.err.println("IOException");
+                System.exit(-1);
+            }
+        }
+
+        //boostrap env
+        Gson gson = new Gson();
+        UnikInstanceData unikInstanceData = gson.fromJson(response, UnikInstanceData.class);
+
+        if (unikInstanceData.Env != null) {
+            LibC libc = (LibC) Native.loadLibrary("c", LibC.class);
+            for (String key: unikInstanceData.Env.keySet()){
+                String value = unikInstanceData.Env.get(key);
+                int result = libc.setenv(key, value, 1);
+                System.out.println("set "+key+"="+value+": "+result);
+            }
+        }
+
     }
 
     public static String getHTML(String urlToRead) throws MalformedURLException, IOException {

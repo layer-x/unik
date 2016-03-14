@@ -1,18 +1,15 @@
 package ec2api
 
 import (
-	"encoding/base64"
 	"fmt"
 	"github.com/Sirupsen/logrus"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"github.com/layer-x/unik/pkg/daemon/ec2/ec2_metada_client"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+	"github.com/layer-x/layerx-commons/lxhttpclient"
 )
 
 func GetLogs(unikInstanceId string) (string, error) {
@@ -20,35 +17,19 @@ func GetLogs(unikInstanceId string) (string, error) {
 	if err != nil {
 		return "", lxerrors.New("failed to retrieve unik instance", err)
 	}
-	ec2Client, err := ec2_metada_client.NewEC2Client()
+	if unikInstance.PublicIp == "" {
+		return "", lxerrors.New("instance does not have a public ip yet", err)
+	}
+	_, logs, err := lxhttpclient.Get(unikInstance.PublicIp+":3000", "/logs", nil)
 	if err != nil {
-		return "", lxerrors.New("could not start ec2 client session", err)
-	}
-	getConsoleInput := &ec2.GetConsoleOutputInput{InstanceId: aws.String(unikInstance.VMID)}
-	consoleOutputOutput, err := ec2Client.GetConsoleOutput(getConsoleInput)
-	if err != nil {
-		return "", lxerrors.New("could not get console output for "+unikInstanceId, err)
-	}
-	var timeStamp string
-	var output string
-	if consoleOutputOutput.Timestamp != nil {
-		timeStamp = (*consoleOutputOutput.Timestamp).String()
-	}
-	if consoleOutputOutput.Output != nil {
-		data, err := base64.StdEncoding.DecodeString(*consoleOutputOutput.Output)
-		if err != nil {
-			return "", lxerrors.New("could not decode base64 output", err)
-		}
-		output = string(data)
+		return "", lxerrors.New("performing GET on "+unikInstance.PublicIp+":3000/logs", err)
 	}
 
-	lxlog.Debugf(logrus.Fields{"response length": len(output)}, "received console output reply from aws")
+	lxlog.Debugf(logrus.Fields{"response length": len(logs)}, "received console logs from unik instance at "+unikInstance.PublicIp)
 	return fmt.Sprintf("begin logs for unik instance: %s\n"+
-		"time: %s\n"+
 		"%s",
-		*consoleOutputOutput.InstanceId,
-		timeStamp,
-		output), nil
+		unikInstance.UnikInstanceID,
+		string(logs)), nil
 }
 
 func StreamLogs(unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error {
@@ -89,7 +70,6 @@ func StreamLogs(unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect b
 		}
 		if len(logLines)-1 == linesCounted {
 			time.Sleep(5000 * time.Millisecond)
-//			lxlog.Warnf(logrus.Fields{"unik_instance_id": unikInstanceId}, "no new logs since last poll, sleeping")
 			continue
 		}
 	}
