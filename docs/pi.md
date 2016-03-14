@@ -22,13 +22,33 @@ Start container:
 In docker shell:
 
     cd /opt/rumprun/
+    rm -rf ./obj
     git remote add  origin2 https://github.com/dave-tucker/rumprun.git
     git fetch origin2
     git checkout raspberrypi
     git submodule update
     export PATH=/opt/raspberrypi-tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/:$PATH
-    env CC=arm-linux-gnueabihf-gcc  ./build-rr.sh -d $DESTDIR -b pi -o ./obj $PLATFORM  build -- -F ACFLAGS=-march=armv6k
+    export CC=arm-linux-gnueabihf-gcc
+    ./build-rr.sh -d $DESTDIR -b pi -o ./obj $PLATFORM  build -- -F ACFLAGS=-march=armv6k
     ./build-rr.sh -d $DESTDIR -b pi -o ./obj $PLATFORM  build -- -F ACFLAGS=-march=armv6k
 
-
 watch it fail :(  
+
+## error amd64
+complication fails with:
+/opt/rumprun/src-netbsd/sys/rump/librump/rumpkern/../../../arch/amd64/amd64/kobj_machdep.c:70:29: fatal error: machine/cpufunc.h: No such file or directory
+ #include <machine/cpufunc.h>
+
+commands to quickly build :
+
+    /opt/rumprun/buildrump.sh/buildrump.sh -j4 -k -s /opt/rumprun/src-netbsd -T ./obj/rumptools -o ./obj/buildrump.sh -d ./obj/dest.stage -F ACFLAGS=-march=armv6k -j 1 build kernelheaders install
+
+    /opt/rumprun/obj/rumptools/bin/brrumpmake -j 1 -f /opt/rumprun/obj/buildrump.sh/Makefile.all obj
+
+
+    /opt/rumprun/buildrump.sh/buildrump.sh -j4 -k -s /opt/rumprun/src-netbsd -T ./obj/rumptools -o ./obj/buildrump.sh -d ./obj/dest.stage -F ACFLAGS=-march=armv6k -j 1 build
+
+
+changing src-netbsd/sys/rump/librump/rumpkern/arch/x86_64/Makefile.inc to the arm version didnt help, the arch probs comes from somewhere else.
+
+Solution: cleaning build env solves this.
