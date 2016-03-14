@@ -311,8 +311,7 @@ func (vc *VsphereClient) AttachVmdk(vmName, vmdkPath string) error {
 }
 
 func formatUrl(u *url.URL) string {
-	password, _ := u.User.Password()
-	return "https://"+ u.User.Username()+":"+password+"@"+strings.TrimPrefix(strings.TrimPrefix(u.String(), "http://"), "https://")
+	return "https://" + strings.TrimPrefix(strings.TrimPrefix(u.String(), "http://"), "https://")
 }
 
 

@@ -6,6 +6,7 @@ import (
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"io/ioutil"
 	"strings"
+"github.com/Sirupsen/logrus"
 )
 
 func WrapJavaApplication(javaWrapperDir, appSourceDir string) (string, string, string, error) {
@@ -15,13 +16,12 @@ func WrapJavaApplication(javaWrapperDir, appSourceDir string) (string, string, s
 	if err != nil {
 		return "", "", "", lxerrors.New("copying java wrapper failed", err)
 	}
-	appPom, err := parsePom(appSourceDir + "/pom.xml")
-	if err != nil {
-		return "", "", "", lxerrors.New("could not parse app pom file", err)
-	}
-	groupId := appPom.Chiproject.ChigroupId.Text
-	artifactId := appPom.Chiproject.ChiartifactId.Text
-	version := appPom.Chiproject.Chiversion.Text
+	appPom := readPom(appSourceDir + "/pom.xml")
+
+	lxlog.Infof(logrus.Fields{"pom": appPom}, "parsed app pom.xml")
+	groupId := appPom.ChigroupId.Text
+	artifactId := appPom.ChiartifactId.Text
+	version := appPom.Chiversion.Text
 
 	wrapperPomBytes, err := ioutil.ReadFile(javaWrapperDir + "/pom.xml")
 	if err != nil {
