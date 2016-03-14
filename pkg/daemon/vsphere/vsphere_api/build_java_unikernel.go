@@ -14,21 +14,20 @@ import (
 	"io"
 	"os/exec"
 	"github.com/layer-x/unik/pkg/daemon/osv"
-	"github.com/layer-x/unik/pkg/daemon/vsphere/vsphere_utils"
 	"github.com/layer-x/unik/pkg/daemon/state"
 )
 
 func BuildUnikernel(unikState *state.UnikState, creds Creds, unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
 	unikernelId := unikernelName //vsphere specific
-	datastoreFolder := VSPHERE_UNIKERNEL_FOLDER + "/" + unikernelId
-	vsphereClient, err := vsphere_utils.NewVsphereClient(creds.url)
-	if err != nil {
-		return lxerrors.New("initiating vsphere client connection", err)
-	}
+	localVmdkFolder := state.DEFAULT_UNIK_STATE_FOLDER + unikernelId + "/"
+	var err error
 	defer func() {
 		if err != nil {
 			lxlog.Errorf(logrus.Fields{"error": err}, "error encountered, cleaning up unikernel artifacts")
-			vsphereClient.Rmdir(datastoreFolder)
+			if !strings.Contains(err.Error(), "already exists") {
+				os.RemoveAll(localVmdkFolder)
+				delete(unikState.Unikernels, unikernelId)
+			}
 		}
 	}()
 
@@ -41,7 +40,7 @@ func BuildUnikernel(unikState *state.UnikState, creds Creds, unikernelName, forc
 			if strings.ToLower(force) == "true" {
 				lxlog.Warnf(logrus.Fields{"unikernelName": unikernelName, "ami": unikernel.Id},
 					"deleting unikernel before building new unikernel")
-				err = DeleteUnikernel(creds, unikernel.Id, true)
+				err = DeleteUnikernel(unikState, creds, unikernel.Id, true)
 				if err != nil {
 					return lxerrors.New("could not delete unikernel", err)
 				}
@@ -121,14 +120,15 @@ func BuildUnikernel(unikState *state.UnikState, creds Creds, unikernelName, forc
 	}
 	lxlog.Infof(logrus.Fields{"unikernel_name": unikernelName}, "unikernel image created")
 
-	err = vsphereClient.Mkdir(datastoreFolder)
+	err = os.MkdirAll(localVmdkFolder, 0777)
 	if err != nil {
-		return lxerrors.New("creating datastore folder to contain unikernel image", err)
+		return lxerrors.New("creating local vmdk folder", err)
 	}
-
-	err = vsphereClient.ImportVmdk(javaWrapperDir + "/program.vmdk", datastoreFolder)
+	saveVmdkCommand := exec.Command("cp", javaWrapperDir + "/program.vmdk", localVmdkFolder + "/program.vmdk")
+	lxlog.LogCommand(saveVmdkCommand, true)
+	err = saveVmdkCommand.Run()
 	if err != nil {
-		return lxerrors.New("importing program.vmdk to datastore folder", err)
+		return lxerrors.New("copying vmdk from tmp dir to local storage failed", err)
 	}
 
 	unikState.Unikernels[unikernelId] = &types.Unikernel{
@@ -136,7 +136,7 @@ func BuildUnikernel(unikState *state.UnikState, creds Creds, unikernelName, forc
 		UnikernelName: unikernelName,
 		CreationDate: time.Now().String(),
 		Created: time.Now().Unix(),
-		Path: datastoreFolder + "/program.vmdk",
+		Path: localVmdkFolder + "/program.vmdk",
 	}
 
 	err = unikState.Save(state.DEFAULT_UNIK_STATE_FILE)

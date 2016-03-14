@@ -4,9 +4,13 @@ import (
 	"github.com/layer-x/unik/pkg/daemon/vsphere/vsphere_utils"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/docker/go/canonical/json"
+	"github.com/layer-x/unik/pkg/daemon/state"
+	vspheretypes "github.com/vmware/govmomi/vim25/types"
+	"github.com/layer-x/unik/vendor/github.com/layer-x/layerx-commons/lxlog"
+	"github.com/Sirupsen/logrus"
 )
 
-func ListUnikInstances(creds Creds) ([]*types.UnikInstance, error) {
+func ListUnikInstances(unikState *state.UnikState, creds Creds) ([]*types.UnikInstance, error) {
 	client, err := vsphere_utils.NewVsphereClient(creds.url)
 	if err != nil {
 		return nil, lxerrors.New("creating new vsphere client ", err.Error())
@@ -40,12 +44,31 @@ func ListUnikInstances(creds Creds) ([]*types.UnikInstance, error) {
 			unikInstance.State = "unknown"
 			break
 		}
-		if vm.Config != nil {
-			unikInstance.VMID = vm.Config.Uuid
+		//we use mac address as the vm id
+		if vm.Config != nil && vm.Config.Hardware != nil && vm.Config.Hardware.Device != nil {
+			FindEthLoop:
+			for _, device := range vm.Config.Hardware.Device {
+				switch device.(type){
+				case vspheretypes.VirtualEthernetCard:
+					eth := device.(vspheretypes.VirtualEthernetCard)
+					unikInstance.VMID = eth.MacAddress
+					break FindEthLoop
+				default:
+					continue
+				}
+			}
 		}
-		//Todo: determine a way to get vm public ip and vm private ip
-
+		for _, registeredUnikInstance := range unikState.UnikInstances {
+			if unikInstance.VMID == registeredUnikInstance.VMID {
+				unikInstance.PublicIp = registeredUnikInstance.PublicIp
+				unikInstance.PrivateIp = registeredUnikInstance.PrivateIp
+				break
+			}
+		}
 		unikInstances = append(unikInstances, unikInstance)
+		if unikInstance.VMID == "" {
+			lxlog.Warnf(logrus.Fields{"unik_instance": unikInstance}, "unik instance was found on vsphere but has not registered with known mac address yet")
+		}
 	}
 	return unikInstances, nil
 }

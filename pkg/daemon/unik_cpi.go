@@ -9,11 +9,10 @@ type UnikCPI interface {
 	AttachVolume(volumeNameOrId, unikInstanceId, deviceName string) error
 	BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error
 	CreateVolume(volumeName string, size int) (*types.Volume, error)
-	DeleteArtifacts(unikernelId string) error
 	DeleteArtifactsForUnikernel(unikernelName string) error
-	DeleteUnikInstance(unikInstanceId string) error
 	DeleteUnikernel(unikernelId string, force bool) error
 	DeleteUnikernelByName(unikernelName string, force bool) error
+	DeleteUnikInstance(unikInstanceId string) error
 	DeleteVolume(volumeNameOrId string, force bool) error
 	DetachVolume(volumeNameOrId string, force bool) error
 	GetUnikInstanceByPrefixOrName(unikInstanceIdPrefixOrName string) (*types.UnikInstance, error)

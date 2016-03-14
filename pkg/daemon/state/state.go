@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	DEFAULT_UNIK_STATE_FILE = os.Getenv("HOME") + "/.unikd/state.json"
+	DEFAULT_UNIK_STATE_FOLDER = os.Getenv("HOME") + ".unikd/"
+	DEFAULT_UNIK_STATE_FILE = DEFAULT_UNIK_STATE_FOLDER + "state.json"
 )
 
 type UnikState struct {

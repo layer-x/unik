@@ -56,13 +56,14 @@ func (vc *VsphereClient) Vms() ([]mo.VirtualMachine, error) {
 	return vmList, nil
 }
 
-func (vc *VsphereClient) CreateVm(vmName string) error {
+func (vc *VsphereClient) CreateVm(vmName, annotation string) error {
 	cmd := exec.Command("docker", "run", "--rm",
 		"vsphere-client",
 		"govc",
 		"vm.create",
 		"-k",
 		"-u", vc.c.URL().String(),
+		"--annotation="+annotation,
 		"--force=true",
 		"--m=512",
 		"--on=false",
@@ -238,3 +239,64 @@ func (vc *VsphereClient) Ls(dir string) ([]string, error) {
 	}
 	return contents, nil
 }
+
+func (vc *VsphereClient) PowerOnVm(vmName string) error {
+	cmd := exec.Command("docker", "run", "--rm",
+		"vsphere-client",
+		"govc",
+		"vm.power",
+		"--on=true",
+		"-k",
+		"-u", vc.c.URL().String(),
+		vmName,
+	)
+	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
+	lxlog.LogCommand(cmd, true)
+	err := cmd.Run()
+	if err != nil {
+		return lxerrors.New("failed running govc vm.power (on)", err)
+	}
+	return nil
+}
+
+func (vc *VsphereClient) PowerOffVm(vmName string) error {
+	cmd := exec.Command("docker", "run", "--rm",
+		"vsphere-client",
+		"govc",
+		"vm.power",
+		"--off=true",
+		"-k",
+		"-u", vc.c.URL().String(),
+		vmName,
+	)
+	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
+	lxlog.LogCommand(cmd, true)
+	err := cmd.Run()
+	if err != nil {
+		return lxerrors.New("failed running govc vm.power (off)", err)
+	}
+	return nil
+}
+
+func (vc *VsphereClient) AttachVmdk(vmName, vmdkPath string) error {
+	cmd := exec.Command("docker", "run", "--rm",
+		"vsphere-client",
+		"java",
+		"-jar",
+		"/vsphere-client.jar",
+		"VmAttachDisk",
+		vc.c.URL().String(),
+		vc.c.URL().User.Username(),
+		vc.c.URL().User.Password(),
+		vmName,
+	)
+	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
+	lxlog.LogCommand(cmd, true)
+	err := cmd.Run()
+	if err != nil {
+		return lxerrors.New("failed running govc vm.power (off)", err)
+	}
+	return nil
+}
+
+
