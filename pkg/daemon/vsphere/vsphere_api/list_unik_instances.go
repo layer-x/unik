@@ -17,7 +17,7 @@ func ListUnikInstances(unikState *state.UnikState, creds Creds) ([]*types.UnikIn
 	}
 	vms, err := client.Vms()
 	if err != nil {
-		return nil, lxerrors.New("retrieving list of vsphere vms", nil)
+		return nil, lxerrors.New("retrieving list of vsphere vms", err)
 	}
 	unikInstances := []*types.UnikInstance{}
 	for _, vm := range vms {

@@ -27,6 +27,16 @@ func NewVsphereClient(u *url.URL) (*VsphereClient, error) {
 	}
 
 	f := find.NewFinder(c.Client, true)
+
+	// Find one and only datacenter
+	dc, err := f.DefaultDatacenter(context.TODO())
+	if err != nil {
+		return nil, lxerrors.New("finding default datacenter", err)
+	}
+
+	// Make future calls local to this datacenter
+	f.SetDatacenter(dc)
+
 	return &VsphereClient{
 		c: c,
 		f: f,
@@ -87,16 +97,13 @@ func (vc *VsphereClient) DestroyVm(vmName string) error {
 		"vm.destroy",
 		"-k",
 		"-u", vc.c.URL().String(),
-		"--force=true",
-		"--m=512",
-		"--on=false",
 		vmName,
 	)
 	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
 	lxlog.LogCommand(cmd, true)
 	err := cmd.Run()
 	if err != nil {
-		return lxerrors.New("failed running govc vm.create "+vmName, err)
+		return lxerrors.New("failed running govc vm.destroy "+vmName, err)
 	}
 	return nil
 }

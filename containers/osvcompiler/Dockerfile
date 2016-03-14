@@ -11,10 +11,6 @@ RUN cd $GOPATH/src/github.com/cloudius-systems
 RUN git clone https://github.com/layer-x/capstan
 RUN cd capstan && ./install
 ADD jar-wrapper /jar-wrapper
-RUN cd /java/vsphere-client && \
-    mvn package && \
-    cp target/vsphere-client-1.0-SNAPSHOT-jar-with-dependencies.jar /vsphere-client.jar
-
 
 #Run this container with
 #   docker run --rm --privileged \
