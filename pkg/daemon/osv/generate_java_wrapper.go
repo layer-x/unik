@@ -10,7 +10,8 @@ import (
 )
 
 func WrapJavaApplication(javaWrapperDir, appSourceDir string) (string, string, string, error) {
-	copyJarWrapper := exec.Command("cp", "-r", "../../containers/osvcompiler/jar-wrapper", javaWrapperDir + "/")
+	copyJarWrapper := exec.Command("cp", "-r", "../../containers/osvcompiler/jar-wrapper/", javaWrapperDir)
+	javaWrapperDir += "/jar-wrapper"
 	lxlog.LogCommand(copyJarWrapper, true)
 	err := copyJarWrapper.Run()
 	if err != nil {
@@ -18,14 +19,13 @@ func WrapJavaApplication(javaWrapperDir, appSourceDir string) (string, string, s
 	}
 	appPom := readPom(appSourceDir + "/pom.xml")
 
-	lxlog.Infof(logrus.Fields{"pom": appPom}, "parsed app pom.xml")
 	groupId := appPom.ChigroupId.Text
 	artifactId := appPom.ChiartifactId.Text
 	version := appPom.Chiversion.Text
 
 	wrapperPomBytes, err := ioutil.ReadFile(javaWrapperDir + "/pom.xml")
 	if err != nil {
-		return "", "", "", lxerrors.New("reading pom bytes", err)
+		return "", "", "", lxerrors.New("reading app pom bytes", err)
 	}
 	wrapperPomContents := strings.Replace(string(wrapperPomBytes), "REPLACE_WITH_GROUPID", groupId, -1)
 	wrapperPomContents = strings.Replace(wrapperPomContents, "REPLACE_WITH_ARTIFACTID", artifactId, -1)
@@ -40,14 +40,15 @@ func WrapJavaApplication(javaWrapperDir, appSourceDir string) (string, string, s
 	if err != nil {
 		return "", "", "", lxerrors.New("retreiving main class from app", err)
 	}
+	lxlog.Infof(logrus.Fields{"pom": appPom, "groupid": appPom.ChigroupId, "artifactId": appPom.ChiartifactId, "version": appPom.Chiversion, "mainClassName": mainClassName}, "parsed app pom.xml, gathered relevant fields")
 
-	wrapperMainContentBytes, err := ioutil.ReadFile(javaWrapperDir + "/src/java/com/emc/wwrapper/Wrapper.java")
+	wrapperMainContentBytes, err := ioutil.ReadFile(javaWrapperDir + "/src/main/java/com/emc/wrapper/Wrapper.java")
 	if err != nil {
-		return "", "", "", lxerrors.New("reading pom bytes", err)
+		return "", "", "", lxerrors.New("reading java pom bytes", err)
 	}
 	wrapperMainContents := strings.Replace(string(wrapperMainContentBytes), "REPLACE_WITH_MAIN_CLASS", mainClassName, -1)
 
-	err = ioutil.WriteFile(javaWrapperDir + "/src/java/com/emc/wwrapper/Wrapper.java", []byte(wrapperMainContents), 0666)
+	err = ioutil.WriteFile(javaWrapperDir + "/src/main/java/com/emc/wrapper/Wrapper.java", []byte(wrapperMainContents), 0666)
 	if err != nil {
 		return "", "", "", lxerrors.New("writing Wrapper class around app class", err)
 	}

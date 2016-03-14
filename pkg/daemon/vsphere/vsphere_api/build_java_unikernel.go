@@ -63,7 +63,7 @@ func BuildUnikernel(unikState *state.UnikState, creds Creds, unikernelName, forc
 		lxlog.Infof(logrus.Fields{"files": unikernelDir}, "cleaned up files")
 	}()
 	lxlog.Infof(logrus.Fields{"path": unikernelDir, "unikernel_name": unikernelName}, "created output directory for unikernel")
-	savedTar, err := os.OpenFile(unikernelDir + filepath.Base(handler.Filename), os.O_CREATE | os.O_RDWR, 0666)
+	savedTar, err := os.OpenFile(unikernelDir+"/" + filepath.Base(handler.Filename), os.O_CREATE | os.O_RDWR, 0666)
 	if err != nil {
 		return lxerrors.New("creating empty file for copying to", err)
 	}
@@ -99,7 +99,7 @@ func BuildUnikernel(unikState *state.UnikState, creds Creds, unikernelName, forc
 
 	artifactId, groupId, version, err := osv.WrapJavaApplication(javaWrapperDir, unikernelDir)
 	if err != nil {
-		lxerrors.New("generating java wrapper application " + unikernelDir, err)
+		return lxerrors.New("generating java wrapper application " + unikernelDir, err)
 	}
 	lxlog.Infof(logrus.Fields{"artifactId": artifactId, "groupid": groupId, "version": version}, "generated java wrapper")
 
@@ -107,12 +107,13 @@ func BuildUnikernel(unikState *state.UnikState, creds Creds, unikernelName, forc
 		"--rm",
 		"--privileged",
 		"-v", unikernelDir + ":/unikernel",
-		"-v", javaWrapperDir + ":/jar-wrapper",
+		"-v", javaWrapperDir+"/jar-wrapper" + ":/jar-wrapper",
 		"-e", "GROUP_ID=" + groupId,
 		"-e", "ARTIFACT_ID=" + artifactId,
 		"-e", "VERSION=" + version,
 		"osvcompiler",
 	)
+	lxlog.Infof(logrus.Fields{"cmd": buildUnikernelCommand.Args}, "running build command")
 	lxlog.LogCommand(buildUnikernelCommand, true)
 	err = buildUnikernelCommand.Run()
 	if err != nil {
@@ -124,7 +125,7 @@ func BuildUnikernel(unikState *state.UnikState, creds Creds, unikernelName, forc
 	if err != nil {
 		return lxerrors.New("creating local vmdk folder", err)
 	}
-	saveVmdkCommand := exec.Command("cp", javaWrapperDir + "/program.vmdk", localVmdkFolder + "/program.vmdk")
+	saveVmdkCommand := exec.Command("cp", javaWrapperDir + "/jar-wrapper/program.vmdk", localVmdkFolder + "/program.vmdk")
 	lxlog.LogCommand(saveVmdkCommand, true)
 	err = saveVmdkCommand.Run()
 	if err != nil {
