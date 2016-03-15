@@ -13,11 +13,10 @@ import (
 	"github.com/layer-x/layerx-commons/lxfileutils"
 	"io"
 	"os/exec"
-	"github.com/layer-x/unik/pkg/daemon/osv"
 	"github.com/layer-x/unik/pkg/daemon/state"
 )
 
-func BuildJavaUnikernel(unikState *state.UnikState, creds Creds, unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
+func BuildGoUnikernel(unikState *state.UnikState, creds Creds, unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
 	unikernelId := unikernelName //vsphere specific
 	localVmdkFolder := state.DEFAULT_UNIK_STATE_FOLDER + unikernelId + "/"
 	var err error
@@ -83,41 +82,32 @@ func BuildJavaUnikernel(unikState *state.UnikState, creds Creds, unikernelName, 
 	}
 	lxlog.Infof(logrus.Fields{"path": unikernelDir, "unikernel_name": unikernelName}, "unikernel tarball untarred")
 
-	//create java-wrapper dir
-	javaWrapperDir, err := ioutil.TempDir(os.TempDir(), unikernelName+"-java-wrapper-dir")
-	if err != nil {
-		return lxerrors.New("creating temporary directory "+unikernelName+"-java-wrapper-dir", err)
-	}
-	//clean up artifacts even if we fail
-	defer func() {
-		err = os.RemoveAll(javaWrapperDir)
-		if err != nil {
-			panic(lxerrors.New("cleaning up java-wrapper files", err))
-		}
-		lxlog.Infof(logrus.Fields{"files": javaWrapperDir}, "cleaned up files")
-	}()
-
-	artifactId, groupId, version, err := osv.WrapJavaApplication(javaWrapperDir, unikernelDir)
-	if err != nil {
-		return lxerrors.New("generating java wrapper application " + unikernelDir, err)
-	}
-	lxlog.Infof(logrus.Fields{"artifactId": artifactId, "groupid": groupId, "version": version}, "generated java wrapper")
-
 	buildUnikernelCommand := exec.Command("docker", "run",
 		"--rm",
 		"--privileged",
-		"-v", unikernelDir + ":/unikernel",
-		"-v", javaWrapperDir+"/jar-wrapper" + ":/jar-wrapper",
-		"-e", "GROUP_ID=" + groupId,
-		"-e", "ARTIFACT_ID=" + artifactId,
-		"-e", "VERSION=" + version,
-		"osvcompiler",
+		"-v", unikernelDir + ":/opt/code",
+		"rumpcompiler-go-hw",
 	)
-	lxlog.Infof(logrus.Fields{"cmd": buildUnikernelCommand.Args}, "running build command")
+	lxlog.Infof(logrus.Fields{"cmd": buildUnikernelCommand.Args}, "running build kernel command")
 	lxlog.LogCommand(buildUnikernelCommand, true)
 	err = buildUnikernelCommand.Run()
 	if err != nil {
-		return lxerrors.New("building unikernel failed", err)
+		return lxerrors.New("building unikernel kernel failed", err)
+	}
+	lxlog.Infof(logrus.Fields{"unikernel_name": unikernelName}, "unikernel .bin created")
+
+	buildImageCommand := exec.Command("docker", "run",
+		"--rm",
+		"--privileged",
+		"-v", "/dev:/dev",
+		"-v", unikernelDir + ":/unikernel",
+		"rump-go-stager",
+	)
+	lxlog.Infof(logrus.Fields{"cmd": buildImageCommand.Args}, "runninig build image command")
+	lxlog.LogCommand(buildImageCommand, true)
+	err = buildImageCommand.Run()
+	if err != nil {
+		return lxerrors.New("building unikernel image failed", err)
 	}
 	lxlog.Infof(logrus.Fields{"unikernel_name": unikernelName}, "unikernel image created")
 
@@ -125,7 +115,8 @@ func BuildJavaUnikernel(unikState *state.UnikState, creds Creds, unikernelName, 
 	if err != nil {
 		return lxerrors.New("creating local vmdk folder", err)
 	}
-	saveVmdkCommand := exec.Command("cp", javaWrapperDir + "/jar-wrapper/program.vmdk", localVmdkFolder + "/program.vmdk")
+
+	saveVmdkCommand := exec.Command("cp", unikernelDir + "/root.vmdk", localVmdkFolder + "/program.vmdk")
 	lxlog.LogCommand(saveVmdkCommand, true)
 	err = saveVmdkCommand.Run()
 	if err != nil {

@@ -78,7 +78,7 @@ func (cpi *UnikVsphereCPI) AttachVolume(volumeNameOrId, unikInstanceId, deviceNa
 }
 
 func (cpi *UnikVsphereCPI) BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
-	return vsphere_api.BuildUnikernel(cpi.unikState, cpi.creds, unikernelName, force, uploadedTar, handler)
+	return vsphere_api.BuildGoUnikernel(cpi.unikState, cpi.creds, unikernelName, force, uploadedTar, handler)
 }
 
 func (cpi *UnikVsphereCPI) CreateVolume(volumeName string, size int) (*types.Volume, error) {
