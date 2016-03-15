@@ -66,3 +66,13 @@ the makefile for the compiler-rt doesn't include the libc path.
 tried to do this:
 
     cp /opt/rumprun/src-netbsd/common/lib/libc/arch/arm/gen/__aeabi*.c  /opt/rumprun/src-netbsd/sys/external//bsd/compiler_rt/dist/lib/builtins/arm/
+
+this cause mkdep to fail, as it couldnt find headers.
+
+
+/opt/rumprun/src-netbsd/sys/external/bsd/compiler_rt/dist/lib/builtins/arm/__aeabi_idiv0.c:35:23: fatal error: sys/systm.h: No such file or directory
+ #include <sys/systm.h>
+
+To work around that, comment out he include and the call to panic.
+
+This will get rump compiling.
