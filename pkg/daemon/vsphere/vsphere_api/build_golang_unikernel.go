@@ -101,7 +101,9 @@ func BuildGoUnikernel(unikState *state.UnikState, creds Creds, unikernelName, fo
 		"--privileged",
 		"-v", "/dev:/dev",
 		"-v", unikernelDir + ":/unikernel",
-		"rump-go-stager",
+		"rumpstager",
+		"-mode",
+		"vmware",
 	)
 	lxlog.Infof(logrus.Fields{"cmd": buildImageCommand.Args}, "runninig build image command")
 	lxlog.LogCommand(buildImageCommand, true)

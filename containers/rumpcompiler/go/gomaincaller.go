@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"github.com/hashicorp/mdns"
 	"net"
 	"bytes"
-	"github.com/layer-x/layerx-commons/lxstream"
-	"github.com/go-martini/martini"
+	"errors"
+	"io"
+	"bufio"
+	"fmt"
 )
 
 //export gomaincaller
@@ -26,6 +27,7 @@ func gomaincaller() {
 		}
 		macAddress := ""
 		for _, iface := range ifaces {
+			fmt.Printf("found an interface: %v\n", iface)
 			if iface.Name != "lo" {
 				macAddress = iface.HardwareAddr.String()
 			}
@@ -34,37 +36,55 @@ func gomaincaller() {
 			panic("could not find mac address")
 		}
 
-		// Make a channel for results and start listening
-		ipChan := make(chan string)
-		entriesCh := make(chan *mdns.ServiceEntry, 4)
-		go func() {
-			for entry := range entriesCh {
-				ipChan <- entry.AddrV4.String()
-			}
-		}()
-		// Start the lookup
-		err = mdns.Lookup("_unik._tcp.local", entriesCh)
-		if err == nil {
-			var instanceData UnikInstanceData
-			resp, err := http.Get("http://"+<- ipChan+":3001/bootstrap?mac_address="+macAddress)
-			if err != nil {
-				panic(err)
-			}
-			defer resp.Body.Close()
-			data, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				panic(err)
-			}
-			err = json.Unmarshal(data, &instanceData)
-			if err != nil {
-				panic(err)
-			}
-			for key, value := range instanceData.Env {
-				os.Setenv(key, value)
-			}
-		} else {
-			panic("expected mdns to work, but failed:" + err.Error())
+		var instanceData UnikInstanceData
+		resp, err := http.Get("http://192.168.0.46:3001/bootstrap?mac_address=" + macAddress)
+		if err != nil {
+			panic(err)
 		}
+		defer resp.Body.Close()
+		data, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			panic(err)
+		}
+		err = json.Unmarshal(data, &instanceData)
+		if err != nil {
+			panic(err)
+		}
+		for key, value := range instanceData.Env {
+			os.Setenv(key, value)
+		}
+
+		//		// Make a channel for results and start listening
+		//		ipChan := make(chan string)
+		//		entriesCh := make(chan *mdns.ServiceEntry, 4)
+		//		go func() {
+		//			for entry := range entriesCh {
+		//				ipChan <- entry.AddrV4.String()
+		//			}
+		//		}()
+		//		// Start the lookup
+		//		err = mdns.Lookup("_unik._tcp.local", entriesCh)
+		//		if err == nil {
+		//			var instanceData UnikInstanceData
+		//			resp, err := http.Get("http://"+<- ipChan+":3001/bootstrap?mac_address="+macAddress)
+		//			if err != nil {
+		//				panic(err)
+		//			}
+		//			defer resp.Body.Close()
+		//			data, err := ioutil.ReadAll(resp.Body)
+		//			if err != nil {
+		//				panic(err)
+		//			}
+		//			err = json.Unmarshal(data, &instanceData)
+		//			if err != nil {
+		//				panic(err)
+		//			}
+		//			for key, value := range instanceData.Env {
+		//				os.Setenv(key, value)
+		//			}
+		//		} else {
+		//			panic("expected mdns to work, but failed:" + err.Error())
+		//		}
 	} else {
 		defer resp.Body.Close()
 		data, err := ioutil.ReadAll(resp.Body)
@@ -82,21 +102,20 @@ func gomaincaller() {
 
 	//make logs available via http request
 	logs := bytes.Buffer{}
-	err = lxstream.Tee(os.Stdout, &logs)
+	err = tee(os.Stdout, &logs)
 	if err != nil {
 		panic(err)
 	}
-	err = lxstream.Tee(os.Stderr, &logs)
+	err = tee(os.Stderr, &logs)
 	if err != nil {
 		panic(err)
 	}
 
 	//handle logs request
-	m := martini.Classic()
-	m.Get("/logs", func() string {
-		return logs.String()
+	http.HandleFunc("/logs", func(res http.ResponseWriter, req *http.Request) {
+		res.Write(logs.Bytes())
 	})
-	go m.RunOnAddr(":3000")
+	go http.ListenAndServe(":3000", nil)
 
 	main()
 }
@@ -106,4 +125,28 @@ func gomaincaller() {
 type UnikInstanceData struct {
 	Tags map[string]string `json:"Tags"`
 	Env  map[string]string `json:"Env"`
+}
+
+func tee(file *os.File, buf *bytes.Buffer) error {
+	r, w, err := os.Pipe()
+	if err != nil {
+		return errors.New("creating pipe: " + err.Error())
+	}
+	stdout := file
+	file = w
+	multi := io.MultiWriter(stdout, bufio.NewWriter(buf))
+	reader := bufio.NewReader(r)
+	go func() {
+		for {
+			line, err := reader.ReadBytes('\n')
+			if err != nil {
+				return
+			}
+			_, err = multi.Write(append(line, byte('\n')))
+			if err != nil {
+				return
+			}
+		}
+	}()
+	return nil
 }
