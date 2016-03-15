@@ -48,16 +48,13 @@ public class Bootstrap {
             String unikIp = "";
             String macAddress = "";
             try {
-                unikListener.Listen();
+                unikIp = unikListener.GetUnikIp();
             } catch (IOException ex) {
                 System.err.println("failed to listen for unik ip addr");
                 ex.printStackTrace();
                 System.exit(-1);
-            }
-            try {
-                unikIp = unikListener.GetUnikIp();
             } catch (InterruptedException ex) {
-                System.err.println("failed while waiting for unik ip addr");
+                System.err.println("interrupted while listening for unik ip");
                 ex.printStackTrace();
                 System.exit(-1);
             }
@@ -113,7 +110,7 @@ public class Bootstrap {
 
     }
 
-    public static String getHTML(String urlToRead) throws MalformedURLException, IOException {
+    public static String getHTML(String urlToRead) throws IOException {
         StringBuilder result = new StringBuilder();
         URL url = new URL(urlToRead);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -147,8 +144,7 @@ public class Bootstrap {
 
 
     public interface LibC extends Library {
-        public int setenv(String name, String value, int overwrite);
-        public int unsetenv(String name);
+        int setenv(String name, String value, int overwrite);
     }
 
     public static class UnikInstanceData {

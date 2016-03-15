@@ -288,17 +288,18 @@ func (vc *VsphereClient) PowerOffVm(vmName string) error {
 }
 
 func (vc *VsphereClient) AttachVmdk(vmName, vmdkPath string) error {
-	password, _ := vc.c.URL().User.Password()
+	password, _ := vc.u.User.Password()
 	cmd := exec.Command("docker", "run", "--rm",
 		"vsphere-client",
 		"java",
 		"-jar",
 		"/vsphere-client.jar",
 		"VmAttachDisk",
-		vc.c.URL().String(),
-		vc.c.URL().User.Username(),
+		vc.u.String(),
+		vc.u.User.Username(),
 		password,
 		vmName,
+		"[datastore1] "+vmdkPath,
 		"200", //TODO: is this right?
 	)
 	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")

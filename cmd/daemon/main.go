@@ -5,9 +5,10 @@ import (
 	"github.com/layer-x/layerx-commons/lxlog"
 	"os/exec"
 	"flag"
-"github.com/layer-x/unik/pkg/daemon"
+	"github.com/layer-x/unik/pkg/daemon"
 	"os"
-	"github.com/hashicorp/mdns"
+	"net"
+	"time"
 )
 
 func main() {
@@ -56,20 +57,47 @@ func main() {
 		}
 		opts = append(opts, *vsphereUrl, *vsphereUser, *vspherePass)
 
-		lxlog.Infof(logrus.Fields{"host": host},"Starting unik discovery service")
-		info := []string{"Unik"}
-		service, err := mdns.NewMDNSService(host, "_unik._tcp", "", "", 8000, nil, info)
+		lxlog.Infof(logrus.Fields{"host": host}, "Starting unik discovery service")
+		conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: 0})
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err}, "creating new mDNS service")
-			os.Exit(-1);
+			lxlog.Fatalf(logrus.Fields{"err": err, "conn": conn}, "error establishing UDP socket connection")
 		}
-		server, err := mdns.NewServer(&mdns.Config{Zone: service})
-		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err}, "starting mDNS server")
-			os.Exit(-1);
-		}
-		defer server.Shutdown()
-		lxlog.Infof(logrus.Fields{"server": server},"Started unik discovery service")
+		go func() {
+			for {
+				_, err = conn.WriteToUDP([]byte("unik"), &net.UDPAddr{IP: net.IP{255, 255, 255, 255}, Port: 9876})
+				if err != nil {
+					lxlog.Fatalf(logrus.Fields{"err": err}, "failed to broadcast unik ip")
+				}
+
+//				BROADCAST_IPv4 := net.IPv4(255, 255, 255, 255)
+//				socket, err := net.DialUDP("udp4", nil, &net.UDPAddr{
+//					IP:   BROADCAST_IPv4,
+//					Port: 9876,
+//				})
+//				if err != nil {
+//					lxlog.Fatalf(logrus.Fields{"err": err, "socket": socket}, "error establishing UDP socket connection")
+//				}
+//				_, err = socket.WriteTo([]byte("unik"), socket.RemoteAddr())
+//				if err != nil {
+//					lxlog.Fatalf(logrus.Fields{"err": err, "socket": socket}, "failed to broadcast unik ip")
+//				}
+				time.Sleep(2000 * time.Millisecond)
+			}
+		}()
+
+		//		info := []string{"Unik"}
+		//		service, err := mdns.NewMDNSService(host, "_unik._tcp.local", "", "", 8000, nil, info)
+		//		if err != nil {
+		//			lxlog.Errorf(logrus.Fields{"err": err}, "creating new mDNS service")
+		//			os.Exit(-1);
+		//		}
+		//		server, err := mdns.NewServer(&mdns.Config{Zone: service})
+		//		if err != nil {
+		//			lxlog.Errorf(logrus.Fields{"err": err}, "starting mDNS server")
+		//			os.Exit(-1);
+		//		}
+		//		defer server.Shutdown()
+		//		lxlog.Infof(logrus.Fields{"server": server},"Started unik discovery service")
 	}
 
 	unikDaemon := daemon.NewUnikDaemon(*provider, opts...)
