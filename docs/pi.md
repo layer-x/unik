@@ -52,3 +52,17 @@ commands to quickly build :
 changing src-netbsd/sys/rump/librump/rumpkern/arch/x86_64/Makefile.inc to the arm version didnt help, the arch probs comes from somewhere else.
 
 Solution: cleaning build env solves this.
+
+## don't know how to make aeabi_idiv0.c.
+
+command:
+
+    cd /opt/rumprun/lib/libcompiler_rt && /opt/rumprun/./obj/rumptools/rumpmake MAKEOBJDIR=/opt/rumprun/./obj/lib/libcompiler_rt RUMPSRC=/opt/rumprun/src-netbsd obj && /opt/rumprun/./obj/rumptools/rumpmake MAKEOBJDIR=/opt/rumprun/./obj/lib/libcompiler_rt RUMPSRC=/opt/rumprun/src-netbsd includes && /opt/rumprun/./obj/rumptools/rumpmake BMKHEADERS=/opt/rumprun/./obj/include MAKEOBJDIR=/opt/rumprun/./obj/lib/libcompiler_rt RUMPSRC=/opt/rumprun/src-netbsd dependall
+
+
+error seems to be a not found error as files are not in path (find out by adding -d A to make command) (nbmake= bsd make program)
+the makefile for the compiler-rt doesn't include the libc path.
+
+tried to do this:
+
+    cp /opt/rumprun/src-netbsd/common/lib/libc/arch/arm/gen/__aeabi*.c  /opt/rumprun/src-netbsd/sys/external//bsd/compiler_rt/dist/lib/builtins/arm/
