@@ -36,13 +36,13 @@ func NewStateFromFile(fileName string) (*UnikState, error) {
 	if err != nil {
 		return nil, lxerrors.New("could not read state file " + fileName, err)
 	}
-	var unikState *UnikState
-	err = json.Unmarshal(stateBytes, unikState)
+	var unikState UnikState
+	err = json.Unmarshal(stateBytes, &unikState)
 	if err != nil {
-		return nil, lxerrors.New("could unmarshal state json " + string(stateBytes), err)
+		return nil, lxerrors.New("could not unmarshal state json " + string(stateBytes), err)
 	}
 	unikState.lock = &sync.Mutex{}
-	return unikState, nil
+	return &unikState, nil
 }
 
 func (state *UnikState) Save(fileName string) error {
