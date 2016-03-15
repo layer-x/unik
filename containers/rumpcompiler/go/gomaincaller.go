@@ -43,7 +43,7 @@ func gomaincaller() {
 			}
 		}()
 		// Start the lookup
-		err = mdns.Lookup("_unik._tcp", entriesCh)
+		err = mdns.Lookup("_unik._tcp.local", entriesCh)
 		if err == nil {
 			var instanceData UnikInstanceData
 			resp, err := http.Get("http://"+<- ipChan+":3001/bootstrap?mac_address="+macAddress)
