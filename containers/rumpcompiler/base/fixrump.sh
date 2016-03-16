@@ -1,5 +1,7 @@
 # patch /opt/rumprun/lib/librumprun_base/config.c < /tmp/patch
 
+set -e
+
 cd  /opt/rumprun/
 
 DESTDIR=/usr/local
@@ -15,8 +17,8 @@ if [ "$PLATFORM" = "hw" ]; then
 # ppb patch
 cat >>  /opt/rumprun/src-netbsd/sys/rump/dev/lib/libpci/PCI.ioconf <<EOF
 
-    pci*    at ppb? bus ?
-    ppb*    at pci? dev ? function ?
+pci*    at ppb? bus ?
+ppb*    at pci? dev ? function ?
 EOF
 
 sed -i -e 's/SRCS+=	pci.c/SRCS+=	ppb.c pci.c/' /opt/rumprun/src-netbsd/sys/rump/dev/lib/libpci/Makefile
