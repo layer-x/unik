@@ -31,6 +31,9 @@ rumpcompiler-go-hw: rumpcompiler-base-hw
 rumpcompiler-go-xen: rumpcompiler-base-xen
 	$(buildcontainer)
 
+rumpcompiler-pi-hw: rumpcompiler-base-hw
+	$(buildcontainer)
+
 rumpdebugger-gdb-hw: rumpcompiler-base-xen
 	$(buildcontainer)
 
