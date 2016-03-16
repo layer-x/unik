@@ -19,11 +19,14 @@ RUN cd /tmp/gorump/go/src && \
 RUN mkdir /tmp/build/
 
 COPY mainstub.c gomaincaller.go /tmp/build/
+COPY Godeps /tmp/build/
+COPY vendor /tmp/build/
 
 # RUN LIKE THIS: docker run --rm -v /path/to/code:/opt/code rumpcompiler-go-hw
 CMD set -x && \
     cp /tmp/build/gomaincaller.go  /tmp/build/mainstub.c . && \
+    cp -r /tmp/build/Godeps . && \
+    cp -r /tmp/build/vendor . && \
     GO15VENDOREXPERIMENT=1 CC=x86_64-rumprun-netbsd-gcc CGO_ENABLED=1 GOOS=rumprun /usr/local/go/bin/go build -buildmode=c-archive -v -a -x  *.go && \
     RUMPRUN_STUBLINK=succeed x86_64-rumprun-netbsd-gcc -g -o program mainstub.c $(find . -name "*.a") && \
-    rm -f /opt/code/mainstub.c /opt/code/gomaincaller.go && \
     rumprun-bake hw_generic program.bin program
