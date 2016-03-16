@@ -13,6 +13,7 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"strings"
 )
 
 //export gomaincaller
@@ -51,7 +52,7 @@ func gomaincaller() {
 		}
 
 		var instanceData UnikInstanceData
-		resp, err := http.Get("http://192.168.0.46:3001/bootstrap?mac_address=" + macAddress)
+		resp, err := http.Get("http://"+getUnikIp()+":3001/bootstrap?mac_address=" + macAddress)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -67,38 +68,6 @@ func gomaincaller() {
 		for key, value := range instanceData.Env {
 			os.Setenv(key, value)
 		}
-
-		//		// Make a channel for results and start listening
-		//		ipChan := make(chan string)
-		//		entriesCh := make(chan *mdns.ServiceEntry, 4)
-		//		go func() {
-		//			for entry := range entriesCh {
-		//				ipChan <- entry.AddrV4.String()
-		//			}
-		//		}()
-		//		// Start the lookup
-		//		err = mdns.Lookup("_unik._tcp.local", entriesCh)
-		//		if err == nil {
-		//			var instanceData UnikInstanceData
-		//			resp, err := http.Get("http://"+<- ipChan+":3001/bootstrap?mac_address="+macAddress)
-		//			if err != nil {
-		//				log.Fatal(err)
-		//			}
-		//			defer resp.Body.Close()
-		//			data, err := ioutil.ReadAll(resp.Body)
-		//			if err != nil {
-		//				log.Fatal(err)
-		//			}
-		//			err = json.Unmarshal(data, &instanceData)
-		//			if err != nil {
-		//				log.Fatal(err)
-		//			}
-		//			for key, value := range instanceData.Env {
-		//				os.Setenv(key, value)
-		//			}
-		//		} else {
-		//			log.Fatal("expected mdns to work, but failed:" + err.Error())
-		//		}
 	} else {
 		defer resp.Body.Close()
 		data, err := ioutil.ReadAll(resp.Body)
@@ -122,6 +91,28 @@ func gomaincaller() {
 	go http.ListenAndServe(":3000", mux)
 
 	main()
+}
+
+func getUnikIp() string {
+	fmt.Printf("begin listening for unik heartbeat...")
+	socket, err := net.ListenUDP("udp4", &net.UDPAddr{
+		IP:   net.IPv4(0, 0, 0, 0),
+		Port: 9876,
+	})
+	if err != nil {
+		log.Fatalf("error listening for udp4: "+err.Error())
+	}
+	for {
+		data := make([]byte, 4096)
+		_, remoteAddr, err := socket.ReadFromUDP(data)
+		if err != nil {
+			log.Fatalf("error reading from udp: "+err.Error())
+		}
+		fmt.Printf("recieved an ip: %s with data: %s", remoteAddr.IP.String(), string(data))
+		if strings.Contains(string(data), "unik") {
+			return remoteAddr.IP.String()
+		}
+	}
 }
 
 //make sure this remains the same as defined in

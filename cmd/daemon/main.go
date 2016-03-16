@@ -7,6 +7,8 @@ import (
 	"flag"
 	"github.com/layer-x/unik/pkg/daemon"
 	"os"
+"net"
+	"time"
 )
 
 func main() {
@@ -55,20 +57,25 @@ func main() {
 		}
 		opts = append(opts, *vsphereUrl, *vsphereUser, *vspherePass)
 
-		lxlog.Infof(logrus.Fields{"host": host}, "Starting unik discovery service")
-//		info := []string{"Unik"}
-//		service, err := mdns.NewMDNSService(host, "_unik._tcp.local", "", "", 8000, nil, info)
-//		if err != nil {
-//			lxlog.Errorf(logrus.Fields{"err": err}, "creating new mDNS service")
-//			os.Exit(-1);
-//		}
-//		server, err := mdns.NewServer(&mdns.Config{Zone: service})
-//		if err != nil {
-//			lxlog.Errorf(logrus.Fields{"err": err}, "starting mDNS server")
-//			os.Exit(-1);
-//		}
-//		defer server.Shutdown()
-//		lxlog.Infof(logrus.Fields{"server": server},"Started unik discovery service")
+		lxlog.Infof(logrus.Fields{"host": host}, "Starting unik discovery (udp heartbeat broadcast)")
+		info := []byte("unik")
+		BROADCAST_IPv4 := net.IPv4(255, 255, 255, 255)
+		socket, err := net.DialUDP("udp4", nil, &net.UDPAddr{
+			IP:   BROADCAST_IPv4,
+			Port: 9876,
+		})
+		if err != nil {
+			lxlog.Fatalf(logrus.Fields{"err": err, "broadcast-ip": BROADCAST_IPv4}, "failed to dial udp broadcast connection")
+		}
+		go func(){
+			for {
+				_, err = socket.Write(info)
+				if err != nil {
+					lxlog.Fatalf(logrus.Fields{"err": err, "broadcast-ip": BROADCAST_IPv4}, "failed writing to broadcast udp socket")
+				}
+				time.Sleep(2000 * time.Millisecond)
+			}
+		}()
 	}
 
 	unikDaemon := daemon.NewUnikDaemon(*provider, opts...)
