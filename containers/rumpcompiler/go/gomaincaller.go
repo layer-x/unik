@@ -19,8 +19,21 @@ import (
 func gomaincaller() {
 	var instanceData UnikInstanceData
 
+	//make logs available via http request
+	logs := bytes.Buffer{}
+	err := teeStdout(&logs)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = teeStderr(&logs)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Beginning bootstrap...")
 	resp, err := http.Get("http://169.254.169.254/latest/user-data")
 	if err != nil { //if AWS user-data doesnt work, try multicast
+		fmt.Printf("Not an EC2 instance? "+err.Error()+" listening for UDP Heartbaet...")
 		//get MAC Addr (needed for vsphere)
 		ifaces, err := net.Interfaces()
 		if err != nil {
@@ -101,22 +114,12 @@ func gomaincaller() {
 		}
 	}
 
-	//make logs available via http request
-	logs := bytes.Buffer{}
-	err = tee(os.Stdout, &logs)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = tee(os.Stderr, &logs)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	//handle logs request
-	http.HandleFunc("/logs", func(res http.ResponseWriter, req *http.Request) {
-		res.Write(logs.Bytes())
+	mux := http.NewServeMux()
+	mux.HandleFunc("/logs", func(res http.ResponseWriter, req *http.Request) {
+		fmt.Fprintf(res, "logs: %s", string(logs.Bytes()))
 	})
-	go http.ListenAndServe(":3000", nil)
+	go http.ListenAndServe(":3000", mux)
 
 	main()
 }
@@ -128,24 +131,40 @@ type UnikInstanceData struct {
 	Env  map[string]string `json:"Env"`
 }
 
-func tee(file *os.File, buf *bytes.Buffer) error {
+func teeStdout(writer io.Writer) error {
 	r, w, err := os.Pipe()
 	if err != nil {
 		return errors.New("creating pipe: " + err.Error())
 	}
-	stdout := file
-	file = w
-	multi := io.MultiWriter(stdout, bufio.NewWriter(buf))
+	stdout := os.Stdout
+	os.Stdout = w
+	multi := io.MultiWriter(stdout, writer)
 	reader := bufio.NewReader(r)
 	go func() {
 		for {
-			line, err := reader.ReadBytes('\n')
+			_, err := io.Copy(multi, reader)
 			if err != nil {
-				return
+				log.Fatalf("copying pipe reader to multi writer: "+err.Error())
 			}
-			_, err = multi.Write(append(line, byte('\n')))
+		}
+	}()
+	return nil
+}
+
+func teeStderr(writer io.Writer) error {
+	r, w, err := os.Pipe()
+	if err != nil {
+		return errors.New("creating pipe: " + err.Error())
+	}
+	stdout := os.Stderr
+	os.Stderr = w
+	multi := io.MultiWriter(stdout, writer)
+	reader := bufio.NewReader(r)
+	go func() {
+		for {
+			_, err := io.Copy(multi, reader)
 			if err != nil {
-				return
+				log.Fatalf("copying pipe reader to multi writer: "+err.Error())
 			}
 		}
 	}()
