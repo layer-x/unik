@@ -19,30 +19,20 @@ func ListUnikInstances(unikState *state.UnikState, creds Creds) ([]*types.UnikIn
 	if err != nil {
 		return nil, lxerrors.New("retrieving list of vsphere vms", err)
 	}
+	lxlog.Debugf(logrus.Fields{"vms": vms}, "Found a collection of vms")
 	unikInstances := []*types.UnikInstance{}
 	for _, vm := range vms {
+		lxlog.Debugf(logrus.Fields{"vm": vm}, "Found a vm")
 		if vm.Config == nil {
+			lxlog.Debugf(logrus.Fields{"Config": vm.Config}, "VM has no config")
 			continue
 		}
 		metadata := vm.Config.Annotation
-		var unikInstance *types.UnikInstance
-		err = json.Unmarshal([]byte(metadata), unikInstance)
-		if err != nil || unikInstance == nil || unikInstance.UnikernelId == "" {
+		var unikInstance types.UnikInstance
+		err = json.Unmarshal([]byte(metadata), &unikInstance)
+		if err != nil {
+			lxlog.Warnf(logrus.Fields{"Annotation": vm.Config.Annotation, "err": err}, "could not read annotation")
 			continue
-		}
-		switch vm.Summary.Runtime.PowerState {
-		case "poweredOn":
-			unikInstance.State = "running"
-			break
-		case "poweredOff":
-			unikInstance.State = "stopped"
-			break
-		case "suspended":
-			unikInstance.State = "paused"
-			break
-		default:
-			unikInstance.State = "unknown"
-			break
 		}
 		//we use mac address as the vm id
 		if vm.Config != nil && vm.Config.Hardware.Device != nil {
@@ -58,6 +48,20 @@ func ListUnikInstances(unikState *state.UnikState, creds Creds) ([]*types.UnikIn
 				}
 			}
 		}
+		switch vm.Summary.Runtime.PowerState {
+		case "poweredOn":
+			unikInstance.State = "running"
+			break
+		case "poweredOff":
+			unikInstance.State = "stopped"
+			break
+		case "suspended":
+			unikInstance.State = "paused"
+			break
+		default:
+			unikInstance.State = "unknown"
+			break
+		}
 		for _, registeredUnikInstance := range unikState.UnikInstances {
 			if unikInstance.VMID == registeredUnikInstance.VMID {
 				unikInstance.PublicIp = registeredUnikInstance.PublicIp
@@ -65,9 +69,11 @@ func ListUnikInstances(unikState *state.UnikState, creds Creds) ([]*types.UnikIn
 				break
 			}
 		}
-		unikInstances = append(unikInstances, unikInstance)
+		unikInstances = append(unikInstances, &unikInstance)
 		if unikInstance.VMID == "" {
 			lxlog.Warnf(logrus.Fields{"unik_instance": unikInstance}, "unik instance was found on vsphere but has not registered with known mac address yet")
+		} else {
+			lxlog.Debugf(logrus.Fields{"unik_instance": unikInstance}, "unik instance was found on vsphere")
 		}
 	}
 	return unikInstances, nil
