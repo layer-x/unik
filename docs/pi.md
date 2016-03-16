@@ -15,9 +15,13 @@ clone outside container so you won't clone it again when containers die.. it's a
 
     git clone https://github.com/raspberrypi/tools raspberrypi-tools
 
+DONT forget to [move ssp headers](#fixing ssp headers). see here.
+
 Start container:
 
-    docker run --rm -t -i -v $PWD/shared-dir/:/opt/code -v $PWD/raspberrypi-tools/:/opt/raspberrypi-tools --entrypoint=/bin/bash rumpcompiler-go-hw
+(mount tools as read only as from some reason it gets deleted during rump run build. no idea why.)
+
+    docker run --rm -t -i -v $PWD/shared-dir/:/opt/code -v $PWD/raspberrypi-tools/:/opt/raspberrypi-tools:ro --entrypoint=/bin/bash rumpcompiler-go-hw
 
 In docker shell:
 
@@ -30,7 +34,7 @@ In docker shell:
     export PATH=/opt/raspberrypi-tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/:$PATH
     export CC=arm-linux-gnueabihf-gcc
     ./build-rr.sh -d $DESTDIR -b pi -o ./obj $PLATFORM  build -- -F ACFLAGS=-march=armv6k
-    ./build-rr.sh -d $DESTDIR -b pi -o ./obj $PLATFORM  build -- -F ACFLAGS=-march=armv6k
+    ./build-rr.sh -d $DESTDIR -o ./obj $PLATFORM install
 
 watch it fail :(  
 
@@ -53,6 +57,15 @@ changing src-netbsd/sys/rump/librump/rumpkern/arch/x86_64/Makefile.inc to the ar
 
 Solution: cleaning build env solves this.
 
+## fixing ssp headers
+
+as described in https://www.freelists.org/post/rumpkernel-users/rumpkernel-on-RPi,10
+
+after cloning rpi tools, do this:
+
+    cd raspberrypi-tools
+    mv arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/lib/gcc/arm-linux-gnueabihf/4.8.3/include arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/lib/gcc/arm-linux-gnueabihf/4.8.3/not-include
+
 ## don't know how to make aeabi_idiv0.c.
 
 command:
@@ -73,6 +86,28 @@ this cause mkdep to fail, as it couldnt find headers.
 /opt/rumprun/src-netbsd/sys/external/bsd/compiler_rt/dist/lib/builtins/arm/__aeabi_idiv0.c:35:23: fatal error: sys/systm.h: No such file or directory
  #include <sys/systm.h>
 
-To work around that, comment out he include and the call to panic.
+To work around that, comment out the include and the call to panic.
+edit:
+- /opt/rumprun/src-netbsd/sys/external/bsd/compiler_rt/dist/lib/builtins/arm/__aeabi_idiv0.c
+- /opt/rumprun/src-netbsd/sys/external/bsd/compiler_rt/dist/lib/builtins/arm/__aeabi_ldiv0.c
 
 This will get rump compiling.
+
+
+# to bake
+
+Create a new target for baking without these drivers:
+
+-lrumpdev_virtio_if_vioif
+-lrumpdev_virtio_ld
+-lrumpdev_virtio_viornd
+-lrumpdev_pci_virtio
+-lrumpdev_pci
+-lrumpdev_audio_ac97
+-lrumpdev_pci_auich
+-lrumpdev_pci_eap
+-lrumpdev_pci_hdaudio
+-lrumpdev_hdaudio_hdafg
+-lrumpdev_pci_if_wm
+-lrumpdev_miiphy
+-lrumpdev_pci_usbhc
