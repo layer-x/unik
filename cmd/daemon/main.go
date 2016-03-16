@@ -7,7 +7,6 @@ import (
 	"flag"
 	"github.com/layer-x/unik/pkg/daemon"
 	"os"
-	"github.com/hashicorp/mdns"
 )
 
 func main() {
@@ -57,19 +56,19 @@ func main() {
 		opts = append(opts, *vsphereUrl, *vsphereUser, *vspherePass)
 
 		lxlog.Infof(logrus.Fields{"host": host}, "Starting unik discovery service")
-		info := []string{"Unik"}
-		service, err := mdns.NewMDNSService(host, "_unik._tcp.local", "", "", 8000, nil, info)
-		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err}, "creating new mDNS service")
-			os.Exit(-1);
-		}
-		server, err := mdns.NewServer(&mdns.Config{Zone: service})
-		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err}, "starting mDNS server")
-			os.Exit(-1);
-		}
-		defer server.Shutdown()
-		lxlog.Infof(logrus.Fields{"server": server},"Started unik discovery service")
+//		info := []string{"Unik"}
+//		service, err := mdns.NewMDNSService(host, "_unik._tcp.local", "", "", 8000, nil, info)
+//		if err != nil {
+//			lxlog.Errorf(logrus.Fields{"err": err}, "creating new mDNS service")
+//			os.Exit(-1);
+//		}
+//		server, err := mdns.NewServer(&mdns.Config{Zone: service})
+//		if err != nil {
+//			lxlog.Errorf(logrus.Fields{"err": err}, "starting mDNS server")
+//			os.Exit(-1);
+//		}
+//		defer server.Shutdown()
+//		lxlog.Infof(logrus.Fields{"server": server},"Started unik discovery service")
 	}
 
 	unikDaemon := daemon.NewUnikDaemon(*provider, opts...)
