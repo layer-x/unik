@@ -36,7 +36,36 @@ In docker shell:
     ./build-rr.sh -d $DESTDIR -b pi -o ./obj $PLATFORM  build -- -F ACFLAGS=-march=armv6k
     ./build-rr.sh -d $DESTDIR -o ./obj $PLATFORM install
 
-watch it fail :(  
+# Test
+
+After fixing all problems (see below) used the rumpcompiler-pi-hw container to build a hello world kernel:
+
+hello.c file:
+
+    #include<stdio.h>
+
+    main()
+    {
+    printf("Hello World");
+
+    }
+
+build:
+
+    /usr/local/bin/arm-rumprun-netbsdelf-eabihf-gcc hello.c -o program
+    rumprun-bake hw_pi program.bin program
+
+copied result program.bin to /boot and edited /boot/config.txt and added
+
+    kernel=program.bin
+
+Also tried via:
+
+    qemu-system-arm -kernel program.bin -cpu arm1176 -m 256  -M versatilepb
+
+and got a black screen
+
+# Notes
 
 ## error amd64
 complication fails with:
