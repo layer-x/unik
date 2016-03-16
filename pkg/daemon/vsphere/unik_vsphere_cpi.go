@@ -54,19 +54,15 @@ func (cpi *UnikVsphereCPI) ListenForBootstrap(port int) {
 		macAddress := req.URL.Query().Get("mac_address")
 		lxlog.Infof(logrus.Fields{"Ip": instanceIp, "mac-address": macAddress}, "Instance registered with mDNS")
 		//mac address = the instance id in vsphere
-		if unikInstance, ok := cpi.unikState.UnikInstances[macAddress]; ok {
-			unikInstance.PrivateIp = instanceIp
-			unikInstance.PublicIp = instanceIp
-		} else {
-			lxlog.Errorf(logrus.Fields{"state": cpi.unikState}, "could not find mac address in known vsphere instances")
-			return ""
-		}
-		cpi.unikState.Save(state.DEFAULT_UNIK_STATE_FILE)
 		unikInstance, err := cpi.GetUnikInstanceByPrefixOrName(macAddress)
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"state": cpi.unikState}, "could not find mac address in known vsphere instances")
+			lxlog.Errorf(logrus.Fields{"state": cpi.unikState}, "could not find unik instance by mac address")
 			return ""
 		}
+		unikInstance.PrivateIp = instanceIp
+		unikInstance.PublicIp = instanceIp
+		cpi.unikState.UnikInstances[macAddress] = unikInstance
+		cpi.unikState.Save(state.DEFAULT_UNIK_STATE_FILE)
 		data, _ := json.Marshal(unikInstance.UnikInstanceData)
 		return string(data)
 	})

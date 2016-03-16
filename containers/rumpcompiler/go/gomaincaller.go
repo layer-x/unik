@@ -12,6 +12,7 @@ import (
 	"io"
 	"bufio"
 	"fmt"
+	"log"
 )
 
 //export gomaincaller
@@ -23,7 +24,7 @@ func gomaincaller() {
 		//get MAC Addr (needed for vsphere)
 		ifaces, err := net.Interfaces()
 		if err != nil {
-			panic("retrieving network interfaces" + err.Error())
+			log.Fatal("retrieving network interfaces" + err.Error())
 		}
 		macAddress := ""
 		for _, iface := range ifaces {
@@ -33,22 +34,22 @@ func gomaincaller() {
 			}
 		}
 		if macAddress == "" {
-			panic("could not find mac address")
+			log.Fatal("could not find mac address")
 		}
 
 		var instanceData UnikInstanceData
 		resp, err := http.Get("http://192.168.0.46:3001/bootstrap?mac_address=" + macAddress)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		defer resp.Body.Close()
 		data, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		err = json.Unmarshal(data, &instanceData)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		for key, value := range instanceData.Env {
 			os.Setenv(key, value)
@@ -68,32 +69,32 @@ func gomaincaller() {
 		//			var instanceData UnikInstanceData
 		//			resp, err := http.Get("http://"+<- ipChan+":3001/bootstrap?mac_address="+macAddress)
 		//			if err != nil {
-		//				panic(err)
+		//				log.Fatal(err)
 		//			}
 		//			defer resp.Body.Close()
 		//			data, err := ioutil.ReadAll(resp.Body)
 		//			if err != nil {
-		//				panic(err)
+		//				log.Fatal(err)
 		//			}
 		//			err = json.Unmarshal(data, &instanceData)
 		//			if err != nil {
-		//				panic(err)
+		//				log.Fatal(err)
 		//			}
 		//			for key, value := range instanceData.Env {
 		//				os.Setenv(key, value)
 		//			}
 		//		} else {
-		//			panic("expected mdns to work, but failed:" + err.Error())
+		//			log.Fatal("expected mdns to work, but failed:" + err.Error())
 		//		}
 	} else {
 		defer resp.Body.Close()
 		data, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		err = json.Unmarshal(data, &instanceData)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		for key, value := range instanceData.Env {
 			os.Setenv(key, value)
@@ -104,11 +105,11 @@ func gomaincaller() {
 	logs := bytes.Buffer{}
 	err = tee(os.Stdout, &logs)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	err = tee(os.Stderr, &logs)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	//handle logs request
