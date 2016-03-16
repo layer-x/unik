@@ -142,7 +142,6 @@ func CreateBootImageOnFile(rootFile string, sizeOfFile device.DiskSize, progPath
 	if err != nil {
 		return err
 	}
-
 	err = writeBootTemplate(path.Join(grubPath, "menu.lst"), "(hd0,0)", jsonConfig)
 	if err != nil {
 		return err
@@ -182,6 +181,9 @@ func writeDeviceMap(fname, rootDevice string) error {
 	return nil
 }
 func writeBootTemplate(fname, rootDrive, jsonConfig string) error {
+
+	log.WithFields(log.Fields{"fname": fname, "rootDrive": rootDrive, "jsonConfig": jsonConfig}).Debug("writing boot template")
+
 	f, err := os.Create(fname)
 	if err != nil {
 		return err
@@ -335,7 +337,9 @@ func ToRumpJson(c model.RumpConfig) (string, error) {
 	c.Blk = nil
 
 	jsonConfig, err := json.Marshal(c)
-	return "", err
+	if err != nil {
+		return "", err
+	}
 
 	blks := ""
 	for _, b := range blk {
