@@ -13,7 +13,6 @@ import (
 	"bufio"
 	"fmt"
 	"log"
-	"github.com/hashicorp/mdns"
 )
 
 //export gomaincaller
@@ -52,7 +51,7 @@ func gomaincaller() {
 		}
 
 		var instanceData UnikInstanceData
-		resp, err := http.Get("http://"+getUnikIp()+":3001/bootstrap?mac_address=" + macAddress)
+		resp, err := http.Get("http://192.168.0.46:3001/bootstrap?mac_address=" + macAddress)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -68,6 +67,38 @@ func gomaincaller() {
 		for key, value := range instanceData.Env {
 			os.Setenv(key, value)
 		}
+
+		//		// Make a channel for results and start listening
+		//		ipChan := make(chan string)
+		//		entriesCh := make(chan *mdns.ServiceEntry, 4)
+		//		go func() {
+		//			for entry := range entriesCh {
+		//				ipChan <- entry.AddrV4.String()
+		//			}
+		//		}()
+		//		// Start the lookup
+		//		err = mdns.Lookup("_unik._tcp.local", entriesCh)
+		//		if err == nil {
+		//			var instanceData UnikInstanceData
+		//			resp, err := http.Get("http://"+<- ipChan+":3001/bootstrap?mac_address="+macAddress)
+		//			if err != nil {
+		//				log.Fatal(err)
+		//			}
+		//			defer resp.Body.Close()
+		//			data, err := ioutil.ReadAll(resp.Body)
+		//			if err != nil {
+		//				log.Fatal(err)
+		//			}
+		//			err = json.Unmarshal(data, &instanceData)
+		//			if err != nil {
+		//				log.Fatal(err)
+		//			}
+		//			for key, value := range instanceData.Env {
+		//				os.Setenv(key, value)
+		//			}
+		//		} else {
+		//			log.Fatal("expected mdns to work, but failed:" + err.Error())
+		//		}
 	} else {
 		defer resp.Body.Close()
 		data, err := ioutil.ReadAll(resp.Body)
@@ -138,24 +169,4 @@ func teeStderr(writer io.Writer) error {
 		}
 	}()
 	return nil
-}
-
-func getUnikIp() string {
-	log.Printf("starting search for unik ip...\n")
-	// Make a channel for results and start listening
-	ipChan := make(chan string)
-	entriesCh := make(chan *mdns.ServiceEntry, 4)
-	go func() {
-		for entry := range entriesCh {
-			ipChan <- entry.AddrV4.String()
-		}
-	}()
-	// Start the lookup
-	err := mdns.Lookup("_unik._tcp.local", entriesCh)
-	if err != nil {
-		log.Fatal("expected mdns to work, but failed:" + err.Error())
-	}
-	ip := <- ipChan
-	log.Printf("found unik ip: %s\n", ip)
-	return ip
 }
