@@ -14,7 +14,14 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 )
+
+var timeout = time.Duration(2 * time.Second)
+
+func dialTimeout(network, addr string) (net.Conn, error) {
+	return net.DialTimeout(network, addr, timeout)
+}
 
 //export gomaincaller
 func gomaincaller() {
@@ -32,9 +39,29 @@ func gomaincaller() {
 	}
 
 	fmt.Printf("Beginning bootstrap...")
-	resp, err := http.Get("http://169.254.169.254/latest/user-data")
-	if err != nil { //if AWS user-data doesnt work, try multicast
-		fmt.Printf("Not an EC2 instance? "+err.Error()+" listening for UDP Heartbaet...")
+
+	client := http.Client{
+		Transport: &http.Transport{
+			Dial: dialTimeout,
+		},
+	}
+	resp, err := client.Get("http://169.254.169.254/latest/user-data")
+	if err == nil {
+		fmt.Printf("I am an EC2 instance! Retreiving boostrapping information from http://169.254.169.254/latest/user-data...")
+		defer resp.Body.Close()
+		data, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = json.Unmarshal(data, &instanceData)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for key, value := range instanceData.Env {
+			os.Setenv(key, value)
+		}
+	} else { //if AWS user-data doesnt work, try multicast
+		fmt.Printf("Not an EC2 instance: "+err.Error()+" listening for Unik backend UDP Heartbeat...")
 		//get MAC Addr (needed for vsphere)
 		ifaces, err := net.Interfaces()
 		if err != nil {
@@ -51,24 +78,10 @@ func gomaincaller() {
 			log.Fatal("could not find mac address")
 		}
 
-		var instanceData UnikInstanceData
 		resp, err := http.Get("http://"+getUnikIp()+":3001/bootstrap?mac_address=" + macAddress)
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer resp.Body.Close()
-		data, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = json.Unmarshal(data, &instanceData)
-		if err != nil {
-			log.Fatal(err)
-		}
-		for key, value := range instanceData.Env {
-			os.Setenv(key, value)
-		}
-	} else {
 		defer resp.Body.Close()
 		data, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
