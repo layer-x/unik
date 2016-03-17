@@ -28,7 +28,7 @@ func NewUnikVsphereCPI(rawUrl, user, password string) *UnikVsphereCPI {
 	if err != nil {
 		lxlog.Fatalf(logrus.Fields{"raw-url": rawUrl, "err": err}, "parsing provided url")
 	}
-	unikState, err := state.NewStateFromFile(state.DEFAULT_UNIK_STATE_FILE)
+	unikState, err := state.NewStateFromVsphere(u)
 	if err != nil {
 		lxlog.Warnf(logrus.Fields{"state": unikState, "err": err}, "could not load unik state, creating fresh")
 		unikState = state.NewCleanState()
@@ -62,7 +62,7 @@ func (cpi *UnikVsphereCPI) ListenForBootstrap(port int) {
 		unikInstance.PrivateIp = instanceIp
 		unikInstance.PublicIp = instanceIp
 		cpi.unikState.UnikInstances[macAddress] = unikInstance
-		cpi.unikState.Save(state.DEFAULT_UNIK_STATE_FILE)
+		cpi.unikState.Save()
 		data, _ := json.Marshal(unikInstance.UnikInstanceData)
 		return string(data)
 	})

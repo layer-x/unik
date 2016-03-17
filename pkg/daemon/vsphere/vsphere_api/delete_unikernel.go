@@ -4,11 +4,15 @@ import (
 	"github.com/layer-x/layerx-commons/lxlog"
 	"github.com/Sirupsen/logrus"
 "github.com/layer-x/unik/pkg/daemon/state"
-	"os"
-	"path/filepath"
+	"github.com/layer-x/unik/pkg/daemon/vsphere/vsphere_utils"
 )
 
 func DeleteUnikernel(unikState *state.UnikState, creds Creds, unikernelId string, force bool) error {
+	vsphereClient, err := vsphere_utils.NewVsphereClient(creds.URL)
+	if err != nil {
+		return lxerrors.New("initiating vsphere client connection", err)
+	}
+
 	unikInstances, err := ListUnikInstances(unikState, creds)
 	if err != nil {
 		return lxerrors.New("could not check to see running unik instances", err)
@@ -27,14 +31,14 @@ func DeleteUnikernel(unikState *state.UnikState, creds Creds, unikernelId string
 	}
 	lxlog.Infof(logrus.Fields{"unikernel": unikernelId, "force": force}, "deleting unikernel")
 
-	if unikernel, ok := unikState.Unikernels[unikernelId]; ok {
-		err = os.RemoveAll(filepath.Dir(unikernel.Path))
+	if _, ok := unikState.Unikernels[unikernelId]; ok {
+		err = vsphereClient.Rmdir("unik/"+unikernelId)
 		if err != nil {
-			return lxerrors.New("failed to remove local unikernel files", err)
+			return lxerrors.New("failed to remove remote unikernel folder", err)
 		}
 		delete(unikState.Unikernels, unikernelId)
 
-		err = unikState.Save(state.DEFAULT_UNIK_STATE_FILE)
+		err = unikState.Save()
 		if err != nil {
 			return lxerrors.New("failed to save updated unikernel index", err)
 		}

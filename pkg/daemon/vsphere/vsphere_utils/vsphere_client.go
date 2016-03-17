@@ -7,10 +7,10 @@ import (
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/property"
- vspheretypes "github.com/vmware/govmomi/vim25/types"
+	vspheretypes "github.com/vmware/govmomi/vim25/types"
 	"os/exec"
 	"github.com/layer-x/layerx-commons/lxlog"
-"github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"path/filepath"
 	"strings"
 )
@@ -58,10 +58,10 @@ func (vc *VsphereClient) Vms() ([]mo.VirtualMachine, error) {
 		refs = append(refs, vm.Reference())
 		err = pc.Retrieve(context.TODO(), refs, nil, &managedVms)
 		if err != nil {
-			return nil, lxerrors.New("retrieving managed vms property of vm "+vm.String(), err)
+			return nil, lxerrors.New("retrieving managed vms property of vm " + vm.String(), err)
 		}
 		if len(managedVms) < 1 {
-			return nil, lxerrors.New("0 managed vms found for vm "+vm.String(), nil)
+			return nil, lxerrors.New("0 managed vms found for vm " + vm.String(), nil)
 		}
 		vmList = append(vmList, managedVms[0])
 	}
@@ -75,7 +75,7 @@ func (vc *VsphereClient) CreateVm(vmName, annotation string) error {
 		"vm.create",
 		"-k",
 		"-u", formatUrl(vc.u),
-		"--annotation="+annotation,
+		"--annotation=" + annotation,
 		"--force=true",
 		"--m=512",
 		"--on=false",
@@ -85,7 +85,7 @@ func (vc *VsphereClient) CreateVm(vmName, annotation string) error {
 	lxlog.LogCommand(cmd, true)
 	err := cmd.Run()
 	if err != nil {
-		return lxerrors.New("failed running govc vm.create "+vmName, err)
+		return lxerrors.New("failed running govc vm.create " + vmName, err)
 	}
 	return nil
 }
@@ -105,7 +105,7 @@ func (vc *VsphereClient) DestroyVm(vmName string) error {
 	lxlog.LogCommand(cmd, true)
 	err := cmd.Run()
 	if err != nil {
-		return lxerrors.New("failed running govc vm.destroy "+vmName, err)
+		return lxerrors.New("failed running govc vm.destroy " + vmName, err)
 	}
 	return nil
 }
@@ -123,7 +123,7 @@ func (vc *VsphereClient) Mkdir(folder string) error {
 	lxlog.LogCommand(cmd, true)
 	err := cmd.Run()
 	if err != nil {
-		return lxerrors.New("failed running govc datastore.mkdir "+folder, err)
+		return lxerrors.New("failed running govc datastore.mkdir " + folder, err)
 	}
 	return nil
 }
@@ -141,14 +141,14 @@ func (vc *VsphereClient) Rmdir(folder string) error {
 	lxlog.LogCommand(cmd, true)
 	err := cmd.Run()
 	if err != nil {
-		return lxerrors.New("failed running govc datastore.rm "+folder, err)
+		return lxerrors.New("failed running govc datastore.rm " + folder, err)
 	}
 	return nil
 }
 
 func (vc *VsphereClient) ImportVmdk(vmdkPath, folder string) error {
 	vmdkFolder := filepath.Dir(vmdkPath)
-	cmd := exec.Command("docker", "run", "--rm", "-v", vmdkFolder+":"+vmdkFolder,
+	cmd := exec.Command("docker", "run", "--rm", "-v", vmdkFolder + ":" + vmdkFolder,
 		"vsphere-client",
 		"govc",
 		"import.vmdk",
@@ -161,14 +161,14 @@ func (vc *VsphereClient) ImportVmdk(vmdkPath, folder string) error {
 	lxlog.LogCommand(cmd, true)
 	err := cmd.Run()
 	if err != nil {
-		return lxerrors.New("failed running govc import.vmdk "+folder, err)
+		return lxerrors.New("failed running govc import.vmdk " + folder, err)
 	}
 	return nil
 }
 
 func (vc *VsphereClient) UploadFile(srcFile, dest string) error {
 	srcDir := filepath.Dir(srcFile)
-	cmd := exec.Command("docker", "run", "--rm", "-v", srcDir +":"+srcDir,
+	cmd := exec.Command("docker", "run", "--rm", "-v", srcDir + ":" + srcDir,
 		"vsphere-client",
 		"govc",
 		"datastore.upload",
@@ -188,7 +188,7 @@ func (vc *VsphereClient) UploadFile(srcFile, dest string) error {
 
 func (vc *VsphereClient) DownloadFile(remoteFile, localFile string) error {
 	localDir := filepath.Dir(localFile)
-	cmd := exec.Command("docker", "run", "--rm", "-v", localDir +":"+ localDir,
+	cmd := exec.Command("docker", "run", "--rm", "-v", localDir + ":" + localDir,
 		"vsphere-client",
 		"govc",
 		"datastore.upload",
@@ -220,7 +220,30 @@ func (vc *VsphereClient) Copy(src, dest string) error {
 	lxlog.LogCommand(cmd, true)
 	err := cmd.Run()
 	if err != nil {
-		return lxerrors.New("failed running govc datastore.cp "+src+" "+dest, err)
+		return lxerrors.New("failed running govc datastore.cp " + src + " " + dest, err)
+	}
+	return nil
+}
+
+func (vc *VsphereClient) CopyVmdk(src, dest string) error {
+	password, _ := vc.u.User.Password()
+	cmd := exec.Command("docker", "run", "--rm",
+		"vsphere-client",
+		"java",
+		"-jar",
+		"/vsphere-client.jar",
+		"CopyVirtualDisk",
+		vc.u.String(),
+		vc.u.User.Username(),
+		password,
+		"[datastore1] " + src,
+		"[datastore1] " + dest,
+	)
+	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running vsphere-client.jar command")
+	lxlog.LogCommand(cmd, true)
+	err := cmd.Run()
+	if err != nil {
+		return lxerrors.New("failed running vsphere-client.jar CopyVirtualDisk " + src + " " + dest, err)
 	}
 	return nil
 }
@@ -237,7 +260,7 @@ func (vc *VsphereClient) Ls(dir string) ([]string, error) {
 	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, lxerrors.New("failed running govc datastore.ls "+dir, err)
+		return nil, lxerrors.New("failed running govc datastore.ls " + dir, err)
 	}
 	split := strings.Split(string(out), "\n")
 	contents := []string{}
@@ -299,14 +322,14 @@ func (vc *VsphereClient) AttachVmdk(vmName, vmdkPath string) error {
 		vc.u.User.Username(),
 		password,
 		vmName,
-		"[datastore1] "+vmdkPath,
+		"[datastore1] " + vmdkPath,
 		"200", //TODO: is this right?
 	)
-	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running govc command")
+	lxlog.Debugf(logrus.Fields{"command": cmd.Args}, "running vsphere-client.jar command")
 	lxlog.LogCommand(cmd, true)
 	err := cmd.Run()
 	if err != nil {
-		return lxerrors.New("failed running govc vm.power (off)", err)
+		return lxerrors.New("failed running vsphere-client.jar AttachVmdk", err)
 	}
 	return nil
 }

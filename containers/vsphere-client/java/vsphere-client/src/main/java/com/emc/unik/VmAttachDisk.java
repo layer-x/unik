@@ -3,17 +3,13 @@ package com.emc.unik;
 
 import java.net.URL;
 
-import com.vmware.vim25.VirtualDeviceConfigSpec;
-import com.vmware.vim25.VirtualDeviceConfigSpecOperation;
-import com.vmware.vim25.VirtualDisk;
-import com.vmware.vim25.VirtualDiskFlatVer2BackingInfo;
-import com.vmware.vim25.VirtualMachineConfigSpec;
+import com.vmware.vim25.*;
 import com.vmware.vim25.mo.*;
 
 public class VmAttachDisk {
     public static void main(String[] args) throws Exception {
         if (args.length < 1) {
-            System.err.println("Usage: java VmAttachDisk|CopyFile [<opts>]");
+            System.err.println("Usage: java VmAttachDisk|CopyFile|CopyVirtualDisk [<opts>]");
             System.exit(-1);
         }
 
@@ -38,7 +34,7 @@ public class VmAttachDisk {
             if (vm == null) {
                 System.out.println("No VM " + vmname + " found");
                 si.getServerConnection().logout();
-                return;
+                System.exit(-1);
             }
 
             VirtualMachineConfigSpec vmConfigSpec = new VirtualMachineConfigSpec();
@@ -46,7 +42,7 @@ public class VmAttachDisk {
             // mode: persistent|independent_persistent,independent_nonpersistent
             String diskMode = "persistent";
             VirtualDeviceConfigSpec vdiskSpec = createExistingDiskSpec(vmdkPath, controllerKey, diskMode);
-            VirtualDeviceConfigSpec [] vdiskSpecArray = {vdiskSpec};
+            VirtualDeviceConfigSpec[] vdiskSpecArray = {vdiskSpec};
             vmConfigSpec.setDeviceChange(vdiskSpecArray);
 
             Task task = vm.reconfigVM_Task(vmConfigSpec);
@@ -55,34 +51,69 @@ public class VmAttachDisk {
                 System.out.println(task.getTaskInfo().getDescription().getMessage());
             }
         }
-//       TODO: remove, not in use
-//        if (args[0].equals("CopyFile")) {
-//            if (args.length != 6) {
-//                System.err.println("Usage: java CopyFile <url> " +
-//                        "<username> <password> <sourcePath> <destinationPath>");
-//                System.exit(-1);
-//            }
-//
-//            ServiceInstance si = new ServiceInstance(
-//                    new URL(args[1]), args[2], args[3], true);
-//
-//            Datacenter datacenter = (Datacenter) new InventoryNavigator(si.getRootFolder()).searchManagedEntity("Datacenter", "ha-datacenter");
-//
-//            String sourcePath = args[4];
-//            String destinationPath = args[5];
-//
-//            FileManager fileManager = si.getFileManager();
-//            if (fileManager == null) {
-//                System.err.println("filemanager not available");
-//                System.exit(-1);
-//            }
-//            Task copyTask = fileManager.copyDatastoreFile_Task(sourcePath, datacenter, destinationPath, datacenter, true);
-//
-//            System.out.println(copyTask.waitForTask());
-//            if (copyTask.getTaskInfo() != null && copyTask.getTaskInfo().getDescription() != null) {
-//                System.out.println(copyTask.getTaskInfo().getDescription().getMessage());
-//            }
-//        }
+        if (args[0].equals("CopyFile")) {
+            if (args.length != 6) {
+                System.err.println("Usage: java CopyFile <url> " +
+                        "<username> <password> <sourcePath> <destinationPath>");
+                System.exit(-1);
+            }
+
+            ServiceInstance si = new ServiceInstance(
+                    new URL(args[1]), args[2], args[3], true);
+
+            Datacenter datacenter = (Datacenter) new InventoryNavigator(si.getRootFolder()).searchManagedEntity("Datacenter", "ha-datacenter");
+
+            String sourcePath = args[4];
+            String destinationPath = args[5];
+
+            FileManager fileManager = si.getFileManager();
+            if (fileManager == null) {
+                System.err.println("filemanager not available");
+                System.exit(-1);
+            }
+            Task copyTask = fileManager.copyDatastoreFile_Task(sourcePath, datacenter, destinationPath, datacenter, true);
+
+            System.out.println(copyTask.waitForTask());
+            if (copyTask.getTaskInfo() != null && copyTask.getTaskInfo().getDescription() != null) {
+                System.out.println(copyTask.getTaskInfo().getDescription().getMessage());
+            }
+        }
+        if (args[0].equals("CopyVirtualDisk")) {
+            if (args.length != 6) {
+                System.out.println("Usage: java CopyVirtualDisk "
+                        + "<url> <username> <password> <src> <dest>");
+                System.exit(-1);
+            }
+
+            ServiceInstance si = new ServiceInstance(
+                    new URL(args[1]), args[2], args[3], true);
+
+            Datacenter dc = (Datacenter) new InventoryNavigator(
+                    si.getRootFolder()).searchManagedEntity(
+                    "Datacenter", "ha-datacenter");
+
+            VirtualDiskManager diskManager = si.getVirtualDiskManager();
+            if (diskManager == null) {
+                System.out.println("DiskManager not available.");
+                si.getServerConnection().logout();
+                System.exit(-1);
+            }
+
+            String srcPath = args[4];
+            String dstPath = args[5];
+            VirtualDiskSpec copyDiskSpec = new VirtualDiskSpec();
+            copyDiskSpec.setDiskType(VirtualDiskType.thin.name());
+            copyDiskSpec.setAdapterType(VirtualDiskAdapterType.ide.name());
+            Task cTask = diskManager.copyVirtualDisk_Task(srcPath, dc, dstPath, dc, copyDiskSpec, new Boolean(true));
+
+            if (cTask.waitForTask().equals(Task.SUCCESS)) {
+                System.out.println("Disk copied successfully!");
+            } else {
+                System.out.println("Disk copy failed!");
+                return;
+            }
+            si.getServerConnection().logout();
+        }
     }
 
     static VirtualDeviceConfigSpec createExistingDiskSpec(String fileName, int cKey, String diskMode) {
@@ -104,3 +135,4 @@ public class VmAttachDisk {
         return diskSpec;
     }
 }
+
