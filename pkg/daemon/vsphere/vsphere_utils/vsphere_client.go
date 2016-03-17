@@ -191,7 +191,7 @@ func (vc *VsphereClient) DownloadFile(remoteFile, localFile string) error {
 	cmd := exec.Command("docker", "run", "--rm", "-v", localDir + ":" + localDir,
 		"vsphere-client",
 		"govc",
-		"datastore.upload",
+		"datastore.download",
 		"-k",
 		"-u", formatUrl(vc.u),
 		remoteFile,
