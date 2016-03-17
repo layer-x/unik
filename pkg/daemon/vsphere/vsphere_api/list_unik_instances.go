@@ -6,8 +6,6 @@ import (
 	"github.com/docker/go/canonical/json"
 	"github.com/layer-x/unik/pkg/daemon/state"
 	vspheretypes "github.com/vmware/govmomi/vim25/types"
-	"github.com/layer-x/layerx-commons/lxlog"
-	"github.com/Sirupsen/logrus"
 )
 
 func ListUnikInstances(unikState *state.UnikState, creds Creds) ([]*types.UnikInstance, error) {
@@ -28,7 +26,6 @@ func ListUnikInstances(unikState *state.UnikState, creds Creds) ([]*types.UnikIn
 		var unikInstance types.UnikInstance
 		err = json.Unmarshal([]byte(metadata), &unikInstance)
 		if err != nil {
-			lxlog.Warnf(logrus.Fields{"Annotation": vm.Config.Annotation, "err": err}, "could not read annotation")
 			continue
 		}
 		//we use mac address as the vm id
@@ -91,11 +88,6 @@ func ListUnikInstances(unikState *state.UnikState, creds Creds) ([]*types.UnikIn
 			}
 		}
 		unikInstances = append(unikInstances, &unikInstance)
-		if unikInstance.VMID == "" {
-			lxlog.Warnf(logrus.Fields{"unik_instance": unikInstance}, "unik instance was found on vsphere but has not registered with known mac address yet")
-		} else {
-			lxlog.Debugf(logrus.Fields{"unik_instance": unikInstance.VMID}, "unik instance was found")
-		}
 	}
 	return unikInstances, nil
 }
