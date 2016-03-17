@@ -31,7 +31,7 @@ func NewUnikVsphereCPI(rawUrl, user, password string) *UnikVsphereCPI {
 	unikState, err := state.NewStateFromVsphere(u)
 	if err != nil {
 		lxlog.Warnf(logrus.Fields{"state": unikState, "err": err}, "could not load unik state, creating fresh")
-		unikState = state.NewCleanState()
+		unikState = state.NewCleanState(u)
 	}
 	lxlog.Infof(logrus.Fields{"state": unikState}, "loaded unik state")
 	return &UnikVsphereCPI{

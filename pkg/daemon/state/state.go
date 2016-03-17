@@ -7,23 +7,24 @@ import (
 	"encoding/json"
 	"time"
 	"sync"
-"github.com/layer-x/layerx-commons/lxfileutils"
-	"os"
+	"github.com/layer-x/layerx-commons/lxfileutils"
 	"net/url"
 	"github.com/layer-x/unik/pkg/daemon/vsphere/vsphere_utils"
+	"os"
 )
 
+var DEFAULT_UNIK_STATE_FILE = os.Getenv("HOME")+"state.json"
+
 const (
-	DEFAULT_UNIK_STATE_FILE = "state.json"
 	remote_unik_state_file = "unik/state.json"
 )
 
 type UnikState struct {
-	lock *sync.Mutex
-	u *url.URL
+	lock          *sync.Mutex
+	u             *url.URL
 	UnikInstances map[string]*types.UnikInstance `json:"UnikInstances"`
 	Unikernels    map[string]*types.Unikernel `json:"Unikernels"`
-	Saved	time.Time `json:"Saved"`
+	Saved         time.Time `json:"Saved"`
 }
 
 func NewCleanState(u *url.URL) *UnikState {

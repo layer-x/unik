@@ -124,7 +124,7 @@ func BuildGoUnikernel(unikState *state.UnikState, creds Creds, unikernelName, fo
 	if err != nil {
 		return lxerrors.New("could not create directory "+vmdkFolder, err)
 	}
-	err = vsphereClient.ImportVmdk(unikernelCompilationDir + "/root.vmdk", vmdkFolder+"/program.vmdk")
+	err = vsphereClient.ImportVmdk(unikernelCompilationDir + "/root.vmdk", vmdkFolder)
 	if err != nil {
 		return lxerrors.New("could not import vmdk "+vmdkFolder, err)
 	}
@@ -134,7 +134,7 @@ func BuildGoUnikernel(unikState *state.UnikState, creds Creds, unikernelName, fo
 		UnikernelName: unikernelName,
 		CreationDate: time.Now().String(),
 		Created: time.Now().Unix(),
-		Path: vmdkFolder+"/program.vmdk",
+		Path: vmdkFolder+"/root.vmdk",
 	}
 
 	err = unikState.Save()
