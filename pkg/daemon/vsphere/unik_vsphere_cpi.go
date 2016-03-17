@@ -82,7 +82,7 @@ func (cpi *UnikVsphereCPI) CreateVolume(volumeName string, size int) (*types.Vol
 }
 
 func (cpi *UnikVsphereCPI) DeleteUnikInstance(unikInstanceId string) error {
-	return vsphere_api.DeleteUnikInstance(cpi.creds, unikInstanceId)
+	return vsphere_api.DeleteUnikInstance(cpi.unikState, cpi.creds, unikInstanceId)
 }
 
 func (cpi *UnikVsphereCPI) DeleteArtifactsForUnikernel(unikernelName string) error {

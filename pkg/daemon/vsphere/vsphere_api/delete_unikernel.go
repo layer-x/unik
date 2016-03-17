@@ -20,7 +20,7 @@ func DeleteUnikernel(unikState *state.UnikState, creds Creds, unikernelId string
 	for _, instance := range unikInstances {
 		if instance.UnikernelId == unikernelId {
 			if force == true {
-				err = DeleteUnikInstance(creds, instance.UnikInstanceID)
+				err = DeleteUnikInstance(unikState, creds, instance.UnikInstanceID)
 				if err != nil {
 					return lxerrors.New("could not delete unik instance "+instance.UnikInstanceID, err)
 				}

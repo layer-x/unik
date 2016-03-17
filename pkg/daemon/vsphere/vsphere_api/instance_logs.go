@@ -34,7 +34,7 @@ func GetLogs(unikState *state.UnikState, creds Creds, unikInstanceId string) (st
 
 func StreamLogs(unikState *state.UnikState, creds Creds, unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error {
 	if deleteInstanceOnDisconnect {
-		defer DeleteUnikInstance(creds, unikInstanceId)
+		defer DeleteUnikInstance(unikState, creds, unikInstanceId)
 	}
 
 	linesCounted := -1
