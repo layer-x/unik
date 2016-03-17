@@ -8,7 +8,7 @@ import (
 )
 
 func DeleteUnikInstance(unikState *state.UnikState, creds Creds, unikInstanceIdOrPrefix string) error {
-	unikInstance, err := GetUnikInstanceByPrefixOrName(unikState, unikInstanceIdOrPrefix)
+	unikInstance, err := GetUnikInstanceByPrefixOrName(unikState, creds, unikInstanceIdOrPrefix)
 	if err != nil {
 		return lxerrors.New("retrieving unik instance for prefix "+ unikInstanceIdOrPrefix, err)
 	}
