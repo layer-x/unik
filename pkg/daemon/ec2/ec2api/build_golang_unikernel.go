@@ -33,20 +33,20 @@ func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, han
 			}
 		}
 	}
-	unikernelDir, err := ioutil.TempDir(os.TempDir(), unikernelName+"-src-dir")
+	unikernelCompilationDir, err := ioutil.TempDir(os.TempDir(), unikernelName+"-src-dir")
 	if err != nil {
 		return lxerrors.New("creating temporary directory "+unikernelName+"-src-dir", err)
 	}
 	//clean up artifacts even if we fail
 	defer func() {
-		err = os.RemoveAll(unikernelDir)
+		err = os.RemoveAll(unikernelCompilationDir)
 		if err != nil {
 			panic(lxerrors.New("cleaning up unikernel files", err))
 		}
-		lxlog.Infof(logrus.Fields{"files": unikernelDir}, "cleaned up files")
+		lxlog.Infof(logrus.Fields{"files": unikernelCompilationDir}, "cleaned up files")
 	}()
-	lxlog.Infof(logrus.Fields{"path": unikernelDir, "unikernel_name": unikernelName}, "created output directory for unikernel")
-	savedTar, err := os.OpenFile(unikernelDir+filepath.Base(handler.Filename), os.O_CREATE|os.O_RDWR, 0666)
+	lxlog.Infof(logrus.Fields{"path": unikernelCompilationDir, "unikernel_name": unikernelName}, "created output directory for unikernel")
+	savedTar, err := os.OpenFile(unikernelCompilationDir +filepath.Base(handler.Filename), os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return lxerrors.New("creating empty file for copying to", err)
 	}
@@ -56,18 +56,18 @@ func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, han
 		return lxerrors.New("copying uploaded file to disk", err)
 	}
 	lxlog.Infof(logrus.Fields{"bytes": bytesWritten}, "file written to disk")
-	err = lxfileutils.Untar(savedTar.Name(), unikernelDir)
+	err = lxfileutils.Untar(savedTar.Name(), unikernelCompilationDir)
 	if err != nil {
 		lxlog.Warnf(logrus.Fields{"saved tar name":savedTar.Name()}, "failed to untar using gzip, trying again without")
-		err = lxfileutils.UntarNogzip(savedTar.Name(), unikernelDir)
+		err = lxfileutils.UntarNogzip(savedTar.Name(), unikernelCompilationDir)
 		if err != nil {
 			return lxerrors.New("untarring saved tar", err)
 		}
 	}
-	lxlog.Infof(logrus.Fields{"path": unikernelDir, "unikernel_name": unikernelName}, "unikernel tarball untarred")
+	lxlog.Infof(logrus.Fields{"path": unikernelCompilationDir, "unikernel_name": unikernelName}, "unikernel tarball untarred")
 	compileUnikernelCommand := exec.Command("docker", "run",
 		"--rm",
-		"-v", unikernelDir+":/unikernel",
+		"-v", unikernelCompilationDir +":/opt/code",
 		"rumpcompiler-go-xen")
 
 	lxlog.LogCommand(compileUnikernelCommand, true)
@@ -80,8 +80,8 @@ func BuildUnikernel(unikernelName, force string, uploadedTar multipart.File, han
 		"--rm",
 		"--privileged",
 		"-v", "/dev:/dev",
-		"-v", unikernelDir+":/unikernel",
-		"rumpstager", "-m", "aws", "-a", unikernelName)
+		"-v", unikernelCompilationDir +":/unikernel",
+		"rumpstager", "-mode", "aws", "-a", unikernelName)
 
 	lxlog.LogCommand(stageUnikernelCommand, true)
 	err = stageUnikernelCommand.Run()
