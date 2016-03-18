@@ -101,7 +101,7 @@ func gomaincaller() {
 	mux.HandleFunc("/logs", func(res http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(res, "logs: %s", string(logs.Bytes()))
 	})
-	go http.ListenAndServe(":3000", mux)
+	go http.ListenAndServe(":9876", mux)
 
 	main()
 }

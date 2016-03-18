@@ -20,9 +20,9 @@ func GetLogs(unikState *state.UnikState, creds Creds, unikInstanceId string) (st
 	if unikInstance.PublicIp == "" {
 		return "", lxerrors.New("instance does not have a public ip yet", err)
 	}
-	_, logs, err := lxhttpclient.Get(unikInstance.PublicIp+":3000", "/logs", nil)
+	_, logs, err := lxhttpclient.Get(unikInstance.PublicIp+":9876", "/logs", nil)
 	if err != nil {
-		return "", lxerrors.New("performing GET on "+unikInstance.PublicIp+":3000/logs", err)
+		return "", lxerrors.New("performing GET on "+unikInstance.PublicIp+":9876/logs", err)
 	}
 
 	lxlog.Debugf(logrus.Fields{"response length": len(logs)}, "received console logs from unik instance at "+unikInstance.PublicIp)
