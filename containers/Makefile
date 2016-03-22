@@ -37,6 +37,9 @@ rumpcompiler-pi-hw: rumpcompiler-base-hw
 rumpdebugger-gdb-hw: rumpcompiler-base-xen
 	$(buildcontainer)
 
+rumpdebugger-gdb-arm: rumpcompiler-pi-hw
+	$(buildcontainer)
+
 rumpstager:
 	$(buildsimplecontainer)
 
