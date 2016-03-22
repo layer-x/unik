@@ -38,10 +38,9 @@ RUN cd /opt/openocd-git && \
 
 RUN  cd /opt/openocd-git && \
      cp -r tcl/ /usr/share/openocd/ && \
-     mkdir /usr/share/openocd/board/ && \
      cp /tmp/raspberrypi-due.tcl /usr/share/openocd/tcl/board/
 
-COPY board/raspberry-raspberry.tcl /usr/share/openocd/tcl/board/
+COPY board/raspberrypi-raspberrypi.tcl /usr/share/openocd/tcl/board/
 COPY target/raspberry.cfg /usr/share/openocd/tcl/target/
 
 # run with
