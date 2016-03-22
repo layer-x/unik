@@ -20,9 +20,9 @@ func GetLogs(unikInstanceId string) (string, error) {
 	if unikInstance.PublicIp == "" {
 		return "", lxerrors.New("instance does not have a public ip yet", err)
 	}
-	_, logs, err := lxhttpclient.Get(unikInstance.PublicIp+":3000", "/logs", nil)
+	_, logs, err := lxhttpclient.Get(unikInstance.PublicIp+":9876", "/logs", nil)
 	if err != nil {
-		return "", lxerrors.New("performing GET on "+unikInstance.PublicIp+":3000/logs", err)
+		return "", lxerrors.New("performing GET on "+unikInstance.PublicIp+":9876/logs", err)
 	}
 
 	lxlog.Debugf(logrus.Fields{"response length": len(logs)}, "received console logs from unik instance at "+unikInstance.PublicIp)
@@ -39,7 +39,7 @@ func StreamLogs(unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect b
 
 	linesCounted := -1
 	for {
-		time.Sleep(5000 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		currentLogs, err := GetLogs(unikInstanceId)
 		if err != nil {
 			return lxerrors.New("could not get logs for unik instance "+unikInstanceId, err)
@@ -69,7 +69,7 @@ func StreamLogs(unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect b
 			return nil
 		}
 		if len(logLines)-1 == linesCounted {
-			time.Sleep(5000 * time.Millisecond)
+			time.Sleep(2500 * time.Millisecond)
 			continue
 		}
 	}

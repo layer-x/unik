@@ -12,18 +12,60 @@ import (
 	"io"
 	"bufio"
 	"fmt"
+	"log"
+	"strings"
+	"time"
 )
+
+var timeout = time.Duration(2 * time.Second)
+
+func dialTimeout(network, addr string) (net.Conn, error) {
+	return net.DialTimeout(network, addr, timeout)
+}
 
 //export gomaincaller
 func gomaincaller() {
 	var instanceData UnikInstanceData
 
-	resp, err := http.Get("http://169.254.169.254/latest/user-data")
-	if err != nil { //if AWS user-data doesnt work, try multicast
+	//make logs available via http request
+	logs := bytes.Buffer{}
+	err := teeStdout(&logs)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = teeStderr(&logs)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Beginning bootstrap...")
+
+	client := http.Client{
+		Transport: &http.Transport{
+			Dial: dialTimeout,
+		},
+	}
+	resp, err := client.Get("http://169.254.169.254/latest/user-data")
+	if err == nil {
+		fmt.Printf("I am an EC2 instance! Retreiving boostrapping information from http://169.254.169.254/latest/user-data...")
+		defer resp.Body.Close()
+		data, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = json.Unmarshal(data, &instanceData)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for key, value := range instanceData.Env {
+			os.Setenv(key, value)
+		}
+	} else { //if AWS user-data doesnt work, try multicast
+		fmt.Printf("Not an EC2 instance: "+err.Error()+" listening for Unik backend UDP Heartbeat...")
 		//get MAC Addr (needed for vsphere)
 		ifaces, err := net.Interfaces()
 		if err != nil {
-			panic("retrieving network interfaces" + err.Error())
+			log.Fatal("retrieving network interfaces" + err.Error())
 		}
 		macAddress := ""
 		for _, iface := range ifaces {
@@ -33,91 +75,57 @@ func gomaincaller() {
 			}
 		}
 		if macAddress == "" {
-			panic("could not find mac address")
+			log.Fatal("could not find mac address")
 		}
 
-		var instanceData UnikInstanceData
-		resp, err := http.Get("http://192.168.0.46:3001/bootstrap?mac_address=" + macAddress)
+		resp, err := http.Get("http://"+getUnikIp()+":3001/bootstrap?mac_address=" + macAddress)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		defer resp.Body.Close()
 		data, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		err = json.Unmarshal(data, &instanceData)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		for key, value := range instanceData.Env {
 			os.Setenv(key, value)
 		}
-
-		//		// Make a channel for results and start listening
-		//		ipChan := make(chan string)
-		//		entriesCh := make(chan *mdns.ServiceEntry, 4)
-		//		go func() {
-		//			for entry := range entriesCh {
-		//				ipChan <- entry.AddrV4.String()
-		//			}
-		//		}()
-		//		// Start the lookup
-		//		err = mdns.Lookup("_unik._tcp.local", entriesCh)
-		//		if err == nil {
-		//			var instanceData UnikInstanceData
-		//			resp, err := http.Get("http://"+<- ipChan+":3001/bootstrap?mac_address="+macAddress)
-		//			if err != nil {
-		//				panic(err)
-		//			}
-		//			defer resp.Body.Close()
-		//			data, err := ioutil.ReadAll(resp.Body)
-		//			if err != nil {
-		//				panic(err)
-		//			}
-		//			err = json.Unmarshal(data, &instanceData)
-		//			if err != nil {
-		//				panic(err)
-		//			}
-		//			for key, value := range instanceData.Env {
-		//				os.Setenv(key, value)
-		//			}
-		//		} else {
-		//			panic("expected mdns to work, but failed:" + err.Error())
-		//		}
-	} else {
-		defer resp.Body.Close()
-		data, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			panic(err)
-		}
-		err = json.Unmarshal(data, &instanceData)
-		if err != nil {
-			panic(err)
-		}
-		for key, value := range instanceData.Env {
-			os.Setenv(key, value)
-		}
-	}
-
-	//make logs available via http request
-	logs := bytes.Buffer{}
-	err = tee(os.Stdout, &logs)
-	if err != nil {
-		panic(err)
-	}
-	err = tee(os.Stderr, &logs)
-	if err != nil {
-		panic(err)
 	}
 
 	//handle logs request
-	http.HandleFunc("/logs", func(res http.ResponseWriter, req *http.Request) {
-		res.Write(logs.Bytes())
+	mux := http.NewServeMux()
+	mux.HandleFunc("/logs", func(res http.ResponseWriter, req *http.Request) {
+		fmt.Fprintf(res, "logs: %s", string(logs.Bytes()))
 	})
-	go http.ListenAndServe(":3000", nil)
+	go http.ListenAndServe(":9876", mux)
 
 	main()
+}
+
+func getUnikIp() string {
+	fmt.Printf("begin listening for unik heartbeat...")
+	socket, err := net.ListenUDP("udp4", &net.UDPAddr{
+		IP:   net.IPv4(0, 0, 0, 0),
+		Port: 9876,
+	})
+	if err != nil {
+		log.Fatalf("error listening for udp4: "+err.Error())
+	}
+	for {
+		data := make([]byte, 4096)
+		_, remoteAddr, err := socket.ReadFromUDP(data)
+		if err != nil {
+			log.Fatalf("error reading from udp: "+err.Error())
+		}
+		fmt.Printf("recieved an ip: %s with data: %s", remoteAddr.IP.String(), string(data))
+		if strings.Contains(string(data), "unik") {
+			return remoteAddr.IP.String()
+		}
+	}
 }
 
 //make sure this remains the same as defined in
@@ -127,24 +135,40 @@ type UnikInstanceData struct {
 	Env  map[string]string `json:"Env"`
 }
 
-func tee(file *os.File, buf *bytes.Buffer) error {
+func teeStdout(writer io.Writer) error {
 	r, w, err := os.Pipe()
 	if err != nil {
 		return errors.New("creating pipe: " + err.Error())
 	}
-	stdout := file
-	file = w
-	multi := io.MultiWriter(stdout, bufio.NewWriter(buf))
+	stdout := os.Stdout
+	os.Stdout = w
+	multi := io.MultiWriter(stdout, writer)
 	reader := bufio.NewReader(r)
 	go func() {
 		for {
-			line, err := reader.ReadBytes('\n')
+			_, err := io.Copy(multi, reader)
 			if err != nil {
-				return
+				log.Fatalf("copying pipe reader to multi writer: "+err.Error())
 			}
-			_, err = multi.Write(append(line, byte('\n')))
+		}
+	}()
+	return nil
+}
+
+func teeStderr(writer io.Writer) error {
+	r, w, err := os.Pipe()
+	if err != nil {
+		return errors.New("creating pipe: " + err.Error())
+	}
+	stdout := os.Stderr
+	os.Stderr = w
+	multi := io.MultiWriter(stdout, writer)
+	reader := bufio.NewReader(r)
+	go func() {
+		for {
+			_, err := io.Copy(multi, reader)
 			if err != nil {
-				return
+				log.Fatalf("copying pipe reader to multi writer: "+err.Error())
 			}
 		}
 	}()

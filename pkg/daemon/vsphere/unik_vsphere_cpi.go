@@ -28,10 +28,10 @@ func NewUnikVsphereCPI(rawUrl, user, password string) *UnikVsphereCPI {
 	if err != nil {
 		lxlog.Fatalf(logrus.Fields{"raw-url": rawUrl, "err": err}, "parsing provided url")
 	}
-	unikState, err := state.NewStateFromFile(state.DEFAULT_UNIK_STATE_FILE)
+	unikState, err := state.NewStateFromVsphere(u)
 	if err != nil {
 		lxlog.Warnf(logrus.Fields{"state": unikState, "err": err}, "could not load unik state, creating fresh")
-		unikState = state.NewCleanState()
+		unikState = state.NewCleanState(u)
 	}
 	lxlog.Infof(logrus.Fields{"state": unikState}, "loaded unik state")
 	return &UnikVsphereCPI{
@@ -54,19 +54,15 @@ func (cpi *UnikVsphereCPI) ListenForBootstrap(port int) {
 		macAddress := req.URL.Query().Get("mac_address")
 		lxlog.Infof(logrus.Fields{"Ip": instanceIp, "mac-address": macAddress}, "Instance registered with mDNS")
 		//mac address = the instance id in vsphere
-		if unikInstance, ok := cpi.unikState.UnikInstances[macAddress]; ok {
-			unikInstance.PrivateIp = instanceIp
-			unikInstance.PublicIp = instanceIp
-		} else {
-			lxlog.Errorf(logrus.Fields{"state": cpi.unikState}, "could not find mac address in known vsphere instances")
-			return ""
-		}
-		cpi.unikState.Save(state.DEFAULT_UNIK_STATE_FILE)
 		unikInstance, err := cpi.GetUnikInstanceByPrefixOrName(macAddress)
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"state": cpi.unikState}, "could not find mac address in known vsphere instances")
+			lxlog.Errorf(logrus.Fields{"state": cpi.unikState}, "could not find unik instance by mac address")
 			return ""
 		}
+		unikInstance.PrivateIp = instanceIp
+		unikInstance.PublicIp = instanceIp
+		cpi.unikState.UnikInstances[macAddress] = unikInstance
+		cpi.unikState.Save()
 		data, _ := json.Marshal(unikInstance.UnikInstanceData)
 		return string(data)
 	})
@@ -86,7 +82,7 @@ func (cpi *UnikVsphereCPI) CreateVolume(volumeName string, size int) (*types.Vol
 }
 
 func (cpi *UnikVsphereCPI) DeleteUnikInstance(unikInstanceId string) error {
-	return vsphere_api.DeleteUnikInstance(cpi.creds, unikInstanceId)
+	return vsphere_api.DeleteUnikInstance(cpi.unikState, cpi.creds, unikInstanceId)
 }
 
 func (cpi *UnikVsphereCPI) DeleteArtifactsForUnikernel(unikernelName string) error {

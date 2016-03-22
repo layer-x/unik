@@ -63,9 +63,9 @@ func RunUnikInstance(unikState *state.UnikState, creds Creds, unikernelName, ins
 			return instanceIds, lxerrors.New("creating base vm", err)
 		}
 
-		err = vsphereClient.ImportVmdk(targetUnikernel.Path, unikInstanceId)
+		err = vsphereClient.CopyVmdk(targetUnikernel.Path, unikInstanceId+"/program.vmdk")
 		if err != nil {
-			return instanceIds, lxerrors.New("importing program.vmdk to datastore folder", err)
+			return instanceIds, lxerrors.New("copying base program.vmdk to instance datastore folder", err)
 		}
 
 		err = vsphereClient.AttachVmdk(instanceName, unikInstanceId+"/program.vmdk")

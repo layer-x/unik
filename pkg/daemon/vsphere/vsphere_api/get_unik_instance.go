@@ -12,7 +12,7 @@ func GetUnikInstanceByPrefixOrName(unikState *state.UnikState, creds Creds, unik
 		return nil, lxerrors.New("failed to retrieve known instances", err)
 	}
 	for _, unikInstance := range unikInstances {
-		if strings.HasPrefix(unikInstance.UnikInstanceID, unikInstanceIdPrefixOrName) || strings.HasPrefix(unikInstance.UnikInstanceName, unikInstanceIdPrefixOrName) {
+		if strings.HasPrefix(unikInstance.VMID, unikInstanceIdPrefixOrName) || strings.HasPrefix(unikInstance.UnikInstanceID, unikInstanceIdPrefixOrName) || strings.HasPrefix(unikInstance.UnikInstanceName, unikInstanceIdPrefixOrName) {
 			return unikInstance, nil
 		}
 	}

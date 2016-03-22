@@ -7,13 +7,14 @@ import com.sun.jna.Native;
 
 import java.io.*;
 import java.net.*;
+import java.util.Enumeration;
 import java.util.HashMap;
 
 public class Bootstrap {
 
     public static ByteArrayOutputStream logBuffer = new ByteArrayOutputStream();
 
-    public static void bootstrap() {
+    public static void bootstrap() throws Exception {
         //connect stdout to logs
         MultiOutputStream multiOut = new MultiOutputStream(System.out, logBuffer);
         MultiOutputStream multiErr = new MultiOutputStream(System.err, logBuffer);
@@ -38,8 +39,7 @@ public class Bootstrap {
             System.err.println("Malformed EC2 userdata url");
             System.exit(-1);
         } catch (IOException ex) {
-            ex.printStackTrace();
-            System.err.println("IOException");
+            System.err.println("IOException trying to contact EC2");
         }
 
         //if not running on ec2
@@ -124,19 +124,30 @@ public class Bootstrap {
         return result.toString();
     }
 
-    public static String getMacAddress() throws UnknownHostException, SocketException {
+    public static String getMacAddress() throws UnknownHostException, SocketException, Exception {
         InetAddress ip = InetAddress.getLocalHost();
         System.out.println("Current IP address : " + ip.getHostAddress());
 
-        NetworkInterface network = NetworkInterface.getByInetAddress(ip);
+        Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces();
+        byte[] mac = new byte[1];
+        while (ifaces.hasMoreElements()) {
+            NetworkInterface network = ifaces.nextElement();
+            System.out.println("Interface name: " + network.getName());
+            if (network.getHardwareAddress() != null) {
+                mac = network.getHardwareAddress();
+                break;
+            }
+        }
+        if (mac.length == 1) {
+            throw new Exception("faield to find mac addr");
+        }
 
-        byte[] mac = network.getHardwareAddress();
-
-        System.out.print("Current MAC address : ");
+        System.out.print("Current MAC address : "+new String(mac));
 
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < mac.length; i++) {
-            sb.append(String.format("%02X%s", mac[i], (i < mac.length - 1) ? "-" : ""));
+            String macString = String.format("%02X%s", mac[i], (i < mac.length - 1) ? "-" : "");
+            sb.append(macString);
         }
         System.out.println(sb.toString());
         return sb.toString();

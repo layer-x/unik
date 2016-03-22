@@ -9,19 +9,23 @@ public class WrapperServer  {
     private static final String LOGS_PATH="/logs";
 
     public void run() {
-        new Server()
-                .GET(LOGS_PATH, new Action() {
-                    public void run(Request request, Response response) throws Exception {
-                        try {
-                            String logs = Bootstrap.logBuffer.toString();
-                            response.respondText(logs);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            throw e;
+        try {
+            new Server()
+                    .GET(LOGS_PATH, new Action() {
+                        public void run(Request request, Response response) throws Exception {
+                            try {
+                                String logs = Bootstrap.logBuffer.toString();
+                                response.respondText(logs);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                throw e;
+                            }
                         }
-                    }
-                })
-                .start(3000);
+                    })
+                    .start(9876);
+        } catch (NoClassDefFoundError ex) {
+            System.out.println("Ingoring no class def found error");
+        }
     }
 
     public static class ServerThread extends Thread {

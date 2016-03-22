@@ -6,8 +6,6 @@ import (
 	"github.com/docker/go/canonical/json"
 	"github.com/layer-x/unik/pkg/daemon/state"
 	vspheretypes "github.com/vmware/govmomi/vim25/types"
-	"github.com/layer-x/layerx-commons/lxlog"
-	"github.com/Sirupsen/logrus"
 )
 
 func ListUnikInstances(unikState *state.UnikState, creds Creds) ([]*types.UnikInstance, error) {
@@ -25,10 +23,48 @@ func ListUnikInstances(unikState *state.UnikState, creds Creds) ([]*types.UnikIn
 			continue
 		}
 		metadata := vm.Config.Annotation
-		var unikInstance *types.UnikInstance
-		err = json.Unmarshal([]byte(metadata), unikInstance)
-		if err != nil || unikInstance == nil || unikInstance.UnikernelId == "" {
+		var unikInstance types.UnikInstance
+		err = json.Unmarshal([]byte(metadata), &unikInstance)
+		if err != nil {
 			continue
+		}
+		//we use mac address as the vm id
+		if vm.Config != nil && vm.Config.Hardware.Device != nil {
+			FindEthLoop:
+			for _, device := range vm.Config.Hardware.Device {
+				switch device.(type){
+				case *vspheretypes.VirtualE1000:
+					eth := device.(*vspheretypes.VirtualE1000)
+					unikInstance.VMID = eth.MacAddress
+					break FindEthLoop
+				case *vspheretypes.VirtualE1000e:
+					eth := device.(*vspheretypes.VirtualE1000e)
+					unikInstance.VMID = eth.MacAddress
+					break FindEthLoop
+				case *vspheretypes.VirtualPCNet32:
+					eth := device.(*vspheretypes.VirtualPCNet32)
+					unikInstance.VMID = eth.MacAddress
+					break FindEthLoop
+				case *vspheretypes.VirtualSriovEthernetCard:
+					eth := device.(*vspheretypes.VirtualSriovEthernetCard)
+					unikInstance.VMID = eth.MacAddress
+					break FindEthLoop
+				case *vspheretypes.VirtualVmxnet:
+					eth := device.(*vspheretypes.VirtualVmxnet)
+					unikInstance.VMID = eth.MacAddress
+					break FindEthLoop
+				case *vspheretypes.VirtualVmxnet2:
+					eth := device.(*vspheretypes.VirtualVmxnet2)
+					unikInstance.VMID = eth.MacAddress
+					break FindEthLoop
+				case *vspheretypes.VirtualVmxnet3:
+					eth := device.(*vspheretypes.VirtualVmxnet3)
+					unikInstance.VMID = eth.MacAddress
+					break FindEthLoop
+				default:
+					continue
+				}
+			}
 		}
 		switch vm.Summary.Runtime.PowerState {
 		case "poweredOn":
@@ -44,20 +80,6 @@ func ListUnikInstances(unikState *state.UnikState, creds Creds) ([]*types.UnikIn
 			unikInstance.State = "unknown"
 			break
 		}
-		//we use mac address as the vm id
-		if vm.Config != nil && vm.Config.Hardware.Device != nil {
-			FindEthLoop:
-			for _, device := range vm.Config.Hardware.Device {
-				switch device.(type){
-				case *vspheretypes.VirtualVmxnet:
-					eth := device.(*vspheretypes.VirtualVmxnet)
-					unikInstance.VMID = eth.MacAddress
-					break FindEthLoop
-				default:
-					continue
-				}
-			}
-		}
 		for _, registeredUnikInstance := range unikState.UnikInstances {
 			if unikInstance.VMID == registeredUnikInstance.VMID {
 				unikInstance.PublicIp = registeredUnikInstance.PublicIp
@@ -65,10 +87,7 @@ func ListUnikInstances(unikState *state.UnikState, creds Creds) ([]*types.UnikIn
 				break
 			}
 		}
-		unikInstances = append(unikInstances, unikInstance)
-		if unikInstance.VMID == "" {
-			lxlog.Warnf(logrus.Fields{"unik_instance": unikInstance}, "unik instance was found on vsphere but has not registered with known mac address yet")
-		}
+		unikInstances = append(unikInstances, &unikInstance)
 	}
 	return unikInstances, nil
 }

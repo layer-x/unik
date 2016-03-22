@@ -14,17 +14,23 @@ import (
 	"io"
 	"os/exec"
 	"github.com/layer-x/unik/pkg/daemon/state"
+	"github.com/layer-x/unik/pkg/daemon/vsphere/vsphere_utils"
 )
 
 func BuildGoUnikernel(unikState *state.UnikState, creds Creds, unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
+	vsphereClient, err := vsphere_utils.NewVsphereClient(creds.URL)
+	if err != nil {
+		return lxerrors.New("initiating vsphere client connection", err)
+	}
+
 	unikernelId := unikernelName //vsphere specific
-	localVmdkFolder := state.DEFAULT_UNIK_STATE_FOLDER + unikernelId + "/"
-	var err error
+	vmdkFolder := "unik/"+unikernelId
+
 	defer func() {
 		if err != nil {
 			lxlog.Errorf(logrus.Fields{"error": err}, "error encountered, cleaning up unikernel artifacts")
 			if !strings.Contains(err.Error(), "already exists") {
-				os.RemoveAll(localVmdkFolder)
+				vsphereClient.Rmdir(vmdkFolder)
 				delete(unikState.Unikernels, unikernelId)
 			}
 		}
@@ -49,20 +55,20 @@ func BuildGoUnikernel(unikState *state.UnikState, creds Creds, unikernelName, fo
 		}
 	}
 
-	unikernelDir, err := ioutil.TempDir(os.TempDir(), unikernelName+"-src-dir")
+	unikernelCompilationDir, err := ioutil.TempDir(os.TempDir(), unikernelName+"-src-dir")
 	if err != nil {
 		return lxerrors.New("creating temporary directory "+unikernelName+"-src-dir", err)
 	}
 	//clean up artifacts even if we fail
 	defer func() {
-		err = os.RemoveAll(unikernelDir)
+		err = os.RemoveAll(unikernelCompilationDir)
 		if err != nil {
 			panic(lxerrors.New("cleaning up unikernel files", err))
 		}
-		lxlog.Infof(logrus.Fields{"files": unikernelDir}, "cleaned up files")
+		lxlog.Infof(logrus.Fields{"files": unikernelCompilationDir}, "cleaned up files")
 	}()
-	lxlog.Infof(logrus.Fields{"path": unikernelDir, "unikernel_name": unikernelName}, "created output directory for unikernel")
-	savedTar, err := os.OpenFile(unikernelDir+"/" + filepath.Base(handler.Filename), os.O_CREATE | os.O_RDWR, 0666)
+	lxlog.Infof(logrus.Fields{"path": unikernelCompilationDir, "unikernel_name": unikernelName}, "created output directory for unikernel")
+	savedTar, err := os.OpenFile(unikernelCompilationDir +"/" + filepath.Base(handler.Filename), os.O_CREATE | os.O_RDWR, 0666)
 	if err != nil {
 		return lxerrors.New("creating empty file for copying to", err)
 	}
@@ -72,20 +78,20 @@ func BuildGoUnikernel(unikState *state.UnikState, creds Creds, unikernelName, fo
 		return lxerrors.New("copying uploaded file to disk", err)
 	}
 	lxlog.Infof(logrus.Fields{"bytes": bytesWritten}, "file written to disk")
-	err = lxfileutils.Untar(savedTar.Name(), unikernelDir)
+	err = lxfileutils.Untar(savedTar.Name(), unikernelCompilationDir)
 	if err != nil {
 		lxlog.Warnf(logrus.Fields{"saved tar name":savedTar.Name()}, "failed to untar using gzip, trying again without")
-		err = lxfileutils.UntarNogzip(savedTar.Name(), unikernelDir)
+		err = lxfileutils.UntarNogzip(savedTar.Name(), unikernelCompilationDir)
 		if err != nil {
 			return lxerrors.New("untarring saved tar", err)
 		}
 	}
-	lxlog.Infof(logrus.Fields{"path": unikernelDir, "unikernel_name": unikernelName}, "unikernel tarball untarred")
+	lxlog.Infof(logrus.Fields{"path": unikernelCompilationDir, "unikernel_name": unikernelName}, "unikernel tarball untarred")
 
 	buildUnikernelCommand := exec.Command("docker", "run",
 		"--rm",
 		"--privileged",
-		"-v", unikernelDir + ":/opt/code",
+		"-v", unikernelCompilationDir + ":/opt/code",
 		"rumpcompiler-go-hw",
 	)
 	lxlog.Infof(logrus.Fields{"cmd": buildUnikernelCommand.Args}, "running build kernel command")
@@ -100,7 +106,7 @@ func BuildGoUnikernel(unikState *state.UnikState, creds Creds, unikernelName, fo
 		"--rm",
 		"--privileged",
 		"-v", "/dev:/dev",
-		"-v", unikernelDir + ":/unikernel",
+		"-v", unikernelCompilationDir + ":/unikernel",
 		"rumpstager",
 		"-mode",
 		"vmware",
@@ -113,16 +119,14 @@ func BuildGoUnikernel(unikState *state.UnikState, creds Creds, unikernelName, fo
 	}
 	lxlog.Infof(logrus.Fields{"unikernel_name": unikernelName}, "unikernel image created")
 
-	err = os.MkdirAll(localVmdkFolder, 0777)
+	vsphereClient.Mkdir("unik") //ignore errors since it may already exist
+	err = vsphereClient.Mkdir(vmdkFolder)
 	if err != nil {
-		return lxerrors.New("creating local vmdk folder", err)
+		return lxerrors.New("could not create directory "+vmdkFolder, err)
 	}
-
-	saveVmdkCommand := exec.Command("cp", unikernelDir + "/root.vmdk", localVmdkFolder + "/program.vmdk")
-	lxlog.LogCommand(saveVmdkCommand, true)
-	err = saveVmdkCommand.Run()
+	err = vsphereClient.ImportVmdk(unikernelCompilationDir + "/root.vmdk", vmdkFolder)
 	if err != nil {
-		return lxerrors.New("copying vmdk from tmp dir to local storage failed", err)
+		return lxerrors.New("could not import vmdk "+vmdkFolder, err)
 	}
 
 	unikState.Unikernels[unikernelId] = &types.Unikernel{
@@ -130,10 +134,10 @@ func BuildGoUnikernel(unikState *state.UnikState, creds Creds, unikernelName, fo
 		UnikernelName: unikernelName,
 		CreationDate: time.Now().String(),
 		Created: time.Now().Unix(),
-		Path: localVmdkFolder + "/program.vmdk",
+		Path: vmdkFolder+"/root.vmdk",
 	}
 
-	err = unikState.Save(state.DEFAULT_UNIK_STATE_FILE)
+	err = unikState.Save()
 	if err != nil {
 		return lxerrors.New("failed to save updated unikernel index", err)
 	}
