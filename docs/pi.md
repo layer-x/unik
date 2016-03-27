@@ -112,7 +112,12 @@ after baking, verify with:
     readelf --file-header --sections program.bin
 
 # kernel crashes on boot
-Global and function static variables are not initialized (not zeroed).
+Global and function static variables are not initialized (not zeroed). i.e. BSS section not zeroed.
+
+it seems that the bss gets mixed with code!
+
+for example, address of "called" variable is 0x1e3028
+
 need to figure out why, might be cause:
 ## rodata start address is still 100000
 
@@ -144,7 +149,9 @@ debug:
 
 and then connect with gdb:
 
-/opt/gdb-7.11/gdb/gdb /path/to/code -ex "target extended-remote 192.168.1.106:3333"
+    /opt/gdb-7.11/gdb/gdb /path/to/code -ex "target extended-remote 192.168.1.106:3333"
+
+restart not supported; perhaps "jump" command to start function will work?
 
 ## error amd64
 complication fails with:

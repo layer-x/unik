@@ -11,6 +11,8 @@ COPY __aeabi_idiv0.c /opt/rumprun/src-netbsd/sys/external/bsd/compiler_rt/dist/l
 COPY ldcore.S        /opt/rumprun/platform/hw/arch/arm/rpi/locore.S
 COPY machdep.c       /opt/rumprun/platform/hw/arch/arm/rpi/machdep.c
 
+COPY kern.ldscript       /opt/rumprun/platform/hw/arch/arm/rpi/kern.ldscript
+
 RUN cd /opt/rumprun && \
      rm -rf ./obj && \
      git remote add  origin2 https://github.com/dave-tucker/rumprun.git && \

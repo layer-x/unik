@@ -129,6 +129,11 @@ arm_boot(void)
 
 	bmk_memcpy((void *)0, vector_start, vector_end - vector_start);
 
+// zero the bss
+	extern char __init_bss_start[], __init_bss_end[];
+
+  bmk_memset(__init_bss_start, 0, __init_bss_end - __init_bss_start);
+
 	bmk_printf_init(cons_putc, NULL);
 	bmk_printf("rump kernel bare metal bootstrap (ARM)\n\n");
 
