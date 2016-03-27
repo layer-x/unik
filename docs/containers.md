@@ -31,3 +31,4 @@ From OS X with docker tools installed, R like this (from the folder where the pr
 ## jtagpi
 
     docker run -v /dev/:/dev/ --privileged  -t -i --name -p 3333:3333 jtagpi jtagpi
+    $ openocd -s /usr/share/openocd/tcl -f board/raspberrypi-raspberrypi.tcl
