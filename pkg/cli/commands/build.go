@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-func Push(config types.UnikConfig, unikernelName, path string, force, verbose bool) error {
+func Build(config types.UnikConfig, unikernelName, path string, force, verbose bool) error {
 	if strings.Contains(unikernelName, "/") {
 		return lxerrors.New("unikernel name cannot contain special characters: '/'", nil)
 	}

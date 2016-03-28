@@ -17,7 +17,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "unik"
 	app.Usage = ""
-	var forcePush bool
+	var forceBuild bool
 	var forceRmu bool
 	var follow bool
 	var destroy bool
@@ -176,23 +176,23 @@ func main() {
 			},
 		},
 		{
-			Name:      "push",
+			Name:      "build",
 			Aliases:   []string{"p"},
-			ArgsUsage: "unik push [OPTIONS] NAME PATH",
-			Usage:     "Push and push a new unikernel from the source code at PATH",
+			ArgsUsage: "unik build [OPTIONS] NAME PATH",
+			Usage:     "build a new unikernel from the source code at PATH",
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:        "force, f",
 					Usage:       "force overwriting previous unikernel",
-					Destination: &forcePush,
+					Destination: &forceBuild,
 				},
 			},
 			Action: func(c *cli.Context) {
 				if len(c.Args()) != 2 {
-					println("unik: \"push\" requires exactly 2 arguments")
-					println("See 'unik push -h'")
-					println("USAGE:    unik [-V] push [-f] NAME PATH")
-					println("push a new unikernel from the source code at PATH")
+					println("unik: \"build\" requires exactly 2 arguments")
+					println("See 'unik build -h'")
+					println("USAGE:    unik [-V] build [-f] NAME PATH")
+					println("build a new unikernel from the source code at PATH")
 					os.Exit(-1)
 				}
 				unikernelName := c.Args().Get(0)
@@ -203,9 +203,9 @@ func main() {
 					println("Try 'unik target UNIK_URL'")
 					os.Exit(-1)
 				}
-				err = commands.Push(config, unikernelName, path, forcePush, verbose)
+				err = commands.Build(config, unikernelName, path, forceBuild, verbose)
 				if err != nil {
-					println("unik push failed!")
+					println("unik build failed!")
 					println("error: " + err.Error())
 					os.Exit(-1)
 				}
