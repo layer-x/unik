@@ -127,6 +127,57 @@ from readelf:
     [ 2] .rodata           PROGBITS        001a6dc0 1a6dc0 033f00 00   A  0   0  8
     ...
 
+
+to solution for this was to manually zero the bss section, as it seems no one else is doing it.
+i hope that it makes sense
+# random crash
+
+got this crash stack:
+
+    (gdb) bt
+    #0  vector_data_abort () at arch/arm/rpi/locore.S:130
+    #1  0x0017c0a0 in rumpns_atomic_cas_ulong_ni ()
+
+did a jump in gdb to "\_start" function - jump was stuck from some reason so did
+"set $pc = 0x8000" instead, and debugging from there. (close as i can get to debugging from start; perhaps can implement wait for debugger logic?)
+
+go this backtrace:
+
+    #0  kern_assert (fmt=0x1b5fc8 "kernel %sassertion \"%s\" failed: file \"%s\", line %d ")
+        at /opt/rumprun/src-netbsd/sys/rump/librump/rumpkern/../../../lib/libkern/kern_assert.c:47
+    #1  0x0017c4e8 in rump_lwproc_curlwp_set (l=0x1e0998 <rumpns_lwp0>) at /opt/rumprun/src-netbsd/sys/rump/librump/rumpkern/lwproc.c:70
+    #2  0x0017e63c in rump_init () at /opt/rumprun/src-netbsd/sys/rump/librump/rumpkern/rump.c:250
+    #3  0x00182940 in rumprun_boot (
+        cmdline=0x1dae10 <cmdline> "\n{\n\tcmdline: \"HELLO just dropping by\n\",\n\tnet :  {\n\t\t\"if\":\t\t\"sm0\",\n\t\t\"type\":\t\"inet\",\n\t\t\"method\":\t\"static\",\n\t\t\"addr\":\t\"10.0.0.2\",\n\t\t\"mask\":\t\"24\",\n\t}\n}\n") at /opt/rumprun/lib/librumprun_base/rumprun.c:92
+    #4  0x00182618 in bmk_mainthread (cmdline=<optimized out>) at /opt/rumprun/lib/librumprun_base/main.c:64
+    #5  0x0000d308 in bmk_cpu_sched_bouncer ()
+
+so two problems - one is why does lwproc fails, and the other is why the assertion fails to print.
+
+kernel panic fails here:
+
+    280			oci = atomic_cas_ptr((void *)&paniccpu, NULL, ci);
+    (gdb) bt
+    #0  vpanic (fmt=0x1b5fc8 "kernel %sassertion \"%s\" failed: file \"%s\", line %d ", ap=...)
+        at /opt/rumprun/src-netbsd/sys/rump/librump/rumpkern/../../../kern/subr_prf.c:280
+    #1  0x00130628 in kern_assert (fmt=0x1b5fc8 "kernel %sassertion \"%s\" failed: file \"%s\", line %d ")
+        at /opt/rumprun/src-netbsd/sys/rump/librump/rumpkern/../../../lib/libkern/kern_assert.c:51
+    #2  0x0017c4e8 in rump_lwproc_curlwp_set (l=0x1b5fc8) at /opt/rumprun/src-netbsd/sys/rump/librump/rumpkern/lwproc.c:70
+    #3  0x0017e63c in rump_init () at /opt/rumprun/src-netbsd/sys/rump/librump/rumpkern/rump.c:250
+    #4  0x00182940 in rumprun_boot (
+        cmdline=0x1dae10 <cmdline> "\n{\n\tcmdline: \"HELLO just dropping by\n\",\n\tnet :  {\n\t\t\"if\":\t\t\"sm0\",\n\t\t\"type\":\t\"inet\",\n\t\t\"method\":\t\"static\",\n\t\t\"addr\":\t\"10.0.0.2\",\n\t\t\"mask\":\t\"24\",\n\t}\n}\n") at /opt/rumprun/lib/librumprun_base/rumprun.c:92
+    #5  0x00182618 in bmk_mainthread (cmdline=<optimized out>) at /opt/rumprun/lib/librumprun_base/main.c:64
+    #6  0x0000d308 in bmk_cpu_sched_bouncer ()
+    **
+
+
+atomic_cas_ptr is in src-netbsd/sys/rump/librump/rumpkern/atomic_cas_generic.c
+
+recompiling rump in debug mode, got a file named gcm128 in openssl not to compile due to an internal compiler error.
+I just compiled that file manually with -O2
+
+    /opt/rumprun/obj/rumptools/bin/arm--netbsdelf-eabihf-gcc -O2 -g -march=armv6k   -std=gnu99     -Wno-format     -D__NetBSD__ -Ulinux -U__linux -U__linux__ -U__gnu_linux__ --sysroot=/opt/rumprun/obj/rumptools/dest  -Dlibcrypto -I. -I/opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist/crypto -I/opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist -I/opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist/crypto/asn1 -I/opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist/crypto/evp -DOPENSSLDIR=\"/etc/openssl\" -DENGINESDIR=\"/usr/lib/openssl\" -DDSO_DLFCN -DHAVE_DLFCN_H -DBF_PTR -DBN_LLONG="long long" -DOPENSSL_BN_ASM_MONT -DOPENSSL_BN_ASM_GF2m -D__ARM_MAX_ARCH__=8 -DDES_INT -DDES_UNROLL -DRC4_CHUNK="unsigned long" -DRC4_INT="unsigned char"  -c   -I/opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist/crypto/modes -DGHASH_ASM /opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist/crypto/modes/gcm128.c -o ./obj/buildrump.sh/crypto/external/bsd/openssl/lib/libcrypto/gcm128.o
+
 # jtag setup
 
 patch pi kernel to turn on alternate use for pins.

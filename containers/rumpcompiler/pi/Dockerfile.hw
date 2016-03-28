@@ -24,7 +24,7 @@ RUN cd /opt/rumprun && \
 RUN  cd /opt/rumprun && \
      export PATH=/opt/raspberrypi-tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/:$PATH && \
      export CC=arm-linux-gnueabihf-gcc && \
-     ./build-rr.sh -d $DESTDIR -b pi -o ./obj $PLATFORM  build -- -F ACFLAGS=-march=armv6k
+     ./build-rr.sh -d $DESTDIR -b pi -o ./obj $PLATFORM  build -- -D -F ACFLAGS=-march=armv6k
 
 RUN  cd /opt/rumprun && \
      export PATH=/opt/raspberrypi-tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/:$PATH && \
