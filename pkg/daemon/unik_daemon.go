@@ -240,6 +240,30 @@ func (d *UnikDaemon) registerHandlers() {
 			return successfulInstances, nil
 		})
 	})
+	d.server.Post("/unikernels/:unikernel_name/push", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		streamOrRespond(res, req, func() (interface{}, error) {
+			unikernelName := params["unikernel_name"]
+			lxlog.Debugf(logrus.Fields{"unikernelName": unikernelName}, "pushing unikernel to unikhub.tk")
+			err := d.cpi.Push(unikernelName)
+			if err != nil {
+				return nil, lxerrors.New("could not push unikernel to unikhub", err)
+			}
+			lxlog.Infof(logrus.Fields{"unikernelName": unikernelName}, "unikernel pushed")
+			return unikernelName, nil
+		})
+	})
+	d.server.Post("/unikernels/:unikernel_name/pull", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		streamOrRespond(res, req, func() (interface{}, error) {
+			unikernelName := params["unikernel_name"]
+			lxlog.Debugf(logrus.Fields{"unikernelName": unikernelName}, "pulling unikernel to unikhub.tk")
+			err := d.cpi.Pull(unikernelName)
+			if err != nil {
+				return nil, lxerrors.New("could not pull unikernel to unikhub", err)
+			}
+			lxlog.Infof(logrus.Fields{"unikernelName": unikernelName}, "unikernel pulled")
+			return unikernelName, nil
+		})
+	})
 	d.server.Delete("/instances/:instance_id", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
 		streamOrRespond(res, req, func() (interface{}, error) {
 			instanceId := params["instance_id"]

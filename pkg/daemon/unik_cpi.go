@@ -23,4 +23,6 @@ type UnikCPI interface {
 	ListVolumes() ([]*types.Volume, error)
 	RunUnikInstance(unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error)
 	StreamLogs(unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error
+	Push(unikernelName string) error
+	Pull(unikernelName string) error
 }

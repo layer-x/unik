@@ -177,7 +177,7 @@ func main() {
 		},
 		{
 			Name:      "build",
-			Aliases:   []string{"p"},
+			Aliases:   []string{"b"},
 			ArgsUsage: "unik build [OPTIONS] NAME PATH",
 			Usage:     "build a new unikernel from the source code at PATH",
 			Flags: []cli.Flag{
@@ -263,6 +263,60 @@ func main() {
 				err = commands.Run(config, unikernelName, instanceName, runInstances, tags, env, verbose)
 				if err != nil {
 					println("unik run failed!")
+					println("error: " + err.Error())
+					os.Exit(-1)
+				}
+			},
+		},
+		{
+			Name:      "push",
+			ArgsUsage: "unik push UNIKERNEL_NAME",
+			Usage:     "push a unikernel image to unikhub.tk",
+			Action: func(c *cli.Context) {
+				if len(c.Args()) != 1 {
+					println("unik: \"push\" requires exactly 1 argument")
+					println("See 'unik push -h'")
+					println("USAGE:    unik [-V] push UNIKERNEL_NAME")
+					println("push a unikernel image to unikhub.tk")
+					os.Exit(-1)
+				}
+				unikernelName := c.Args().Get(0)
+				config, err := getConfig()
+				if err != nil {
+					println("You must be logged in to run this command.")
+					println("Try 'unik target UNIK_URL'")
+					os.Exit(-1)
+				}
+				err = commands.Push(config, unikernelName, verbose)
+				if err != nil {
+					println("unik push failed!")
+					println("error: " + err.Error())
+					os.Exit(-1)
+				}
+			},
+		},
+		{
+			Name:      "pull",
+			ArgsUsage: "unik pull UNIKERNEL_NAME",
+			Usage:     "pull a unikernel image to unikhub.tk",
+			Action: func(c *cli.Context) {
+				if len(c.Args()) != 1 {
+					println("unik: \"pull\" requires exactly 1 argument")
+					println("See 'unik pull -h'")
+					println("USAGE:    unik [-V] pull UNIKERNEL_NAME")
+					println("pull a unikernel image to unikhub.tk")
+					os.Exit(-1)
+				}
+				unikernelName := c.Args().Get(0)
+				config, err := getConfig()
+				if err != nil {
+					println("You must be logged in to run this command.")
+					println("Try 'unik target UNIK_URL'")
+					os.Exit(-1)
+				}
+				err = commands.Pull(config, unikernelName, verbose)
+				if err != nil {
+					println("unik pull failed!")
 					println("error: " + err.Error())
 					os.Exit(-1)
 				}

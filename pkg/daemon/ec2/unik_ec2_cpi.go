@@ -83,3 +83,11 @@ func (cpi *UnikEC2CPI) RunUnikInstance(unikernelName, instanceName string, insta
 func (cpi *UnikEC2CPI) StreamLogs(unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error {
 	return ec2api.StreamLogs(unikInstanceId, w, deleteInstanceOnDisconnect)
 }
+
+func (cpi *UnikEC2CPI) Push(unikernelName string) error {
+	return ec2api.Push(unikernelName)
+}
+
+func (cpi *UnikEC2CPI) Pull(unikernelName string) error {
+	return ec2api.Pull(unikernelName)
+}

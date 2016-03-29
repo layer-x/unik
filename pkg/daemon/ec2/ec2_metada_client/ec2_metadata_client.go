@@ -25,7 +25,7 @@ type unikEc2Client struct {
 	AvailabilityZone string
 }
 
-func getRegion() (string, error) {
+func GetRegion() (string, error) {
 	curlCommand := exec.Command("curl", "http://169.254.169.254/latest/meta-data/placement/availability-zone")
 	azBytes, err := curlCommand.Output()
 	if err != nil {
@@ -289,6 +289,36 @@ func (c *unikEc2Client) DetachVolume(input *ec2.DetachVolumeInput) (*ec2.VolumeA
 	var retries uint
 	for {
 		output, err := c.ec2Client.DetachVolume(input)
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
+		}
+		time.Sleep((1 << retries) * time.Second)
+		retries++
+		if retries > MAX_RETRIES {
+			return nil, err
+		}
+	}
+}
+
+func (c *unikEc2Client) CopyImage(input *ec2.CopyImageInput) (*ec2.CopyImageOutput, error) {
+	var retries uint
+	for {
+		output, err := c.ec2Client.CopyImage(input)
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
+		}
+		time.Sleep((1 << retries) * time.Second)
+		retries++
+		if retries > MAX_RETRIES {
+			return nil, err
+		}
+	}
+}
+
+func (c *unikEc2Client) ModifyImageAttribute(input *ec2.ModifyImageAttributeInput) (*ec2.ModifyImageAttributeOutput, error) {
+	var retries uint
+	for {
+		output, err := c.ec2Client.ModifyImageAttribute(input)
 		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
 			return output, err
 		}
