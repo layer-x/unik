@@ -6,13 +6,6 @@ RUN cd /opt/raspberrypi-tools && \
     mv arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/lib/gcc/arm-linux-gnueabihf/4.8.3/include arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/lib/gcc/arm-linux-gnueabihf/4.8.3/not-include &&\
     chmod -R a-w  .
 
-COPY __aeabi_ldiv0.c /opt/rumprun/src-netbsd/sys/external/bsd/compiler_rt/dist/lib/builtins/arm/__aeabi_ldiv0.c
-COPY __aeabi_idiv0.c /opt/rumprun/src-netbsd/sys/external/bsd/compiler_rt/dist/lib/builtins/arm/__aeabi_idiv0.c
-COPY ldcore.S        /opt/rumprun/platform/hw/arch/arm/rpi/locore.S
-COPY machdep.c       /opt/rumprun/platform/hw/arch/arm/rpi/machdep.c
-
-COPY kern.ldscript       /opt/rumprun/platform/hw/arch/arm/rpi/kern.ldscript
-
 RUN cd /opt/rumprun && \
      rm -rf ./obj && \
      git remote add  origin2 https://github.com/dave-tucker/rumprun.git && \
@@ -20,11 +13,21 @@ RUN cd /opt/rumprun && \
      git checkout raspberrypi && \
      git submodule update
 
+COPY __aeabi_ldiv0.c /opt/rumprun/src-netbsd/sys/external/bsd/compiler_rt/dist/lib/builtins/arm/__aeabi_ldiv0.c
+COPY __aeabi_idiv0.c /opt/rumprun/src-netbsd/sys/external/bsd/compiler_rt/dist/lib/builtins/arm/__aeabi_idiv0.c
+COPY ldcore.S        /opt/rumprun/platform/hw/arch/arm/rpi/locore.S
+COPY machdep.c       /opt/rumprun/platform/hw/arch/arm/rpi/machdep.c
+COPY kern.ldscript       /opt/rumprun/platform/hw/arch/arm/rpi/kern.ldscript
 
+# build rump run; when it fails, manually build the internal compiler error and build again.
 RUN  cd /opt/rumprun && \
      export PATH=/opt/raspberrypi-tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/:$PATH && \
      export CC=arm-linux-gnueabihf-gcc && \
-     ./build-rr.sh -d $DESTDIR -b pi -o ./obj $PLATFORM  build -- -D -F ACFLAGS=-march=armv6k
+     (./build-rr.sh -d $DESTDIR -b pi -o ./obj $PLATFORM  build -- -D -F ACFLAGS=-march=armv6k || \
+     ( /opt/rumprun/obj/rumptools/bin/arm--netbsdelf-eabihf-gcc -O2 -g -march=armv6k   -std=gnu99     -Wno-format     -D__NetBSD__ -Ulinux -U__linux -U__linux__ -U__gnu_linux__ --sysroot=/opt/rumprun/obj/rumptools/dest  -Dlibcrypto -I. -I/opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist/crypto -I/opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist -I/opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist/crypto/asn1 -I/opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist/crypto/evp -DOPENSSLDIR=\"/etc/openssl\" -DENGINESDIR=\"/usr/lib/openssl\" -DDSO_DLFCN -DHAVE_DLFCN_H -DBF_PTR -DBN_LLONG="long long" -DOPENSSL_BN_ASM_MONT -DOPENSSL_BN_ASM_GF2m -D__ARM_MAX_ARCH__=8 -DDES_INT -DDES_UNROLL -DRC4_CHUNK="unsigned long" -DRC4_INT="unsigned char"  -c   -I/opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist/crypto/modes -DGHASH_ASM /opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist/crypto/modes/gcm128.c -o ./obj/buildrump.sh/crypto/external/bsd/openssl/lib/libcrypto/gcm128.o && \
+       ./build-rr.sh -d $DESTDIR -b pi -o ./obj $PLATFORM  build -- -D -F ACFLAGS=-march=armv6k \
+      ) \
+      )
 
 RUN  cd /opt/rumprun && \
      export PATH=/opt/raspberrypi-tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin/:$PATH && \
