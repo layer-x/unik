@@ -178,6 +178,14 @@ I just compiled that file manually with -O2
 
     /opt/rumprun/obj/rumptools/bin/arm--netbsdelf-eabihf-gcc -O2 -g -march=armv6k   -std=gnu99     -Wno-format     -D__NetBSD__ -Ulinux -U__linux -U__linux__ -U__gnu_linux__ --sysroot=/opt/rumprun/obj/rumptools/dest  -Dlibcrypto -I. -I/opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist/crypto -I/opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist -I/opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist/crypto/asn1 -I/opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist/crypto/evp -DOPENSSLDIR=\"/etc/openssl\" -DENGINESDIR=\"/usr/lib/openssl\" -DDSO_DLFCN -DHAVE_DLFCN_H -DBF_PTR -DBN_LLONG="long long" -DOPENSSL_BN_ASM_MONT -DOPENSSL_BN_ASM_GF2m -D__ARM_MAX_ARCH__=8 -DDES_INT -DDES_UNROLL -DRC4_CHUNK="unsigned long" -DRC4_INT="unsigned char"  -c   -I/opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist/crypto/modes -DGHASH_ASM /opt/rumprun/src-netbsd/crypto/external/bsd/openssl/dist/crypto/modes/gcm128.c -o ./obj/buildrump.sh/crypto/external/bsd/openssl/lib/libcrypto/gcm128.o
 
+curlwp is in:
+
+    #0  rump_curlwp_fast () at /opt/rumprun/src-netbsd/sys/rump/librump/rumpkern/../../librump/rumpkern/rump_curlwp___thread.h:62
+
+"The instruction that caused the abort is at lr_ABT-8 because lr_ABT points two instructions beyond the instruction that caused the abort."
+
+which makes sense as the abort is in 0x00183064 and lr in the loop is 0x18306c
+
 # jtag setup
 
 patch pi kernel to turn on alternate use for pins.

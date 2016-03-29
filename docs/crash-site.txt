@@ -1,0 +1,92 @@
+(gdb) disass /s
+Dump of assembler code for function vpanic:
+/opt/rumprun/src-netbsd/sys/rump/librump/rumpkern/../../../kern/subr_prf.c:
+264	{
+=> 0x0014d060 <+0>:	push	{r7, lr}
+   0x0014d064 <+4>:	mov	r4, r0
+   0x0014d068 <+8>:	mov	r7, r1
+
+265		CPU_INFO_ITERATOR cii;
+266		struct cpu_info *ci, *oci;
+267		int bootopt;
+268		static char scratchstr[256]; /* stores panic message */
+269
+270		spldebug_stop();
+   0x0014d06c <+12>:	bl	0x1655a8 <voidop>
+
+271
+272		if (lwp0.l_cpu && curlwp) {
+   0x0014d070 <+16>:	ldr	r3, [pc, #424]	; 0x14d220 <vpanic+448>
+   0x0014d074 <+20>:	ldr	r3, [r3, #12]
+   0x0014d078 <+24>:	cmp	r3, #0
+   0x0014d07c <+28>:	beq	0x14d114 <vpanic+180>
+
+/opt/rumprun/src-netbsd/sys/rump/librump/rumpkern/../../librump/rumpkern/rump_curlwp___thread.h:
+62		return curlwp_storage;
+   0x0014d080 <+32>:	ldr	r2, [pc, #412]	; 0x14d224 <vpanic+452>
+   0x0014d084 <+36>:	ldr	r2, [pc, r2]
+   0x0014d088 <+40>:	mrc	15, 0, r3, cr13, cr0, {3}
+
+/opt/rumprun/src-netbsd/sys/rump/librump/rumpkern/../../../kern/subr_prf.c:
+272		if (lwp0.l_cpu && curlwp) {
+   0x0014d08c <+44>:	ldr	r3, [r3, r2]
+   0x0014d090 <+48>:	cmp	r3, #0
+   0x0014d094 <+52>:	beq	0x14d114 <vpanic+180>
+
+273			/*
+274			 * Disable preemption.  If already panicing on another CPU, sit
+275			 * here and spin until the system is rebooted.  Allow the CPU that
+276			 * first paniced to panic again.
+277			 */
+278			kpreempt_disable();
+   0x0014d098 <+56>:	bl	0x182f4c <kpreempt_disable>
+
+/opt/rumprun/src-netbsd/sys/rump/librump/rumpkern/../../librump/rumpkern/rump_curlwp___thread.h:
+62		return curlwp_storage;
+   0x0014d09c <+60>:	ldr	r2, [pc, #388]	; 0x14d228 <vpanic+456>
+   0x0014d0a0 <+64>:	ldr	r2, [pc, r2]
+   0x0014d0a4 <+68>:	mrc	15, 0, r3, cr13, cr0, {3}
+   0x0014d0a8 <+72>:	ldr	r3, [r3, r2]
+
+/opt/rumprun/src-netbsd/sys/rump/librump/rumpkern/../../../kern/subr_prf.c:
+279			ci = curcpu();
+   0x0014d0ac <+76>:	ldr	r5, [r3, #12]
+
+280			oci = atomic_cas_ptr((void *)&paniccpu, NULL, ci);
+   0x0014d0b0 <+80>:	ldr	r0, [pc, #372]	; 0x14d22c <vpanic+460>
+   0x0014d0b4 <+84>:	mov	r1, #0
+   0x0014d0b8 <+88>:	mov	r2, r5
+   0x0014d0bc <+92>:	bl	0x183060 <rumpns_atomic_cas_ulong_ni>
+
+281			if (oci != NULL && oci != ci) {
+   0x0014d0c0 <+96>:	cmp	r5, r0
+   0x0014d0c4 <+100>:	cmpne	r0, #0
+   0x0014d0c8 <+104>:	beq	0x14d0d0 <vpanic+112>
+   0x0014d0cc <+108>:	b	0x14d0cc <vpanic+108>
+
+/opt/rumprun/src-netbsd/sys/rump/librump/rumpkern/../../librump/rumpkern/rump_curlwp___thread.h:
+62		return curlwp_storage;
+   0x0014d0d0 <+112>:	ldr	r2, [pc, #344]	; 0x14d230 <vpanic+464>
+   0x0014d0d4 <+116>:	ldr	r2, [pc, r2]
+   0x0014d0d8 <+120>:	mrc	15, 0, r3, cr13, cr0, {3}
+   0x0014d0dc <+124>:	ldr	r3, [r3, r2]
+
+/opt/rumprun/src-netbsd/sys/rump/librump/rumpkern/../../../kern/subr_prf.c:
+295			curlwp->l_pflag |= LP_BOUND;
+   0x0014d0e0 <+128>:	ldr	r2, [r3, #536]	; 0x218
+================================
+
+
+this code calls: and crashes :(
+
+
+Dump of assembler code for function rumpns_atomic_cas_ulong_ni:
+0x00183060 <+0>:	mov	r12, r0
+=> 0x00183064 <+4>:	ldrex	r0, [r12]
+0x00183068 <+8>:	cmp	r0, r1
+0x0018306c <+12>:	bxne	lr
+0x00183070 <+16>:	strex	r3, r2, [r12]
+0x00183074 <+20>:	cmp	r3, #0
+0x00183078 <+24>:	bne	0x183064 <rumpns_atomic_cas_ulong_ni+4>
+0x0018307c <+28>:	mcr	15, 0, r3, cr7, cr10, {4}
+0x00183080 <+32>:	bx	lr
