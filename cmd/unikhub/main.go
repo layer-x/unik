@@ -1,4 +1,5 @@
 package main
+
 import (
 	"github.com/layer-x/unik/pkg/types"
 	"sync"
@@ -14,6 +15,11 @@ import (
 	"github.com/layer-x/unik/pkg/daemon/ec2/ec2_metada_client"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/layer-x/unik/pkg/daemon/ec2/unik_ec2_utils"
+	"github.com/Sirupsen/logrus"
+	"github.com/layer-x/layerx-commons/lxlog"
+	"log"
+	"strings"
 )
 
 const hubDataFile = "/var/unik/data.json"
@@ -29,25 +35,28 @@ func main() {
 		res.Write([]byte(serveMainPage(hub)))
 	})
 	m.Post("/unikernels", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
+		lxlog.Infof(logrus.Fields{}, "reading in unikernel json")
 		data, err := ioutil.ReadAll(req.Body)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		defer req.Body.Close()
 		var unikernel types.Unikernel
 		err = json.Unmarshal(data, &unikernel)
 		if err != nil {
-			panic(err)
+			fmt.Printf("received: " + string(data) + "\n")
+			log.Fatal(err)
 		}
 		ec2Client, err := ec2_metada_client.NewEC2Client()
 		if err != nil {
-			panic(lxerrors.New("could not start ec2 client session", err))
+			log.Fatal(lxerrors.New("could not start ec2 client session", err))
 		}
 		region, err := ec2_metada_client.GetRegion()
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		newName := unikernel.UnikernelName + "-public"
+		lxlog.Infof(logrus.Fields{"name": newName}, "copying image")
 		copyImageInput := &ec2.CopyImageInput{
 			Name: aws.String(newName),
 			SourceImageId: aws.String(unikernel.Id),
@@ -55,9 +64,52 @@ func main() {
 		}
 		output, err := ec2Client.CopyImage(copyImageInput)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		newAmi := *output.ImageId
+		time.Sleep(1000 * time.Millisecond)
+		createTagsInput := &ec2.CreateTagsInput{
+			Resources: aws.StringSlice([]string{newAmi}),
+			Tags: []*ec2.Tag{
+				&ec2.Tag{
+					Key:   aws.String(unik_ec2_utils.UNIKERNEL_ID),
+					Value: aws.String(newAmi),
+				},
+				&ec2.Tag{
+					Key:   aws.String(unik_ec2_utils.UNIKERNEL_NAME),
+					Value: aws.String(newName),
+				},
+			},
+		}
+		lxlog.Infof(logrus.Fields{"tags": createTagsInput}, "tagging unikernel")
+		_, err = ec2Client.CreateTags(createTagsInput)
+		if err != nil {
+			log.Fatal(lxerrors.New("failed to tag unikernel", err))
+		}
+
+		lxlog.Infof(logrus.Fields{"ami": newAmi}, "waiting for ami to become available")
+		amiState := ""
+		retries := 0
+		for !strings.Contains(strings.ToLower(amiState), "available") && retries < 360 {
+			retries++
+			describeImagesInput := &ec2.DescribeImagesInput{
+				ImageIds: []*string{aws.String(newAmi)},
+			}
+			describeOut, err := ec2Client.DescribeImages(describeImagesInput)
+			if err != nil {
+				log.Fatal(err)
+			}
+			for _, image := range describeOut.Images {
+				if *image.ImageId == newAmi {
+					amiState = *image.State
+					lxlog.Infof(logrus.Fields{"status": *image.State}, "ami found, status is")
+				} else {
+					lxlog.Infof(logrus.Fields{"ami": *image.ImageId}, "these are not the amis you are looking for")
+				}
+			}
+			time.Sleep(5000 * time.Millisecond)
+		}
+
 		modifyImageAttributeInput := &ec2.ModifyImageAttributeInput{
 			ImageId: aws.String(newAmi),
 			LaunchPermission: &ec2.LaunchPermissionModifications{
@@ -68,10 +120,12 @@ func main() {
 				},
 			},
 		}
+		lxlog.Infof(logrus.Fields{"modifyImageAttributeInput": modifyImageAttributeInput}, "making public")
 		_, err = ec2Client.ModifyImageAttribute(modifyImageAttributeInput)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
+		time.Sleep(2000 * time.Millisecond)
 		unikernel.Id = newAmi
 		unikernel.UnikernelName = newName
 		hub.Unikernels[newAmi] = &unikernel
@@ -100,7 +154,7 @@ func serveMainPage(hub *UnikHub) string {
 <head>
 <style>
 #header {
-    background-color:rgb(90,85,180);
+    background-color:rgb(5,85,180);
     color:white;
     text-align:center;
     padding:5px;
@@ -108,7 +162,7 @@ func serveMainPage(hub *UnikHub) string {
 }
 #nav {
     line-height:20px;
-    background-color:rgb(180,175,255);
+    background-color:rgb(65,175,255);
     height:300px;
     width:100px;
     float:left;
@@ -143,7 +197,7 @@ Scott Weiss
 </div>
 
 <div id="section">
-<h2>Published Unikernels</h2>
+<h2>Public Images</h2>
 
 <table>
   <tr>
@@ -152,9 +206,10 @@ Scott Weiss
     <th>Created</th>
   </tr>
 `
-	for _, unikernel := range hub.Unikernels {
+	for unikernelId, unikernel := range hub.Unikernels {
 		page += `
   <tr>
+    <td><img src="` + hub.Images[unikernelId] + `" height="42" width="42"></td>
     <td>` + unikernel.UnikernelName + `</td>
     <td>` + unikernel.Id + `</td>
     <td>` + unikernel.CreationDate + `</td>
@@ -165,7 +220,7 @@ Scott Weiss
 </div>
 
 <div id="footer">
-Office of the CTO @ EMC
+Advanced Development @ EMC
 </div>
 
 </body>
@@ -175,13 +230,29 @@ Office of the CTO @ EMC
 
 type UnikHub struct {
 	Unikernels map[string]*types.Unikernel
+	Images map[string]string
 	lock       *sync.Mutex
 	Saved      time.Time `json:"Saved"`
 }
 
 func NewCleanHub() *UnikHub {
+	unikernels := make(map[string]*types.Unikernel)
+	images := make(map[string]string)
+	unikernels["ami-b6b5c8d6"] = &types.Unikernel{
+		Id: "ami-b6b5c8d6",
+		UnikernelName: "steve-jobs-static-website",
+		CreationDate: "March 29, 2016 at 6:39:22 PM UTC-4",
+	}
+	images["ami-b6b5c8d6"] = "http://i.imgur.com/2iSFHSC.png"
+	unikernels["ami-c35f2da3"] = &types.Unikernel{
+		Id: "ami-c35f2da3",
+		UnikernelName: "test-go-app",
+		CreationDate: "March 29, 2016 at 7:04:40 PM UTC-4",
+	}
+	images["ami-c35f2da3"] = "http://natebrennand.github.io/concurrency_and_golang/pics/gopher_head.png"
 	return &UnikHub{
-		Unikernels: make(map[string]*types.Unikernel),
+		Unikernels: unikernels,
+		Images: images,
 		lock: &sync.Mutex{},
 	}
 }
