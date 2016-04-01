@@ -51,25 +51,19 @@ func BuildJavaUnikernel(unikernelName, unikernelCompilationDir string) error {
 	}
 	lxlog.Infof(logrus.Fields{"unikernel_name": unikernelName}, "unikernel image created")
 
-	//todo: implement osv stager
-//	ec2Client, err := ec2_metada_client.NewEC2Client()
-//	if err != nil {
-//		return lxerrors.New("could not start ec2 client session", err)
-//	}
-//
-//	stageUnikernelCommand := exec.Command("docker", "run",
-//		"--rm",
-//		"--privileged",
-//		"-v", "/dev:/dev",
-//		"-v", unikernelCompilationDir +":/unikernel",
-//		"rumpstager", "-mode", "aws", "-a", unikernelName)
-//
-//	lxlog.LogCommand(stageUnikernelCommand, true)
-//	err = stageUnikernelCommand.Run()
-//	if err != nil {
-//		return lxerrors.New("staging unikernel failed", err)
-//	}
-//	lxlog.Infof(logrus.Fields{"unikernel_name": unikernelName}, "unikernel staging complete")
-//	return nil
-	return lxerrors.New("osv stager not implemented yet", nil)
+	stageUnikernelCommand := exec.Command("docker", "run",
+		"--rm",
+		"--privileged",
+		"-v", "/dev:/dev",
+		"-e", "UNIKERNELFILE="+unikernelCompilationDir+"/program.raw",
+		"-e", "UNIKERNEL_APP_NAME="+unikernelName,
+		"osvec2stager")
+
+	lxlog.LogCommand(stageUnikernelCommand, true)
+	err = stageUnikernelCommand.Run()
+	if err != nil {
+		return lxerrors.New("staging unikernel failed", err)
+	}
+	lxlog.Infof(logrus.Fields{"unikernel_name": unikernelName}, "unikernel staging complete")
+	return nil
 }
