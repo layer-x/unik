@@ -7,7 +7,7 @@ import (
 )
 
 //const hubUrl = "http://www.unikhub.tk/"
-const hubUrl = "ec2-54-215-251-128.us-west-1.compute.amazonaws.com:9999/"
+const hubUrl = "www.unikhub.tk"
 
 func Push(unikernelName string) error {
 	var unikernel *types.Unikernel

@@ -329,3 +329,18 @@ func (c *unikEc2Client) ModifyImageAttribute(input *ec2.ModifyImageAttributeInpu
 		}
 	}
 }
+
+func (c *unikEc2Client) ImportVolume(input *ec2.ImportVolumeInput) (*ec2.ImportVolumeOutput, error) {
+	var retries uint
+	for {
+		output, err := c.ec2Client.ImportVolume(input)
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
+		}
+		time.Sleep((1 << retries) * time.Second)
+		retries++
+		if retries > MAX_RETRIES {
+			return nil, err
+		}
+	}
+}
