@@ -1,7 +1,8 @@
 FROM rumpcompiler-base-xen
 
 ENV GOROOT=/usr/local/go
-ENV PATH=$PATH:$GOROOT/bin
+ENV GOPATH=$HOME/go
+ENV PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 
 RUN curl https://storage.googleapis.com/golang/go1.5.2.linux-amd64.tar.gz | sudo tar xz -C /usr/local && \
     mv /usr/local/go /usr/local/go1.5 && ln -s /usr/local/go1.5 /usr/local/go && \
@@ -21,10 +22,13 @@ RUN mkdir /tmp/build/
 
 COPY mainstub.c gomaincaller.go /tmp/build/
 
+RUN go get github.com/tools/godep
+
 # RUN LIKE THIS: docker run --rm -v /path/to/code:/opt/code rumpcompiler-go-xen
 CMD set -x && \
     cp /tmp/build/gomaincaller.go  /tmp/build/mainstub.c . && \
-    GO15VENDOREXPERIMENT=1 CC=x86_64-rumprun-netbsd-gcc CGO_ENABLED=1 GOOS=rumprun /usr/local/go/bin/go build -buildmode=c-archive -v -a -x  *.go && \
+    GO15VENDOREXPERIMENT=1 godep restore && \
+    CC=x86_64-rumprun-netbsd-gcc CGO_ENABLED=1 GOOS=rumprun /usr/local/go/bin/go build -buildmode=c-archive -v -a -x  *.go && \
     RUMPRUN_STUBLINK=succeed x86_64-rumprun-netbsd-gcc -g -o program mainstub.c $(find . -name "*.a") && \
     rm -f /opt/code/mainstub.c /opt/code/gomaincaller.go && \
     rumprun-bake xen_pv program.bin program
