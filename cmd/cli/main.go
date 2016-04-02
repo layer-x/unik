@@ -17,18 +17,9 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "unik"
 	app.Usage = ""
-	var forceBuild bool
-	var forceRmu bool
-	var follow bool
-	var destroy bool
-	var verbose bool
-	var runInstances int
-	var unikernelName string
-	var instanceName string
-	var volumeSize int
-	var forceRmv bool
-	var deviceName string
-	var forceDetach bool
+	var force, follow, destroy, verbose bool
+	var runInstances, volumeSize int
+	var unikernelName, instanceName, deviceName string
 	app.Commands = []cli.Command{
 		{
 			Name:      "delete",
@@ -68,7 +59,7 @@ func main() {
 				cli.BoolFlag{
 					Name:        "force, f",
 					Usage:       "force delete running instances of this unikernel",
-					Destination: &forceRmu,
+					Destination: &force,
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -86,7 +77,7 @@ func main() {
 					os.Exit(-1)
 				}
 				for _, instanceId := range c.Args() {
-					err = commands.Rmu(config, instanceId, forceRmu, verbose)
+					err = commands.Rmu(config, instanceId, force, verbose)
 					if err != nil {
 						println("unik rmu failed!")
 						println("error: " + err.Error())
@@ -184,7 +175,7 @@ func main() {
 				cli.BoolFlag{
 					Name:        "force, f",
 					Usage:       "force overwriting previous unikernel",
-					Destination: &forceBuild,
+					Destination: &force,
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -203,7 +194,7 @@ func main() {
 					println("Try 'unik target UNIK_URL'")
 					os.Exit(-1)
 				}
-				err = commands.Build(config, unikernelName, path, forceBuild, verbose)
+				err = commands.Build(config, unikernelName, path, force, verbose)
 				if err != nil {
 					println("unik build failed!")
 					println("error: " + err.Error())
@@ -456,7 +447,7 @@ func main() {
 				cli.BoolFlag{
 					Name:        "force, f",
 					Usage:       "force delete if volume is attached to an instance",
-					Destination: &forceRmv,
+					Destination: &force,
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -474,7 +465,7 @@ func main() {
 					os.Exit(-1)
 				}
 				for _, volumeName := range c.Args() {
-					err = commands.DeleteVolume(config, volumeName, forceRmv, verbose)
+					err = commands.DeleteVolume(config, volumeName, force, verbose)
 					if err != nil {
 						println("unik rmu failed!")
 						println("error: " + err.Error())
@@ -534,7 +525,7 @@ func main() {
 				cli.BoolFlag{
 					Name:        "force, f",
 					Usage:       "force detaching the volume",
-					Destination: &forceDetach,
+					Destination: &force,
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -552,7 +543,7 @@ func main() {
 					os.Exit(-1)
 				}
 				for _, volumeName := range c.Args() {
-					err = commands.DetachVolume(config, volumeName, forceDetach, verbose)
+					err = commands.DetachVolume(config, volumeName, force, verbose)
 					if err != nil {
 						println("unik detach-volume failed!")
 						println("error: " + err.Error())

@@ -24,20 +24,15 @@ type UnikDaemon struct {
 	cpi UnikCPI
 }
 
-func NewUnikDaemon(provider string, opts ... string) *UnikDaemon {
+func NewUnikDaemon(provider string, opts map[string]string) *UnikDaemon {
 	var cpi UnikCPI
 	switch provider{
 	case "ec2":
 		cpi = ec2.NewUnikEC2CPI()
 		break
 	case "vsphere":
-		if len(opts) != 3 {
-			panic("invalid number of arguments: "+strings.Join(opts, ","))
-		}
-		vsphereUrl := opts[0]
-		vsphereUser := opts[1]
-		vspherePass := opts[2]
-		vsphereCpi := vsphere.NewUnikVsphereCPI(vsphereUrl, vsphereUser, vspherePass)
+		vsphereCpi := vsphere.NewUnikVsphereCPI(opts["vsphereUrl"], opts["vsphereUser"], opts["vspherePass"])
+		vsphereCpi.StartInstanceDiscovery()
 		vsphereCpi.ListenForBootstrap(3001)
 		cpi = vsphereCpi
 		break

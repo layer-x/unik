@@ -33,13 +33,7 @@ func main() {
 
 	lxlog.Infof(logrus.Fields{}, "all images finished")
 
-	host, err := os.Hostname()
-	if err != nil {
-		lxlog.Errorf(logrus.Fields{"err": err}, "retreiving hostname")
-		os.Exit(-1);
-	}
-
-	opts := []string{}
+	opts := make(map[string]string)
 
 	//make sure we don't attempt to multicast on a public cloud
 	if *provider == "vsphere" {
@@ -55,27 +49,9 @@ func main() {
 			lxlog.Errorf(logrus.Fields{}, "vsphere pass must be set")
 			os.Exit(-1);
 		}
-		opts = append(opts, *vsphereUrl, *vsphereUser, *vspherePass)
-
-		lxlog.Infof(logrus.Fields{"host": host}, "Starting unik discovery (udp heartbeat broadcast)")
-		info := []byte("unik")
-		BROADCAST_IPv4 := net.IPv4(255, 255, 255, 255)
-		socket, err := net.DialUDP("udp4", nil, &net.UDPAddr{
-			IP:   BROADCAST_IPv4,
-			Port: 9876,
-		})
-		if err != nil {
-			lxlog.Fatalf(logrus.Fields{"err": err, "broadcast-ip": BROADCAST_IPv4}, "failed to dial udp broadcast connection")
-		}
-		go func(){
-			for {
-				_, err = socket.Write(info)
-				if err != nil {
-					lxlog.Fatalf(logrus.Fields{"err": err, "broadcast-ip": BROADCAST_IPv4}, "failed writing to broadcast udp socket")
-				}
-				time.Sleep(2000 * time.Millisecond)
-			}
-		}()
+		opts["vsphereUrl"] = *vsphereUrl
+		opts["vsphereUser"] = *vsphereUser
+		opts["vspherePass"] = *vspherePass
 	}
 
 	unikDaemon := daemon.NewUnikDaemon(*provider, opts...)

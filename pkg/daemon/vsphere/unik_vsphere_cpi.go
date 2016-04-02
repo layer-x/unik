@@ -15,6 +15,8 @@ import (
 	"fmt"
 	"encoding/json"
 	"github.com/layer-x/unik/pkg/daemon/state"
+"net"
+"time"
 )
 
 type UnikVsphereCPI struct {
@@ -40,6 +42,28 @@ func NewUnikVsphereCPI(rawUrl, user, password string) *UnikVsphereCPI {
 		},
 		unikState: unikState,
 	}
+}
+
+func (cpi *UnikVsphereCPI) StartInstanceDiscovery() {
+	lxlog.Infof(logrus.Fields{}, "Starting unik discovery (udp heartbeat broadcast)")
+	info := []byte("unik")
+	BROADCAST_IPv4 := net.IPv4(255, 255, 255, 255)
+	socket, err := net.DialUDP("udp4", nil, &net.UDPAddr{
+		IP:   BROADCAST_IPv4,
+		Port: 9876,
+	})
+	if err != nil {
+		lxlog.Fatalf(logrus.Fields{"err": err, "broadcast-ip": BROADCAST_IPv4}, "failed to dial udp broadcast connection")
+	}
+	go func(){
+		for {
+			_, err = socket.Write(info)
+			if err != nil {
+				lxlog.Fatalf(logrus.Fields{"err": err, "broadcast-ip": BROADCAST_IPv4}, "failed writing to broadcast udp socket")
+			}
+			time.Sleep(2000 * time.Millisecond)
+		}
+	}()
 }
 
 func (cpi *UnikVsphereCPI) ListenForBootstrap(port int) {
