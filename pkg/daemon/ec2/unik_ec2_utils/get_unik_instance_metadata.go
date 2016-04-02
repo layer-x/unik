@@ -7,7 +7,6 @@ import (
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/Sirupsen/logrus"
 	"github.com/layer-x/layerx-commons/lxlog"
 	"github.com/layer-x/unik/pkg/daemon/ec2/ec2_metada_client"
 )
@@ -15,8 +14,8 @@ import (
 const UNIK_INSTANCE_ID = "UNIK_INSTANCE_ID"
 const UNIKERNEL_ID = "UNIKERNEL_ID"
 
-func GetUnikInstanceMetadata(instance *ec2.Instance) (*types.UnikInstance, error) {
-	ec2Client, err := ec2_metada_client.NewEC2Client()
+func GetUnikInstanceMetadata(logger *lxlog.LxLogger, instance *ec2.Instance) (*types.UnikInstance, error) {
+	ec2Client, err := ec2_metada_client.NewEC2Client(logger)
 	if err != nil {
 		return nil, lxerrors.New("could not start ec2 client session", err)
 	}
@@ -81,6 +80,8 @@ func GetUnikInstanceMetadata(instance *ec2.Instance) (*types.UnikInstance, error
 	if instance.LaunchTime != nil {
 		unikInstance.Created = *instance.LaunchTime
 	}
-	lxlog.Debugf(logrus.Fields{"unik-instance": unikInstance}, "read unik instance")
+	logger.WithFields(lxlog.Fields{
+		"unik-instance": unikInstance,
+	}).Debugf("read unik instance")
 	return unikInstance, nil
 }

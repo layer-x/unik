@@ -1,7 +1,6 @@
 package ec2api
 
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/layerx-commons/lxerrors"
@@ -11,7 +10,7 @@ import (
 	"github.com/layer-x/unik/pkg/types"
 )
 
-func ListUnikInstances() ([]*types.UnikInstance, error) {
+func ListUnikInstances(logger *lxlog.LxLogger) ([]*types.UnikInstance, error) {
 	ec2Client, err := ec2_metada_client.NewEC2Client()
 	if err != nil {
 		return nil, lxerrors.New("could not start ec2 client session", err)
@@ -35,7 +34,9 @@ func ListUnikInstances() ([]*types.UnikInstance, error) {
 		for _, instance := range reservation.Instances {
 			unikInstance, err := unik_ec2_utils.GetUnikInstanceMetadata(instance)
 			if unikInstance != nil && err == nil {
-				lxlog.Debugf(logrus.Fields{"UnikInstance": unikInstance.UnikInstanceID}, "Unik Instance read")
+				logger.WithFields(lxlog.Fields{
+					"UnikInstance": unikInstance.UnikInstanceID,
+				}).Debugf("Unik Instance read")
 				allUnikInstances = append(allUnikInstances, unikInstance)
 			}
 		}

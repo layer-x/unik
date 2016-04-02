@@ -6,18 +6,17 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"github.com/Sirupsen/logrus"
 )
 
 const UNIK_VOLUME_NAME = "UNIK_VOLUME_NAME"
 
-func CreateVolume(volumeName string, size int) (*types.Volume, error) {
-	_, err := GetVolumeByIdOrName(volumeName)
+func CreateVolume(logger *lxlog.LxLogger, volumeName string, size int) (*types.Volume, error) {
+	_, err := GetVolumeByIdOrName(logger, volumeName)
 	if err == nil {
 		return nil, lxerrors.New("cannot create, volume "+volumeName+" already exists", nil)
 	}
 
-	ec2Client, err := ec2_metada_client.NewEC2Client()
+	ec2Client, err := ec2_metada_client.NewEC2Client(logger)
 	if err != nil {
 		return nil, lxerrors.New("could not start ec2 client session", err)
 	}
@@ -46,15 +45,19 @@ func CreateVolume(volumeName string, size int) (*types.Volume, error) {
 	}
 	createTagsOutput, err := ec2Client.CreateTags(createTagsInput)
 	if err != nil {
-		defer DeleteVolume(volumeName, true)
+		defer DeleteVolume(logger, volumeName, true)
 		return nil, lxerrors.New("failed to tag volume " + volumeName, err)
 	}
-	lxlog.Debugf(logrus.Fields{"output": createTagsOutput}, "tagged volume " + volumeName)
-	volume, err := GetVolumeByIdOrName(volumeName)
+	logger.WithFields(lxlog.Fields{
+		"output": createTagsOutput,
+	}).Debugf("tagged volume " + volumeName)
+	volume, err := GetVolumeByIdOrName(logger, volumeName)
 	if err != nil {
-		defer DeleteVolume(volumeName, true)
+		defer DeleteVolume(logger, volumeName, true)
 		return nil, lxerrors.New("failed to retrieve volume " + volumeName + " after it was just created...", err)
 	}
-	lxlog.Debugf(logrus.Fields{"volume": volume}, "created volume")
+	logger.WithFields(lxlog.Fields{
+		"volume": volume,
+	}).Debugf("created volume")
 	return volume, nil
 }

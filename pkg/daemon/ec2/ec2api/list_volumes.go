@@ -6,11 +6,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"github.com/Sirupsen/logrus"
 	"github.com/layer-x/unik/pkg/daemon/ec2/unik_ec2_utils"
 )
 
-func ListVolumes() ([]*types.Volume, error) {
+func ListVolumes(logger *lxlog.LxLogger) ([]*types.Volume, error) {
 	ec2Client, err := ec2_metada_client.NewEC2Client()
 	if err != nil {
 		return nil, lxerrors.New("could not start ec2 client session", err)
@@ -27,7 +26,9 @@ func ListVolumes() ([]*types.Volume, error) {
 	if err != nil {
 		return nil, lxerrors.New("running describe volumes", err)
 	}
-	lxlog.Debugf(logrus.Fields{"volumes": describeVolumesOutput.Volumes}, "retrieved volumes")
+	logger.WithFields(lxlog.Fields{
+		"volumes": describeVolumesOutput.Volumes,
+	}).Debugf("retrieved volumes")
 	volumes := []*types.Volume{}
 	for _, awsVol := range describeVolumesOutput.Volumes {
 		volume := unik_ec2_utils.GetVolumeMetadata(awsVol)

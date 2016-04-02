@@ -4,10 +4,11 @@ import (
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/unik/pkg/types"
 	"strings"
+"github.com/layer-x/layerx-commons/lxlog"
 )
 
-func GetVolumeByIdOrName(volumeIdOrName string) (*types.Volume, error) {
-	volumes, err := ListVolumes()
+func GetVolumeByIdOrName(logger *lxlog.LxLogger, volumeIdOrName string) (*types.Volume, error) {
+	volumes, err := ListVolumes(logger)
 	if err != nil {
 		return nil, lxerrors.New("failed to retrieve known volumes", err)
 	}

@@ -35,7 +35,7 @@ func main() {
 		res.Write([]byte(serveMainPage(hub)))
 	})
 	m.Post("/unikernels", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		lxlog.Infof(logrus.Fields{}, "reading in unikernel json")
+		lxlog.Infof("reading in unikernel json")
 		data, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			log.Fatal(err)

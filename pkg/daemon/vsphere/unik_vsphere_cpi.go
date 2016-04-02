@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"github.com/Sirupsen/logrus"
 	"github.com/layer-x/layerx-commons/lxmartini"
 	"net/http"
 	"fmt"
@@ -24,18 +23,24 @@ type UnikVsphereCPI struct {
 	unikState *state.UnikState
 }
 
-func NewUnikVsphereCPI(rawUrl, user, password string) *UnikVsphereCPI {
+func NewUnikVsphereCPI(logger *lxlog.LxLogger, rawUrl, user, password string) *UnikVsphereCPI {
 	rawUrl = "https://" + user + ":" + password + "@" + strings.TrimSuffix(strings.TrimPrefix(strings.TrimPrefix(rawUrl, "http://"), "https://"), "/sdk") + "/sdk"
 	u, err := url.Parse(rawUrl)
 	if err != nil {
-		lxlog.Fatalf(logrus.Fields{"raw-url": rawUrl, "err": err}, "parsing provided url")
+		logger.WithErr(err).WithFields(lxlog.Fields{
+			"raw-url": rawUrl,
+		}).Fatalf("parsing provided url")
 	}
 	unikState, err := state.NewStateFromVsphere(u)
 	if err != nil {
-		lxlog.Warnf(logrus.Fields{"state": unikState, "err": err}, "could not load unik state, creating fresh")
+		logger.WithErr(err).WithFields(lxlog.Fields{
+			"state": unikState,
+		}).Warnf("could not load unik state, creating fresh")
 		unikState = state.NewCleanState(u)
 	}
-	lxlog.Infof(logrus.Fields{"state": unikState}, "loaded unik state")
+	logger.WithFields(lxlog.Fields{
+		"state": unikState,,
+	}).Infof("loaded unik state")
 	return &UnikVsphereCPI{
 		creds: vsphere_api.Creds{
 			URL: u,
@@ -44,8 +49,8 @@ func NewUnikVsphereCPI(rawUrl, user, password string) *UnikVsphereCPI {
 	}
 }
 
-func (cpi *UnikVsphereCPI) StartInstanceDiscovery() {
-	lxlog.Infof(logrus.Fields{}, "Starting unik discovery (udp heartbeat broadcast)")
+func (cpi *UnikVsphereCPI) StartInstanceDiscovery(logger *lxlog.LxLogger) {
+	logger.Infof("Starting unik discovery (udp heartbeat broadcast)")
 	info := []byte("unik")
 	BROADCAST_IPv4 := net.IPv4(255, 255, 255, 255)
 	socket, err := net.DialUDP("udp4", nil, &net.UDPAddr{
@@ -53,34 +58,45 @@ func (cpi *UnikVsphereCPI) StartInstanceDiscovery() {
 		Port: 9876,
 	})
 	if err != nil {
-		lxlog.Fatalf(logrus.Fields{"err": err, "broadcast-ip": BROADCAST_IPv4}, "failed to dial udp broadcast connection")
+		logger.WithErr(err).WithFields(lxlog.Fields{
+			"broadcast-ip": BROADCAST_IPv4,
+		}).Fatalf("failed to dial udp broadcast connection")
 	}
 	go func(){
 		for {
 			_, err = socket.Write(info)
 			if err != nil {
-				lxlog.Fatalf(logrus.Fields{"err": err, "broadcast-ip": BROADCAST_IPv4}, "failed writing to broadcast udp socket")
+				logger.WithErr(err).WithFields(lxlog.Fields{
+					"broadcast-ip": BROADCAST_IPv4,
+				}).Fatalf("failed writing to broadcast udp socket")
 			}
 			time.Sleep(2000 * time.Millisecond)
 		}
 	}()
 }
 
-func (cpi *UnikVsphereCPI) ListenForBootstrap(port int) {
+func (cpi *UnikVsphereCPI) ListenForBootstrap(logger *lxlog.LxLogger, port int) {
 	m := lxmartini.QuietMartini()
 	m.Get("/bootstrap", func(res http.ResponseWriter, req *http.Request) string {
 		splitAddr := strings.Split(req.RemoteAddr, ":")
 		if len(splitAddr) < 1 {
-			lxlog.Errorf(logrus.Fields{"req.RemoteAddr": req.RemoteAddr}, "could not parse remote addr into ip/port combination")
+			logger.WithFields(lxlog.Fields{
+				"req.RemoteAddr": req.RemoteAddr,
+			}).Errorf("could not parse remote addr into ip/port combination")
 			return ""
 		}
 		instanceIp := splitAddr[0]
 		macAddress := req.URL.Query().Get("mac_address")
-		lxlog.Infof(logrus.Fields{"Ip": instanceIp, "mac-address": macAddress}, "Instance registered with mDNS")
+		logger.WithFields(lxlog.Fields{
+			"Ip": instanceIp, 
+			"mac-address": macAddress,
+		}).Infof("Instance registered with mDNS")
 		//mac address = the instance id in vsphere
 		unikInstance, err := cpi.GetUnikInstanceByPrefixOrName(macAddress)
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"state": cpi.unikState}, "could not find unik instance by mac address")
+			logger.WithFields(lxlog.Fields{
+				"state": cpi.unikState,
+			}).Errorf("could not find unik instance by mac address")
 			return ""
 		}
 		unikInstance.PrivateIp = instanceIp

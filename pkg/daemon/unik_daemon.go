@@ -3,7 +3,6 @@ package daemon
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/go-martini/martini"
 	"github.com/layer-x/layerx-commons/lxerrors"
@@ -25,6 +24,7 @@ type UnikDaemon struct {
 }
 
 func NewUnikDaemon(provider string, opts map[string]string) *UnikDaemon {
+	logger := lxlog.New()
 	var cpi UnikCPI
 	switch provider{
 	case "ec2":
@@ -37,7 +37,7 @@ func NewUnikDaemon(provider string, opts map[string]string) *UnikDaemon {
 		cpi = vsphereCpi
 		break
 	default:
-		panic("Unrecognized provider "+provider)
+		logger.Fatalf("Unrecognized provider "+provider)
 	}
 	return &UnikDaemon{
 		server: lxmartini.QuietMartini(),
@@ -46,18 +46,19 @@ func NewUnikDaemon(provider string, opts map[string]string) *UnikDaemon {
 }
 
 func (d *UnikDaemon) registerHandlers() {
-	streamOrRespond := func(res http.ResponseWriter, req *http.Request, action func() (interface{}, error)) {
+	streamOrRespond := func(res http.ResponseWriter, req *http.Request, action func(logger *lxlog.LxLogger) (interface{}, error)) {
 		verbose := req.URL.Query().Get("verbose")
+		logger := lxlog.New()
 		if strings.ToLower(verbose) == "true" {
 			httpOutStream := ioutils.NewWriteFlusher(res)
 			uuid := uuid.New()
-			lxlog.AddLogger(uuid, logrus.DebugLevel, httpOutStream)
-			defer lxlog.DeleteLogger(uuid)
+			logger.AddWriter(uuid, lxlog.DebugLevel, httpOutStream)
+			defer logger.DeleteWriter(uuid)
 
-			jsonObject, err := action()
+			jsonObject, err := action(logger)
 			if err != nil {
 				lxmartini.Respond(res, err)
-				lxlog.Errorf(logrus.Fields{"err": err}, "error performing action")
+				logger.WithErr(err).Errorf("error performing action")
 				return
 			}
 			if text, ok := jsonObject.(string); ok {
@@ -85,7 +86,7 @@ func (d *UnikDaemon) registerHandlers() {
 		jsonObject, err := action()
 		if err != nil {
 			lxmartini.Respond(res, err)
-			lxlog.Errorf(logrus.Fields{"err": err}, "error performing action")
+			logger.WithErr(err).Errorf("error performing action")
 			return
 		}
 		if jsonObject != nil {
@@ -96,60 +97,76 @@ func (d *UnikDaemon) registerHandlers() {
 	}
 
 	d.server.Get("/instances", func(res http.ResponseWriter, req *http.Request) {
-		streamOrRespond(res, req, func() (interface{}, error) {
+		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
 			unikInstances, err := d.cpi.ListUnikInstances()
 			if err != nil {
-				lxlog.Errorf(logrus.Fields{"err": err}, "could not get unik instance list")
+				logger.WithErr(err).Errorf("could not get unik instance list")
 			} else {
-				lxlog.Debugf(logrus.Fields{"instances": unikInstances}, "Listing all unik instances")
+				logger.WithFields(lxlog.Fields{
+					"instances": unikInstances,
+				}).Debugf("Listing all unik instances")
 			}
 			return unikInstances, err
 		})
 	})
 	d.server.Get("/unikernels", func(res http.ResponseWriter, req *http.Request) {
-		streamOrRespond(res, req, func() (interface{}, error) {
+		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
 			unikernels, err := d.cpi.ListUnikernels()
 			if err != nil {
-				lxlog.Errorf(logrus.Fields{"err": err}, "could not get unikernel list")
+				logger.WithErr(err).Errorf("could not get unikernel list")
 			} else {
-				lxlog.Debugf(logrus.Fields{"unikernels": unikernels}, "Listing all unikernels")
+				logger.WithFields(lxlog.Fields{
+					"unikernels": unikernels,
+				}).Debugf("Listing all unikernels")
 			}
 			return unikernels, err
 		})
 	})
 	d.server.Post("/unikernels/:unikernel_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func() (interface{}, error) {
+		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
 			err := req.ParseMultipartForm(0)
 			if err != nil {
 				return nil, err
 			}
-			lxlog.Debugf(logrus.Fields{"req": req}, "parsing multipart form")
+			logger.WithFields(lxlog.Fields{
+				"req": req,
+			}).Debugf("parsing multipart form")
 			unikernelName := params["unikernel_name"]
 			if unikernelName == "" {
 				return nil, lxerrors.New("unikernel must be named", nil)
 			}
-			lxlog.Debugf(logrus.Fields{"form": req.Form}, "parsing form file marked 'tarfile'")
+			logger.WithFields(lxlog.Fields{
+				"form": req.Form,
+			}).Debugf("parsing form file marked 'tarfile'")
 			uploadedTar, handler, err := req.FormFile("tarfile")
 			if err != nil {
 				return nil, err
 			}
 			defer uploadedTar.Close()
 			force := req.FormValue("force")
-			lxlog.Debugf(logrus.Fields{"unikernelName": unikernelName, "force": force, "uploadedTar": uploadedTar}, "building unikernel")
+			logger.WithFields(lxlog.Fields{
+				"unikernelName": unikernelName, "force": force, "uploadedTar": uploadedTar,
+			}).Debugf("building unikernel")
 			err = d.cpi.BuildUnikernel(unikernelName, force, uploadedTar, handler)
 			if err != nil {
-				lxlog.Errorf(logrus.Fields{"err": err, "form": fmt.Sprintf("%v", req.Form), "unikernel_name": unikernelName}, "building unikernel from unikernel source")
-				lxlog.Warnf(logrus.Fields{}, "cleaning up unikernel build artifacts (volumes, snapshots)")
+				logger.WithErr(err).WithFields(lxlog.Fields{
+					"form": fmt.Sprintf("%v", req.Form), "unikernel_name": unikernelName,
+				}).Errorf("building unikernel from unikernel source")
+				logger.WithFields(lxlog.Fields{
+
+				}).Warnf("cleaning up unikernel build artifacts (volumes, snapshots)")
 				snapshotErr := d.cpi.DeleteArtifactsForUnikernel(unikernelName)
 				if snapshotErr != nil {
-					lxlog.Errorf(logrus.Fields{"err": snapshotErr, "unikernel_name": unikernelName}, "could not remove volume and/or snapshot for instance")
+					logger.WithErr(err).WithFields(lxlog.Fields{
+						"unikernel_name": unikernelName,
+					}).Errorf("could not remove volume and/or snapshot for instance")
 				}
 				return nil, err
 			}
-			lxlog.Debugf(logrus.Fields{}, "verifying unikernel succeeded")
+			logger.Debugf("verifying unikernel succeeded")
 			unikernels, err := d.cpi.ListUnikernels()
 			if err != nil {
-				lxlog.Errorf(logrus.Fields{"err": err}, "could not get unikernel list")
+				logger.WithErr(err).Errorf("could not get unikernel list")
 				return nil, err
 			}
 			for _, unikernel := range unikernels {
@@ -161,11 +178,15 @@ func (d *UnikDaemon) registerHandlers() {
 		})
 	})
 	d.server.Post("/unikernels/:unikernel_name/run", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func() (interface{}, error) {
-			lxlog.Debugf(logrus.Fields{"request": req, "query": req.URL.Query()}, "recieved run request")
+		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
+			logger.WithFields(lxlog.Fields{
+				"request": req, "query": req.URL.Query(),
+			}).Debugf("recieved run request")
 			unikernelName := params["unikernel_name"]
 			if unikernelName == "" {
-				lxlog.Errorf(logrus.Fields{"request": fmt.Sprintf("%v", req)}, "unikernel must be named")
+				logger.WithFields(lxlog.Fields{
+					"request": fmt.Sprintf("%v", req),
+				}).Errorf("unikernel must be named")
 				return nil, lxerrors.New("unikernel must be named", nil)
 			}
 			instancesStr := req.URL.Query().Get("instances")
@@ -193,7 +214,9 @@ func (d *UnikDaemon) registerHandlers() {
 			for _, tagPair := range tagPairs {
 				splitTag := strings.Split(tagPair, "=")
 				if len(splitTag) != 2 {
-					lxlog.Warnf(logrus.Fields{"tagPair": tagPair}, "was given a tag string with an invalid format, ignoring")
+					logger.WithFields(lxlog.Fields{
+						"tagPair": tagPair,
+					}).Warnf("was given a tag string with an invalid format, ignoring")
 					continue
 				}
 				tags[splitTag[0]] = splitTag[1]
@@ -206,7 +229,9 @@ func (d *UnikDaemon) registerHandlers() {
 			for _, envPair := range envPairs {
 				splitEnv := strings.Split(envPair, envPairDelimiter)
 				if len(splitEnv) != 2 {
-					lxlog.Warnf(logrus.Fields{"envPair": envPair}, "was given a env string with an invalid format, ignoring")
+					logger.WithFields(lxlog.Fields{
+						"envPair": envPair,
+					}).Warnf("was given a env string with an invalid format, ignoring")
 					continue
 				}
 				env[splitEnv[0]] = splitEnv[1]
@@ -216,11 +241,11 @@ func (d *UnikDaemon) registerHandlers() {
 			if err != nil {
 				return nil, err
 			}
-			lxlog.Debugf(logrus.Fields{}, "verifying instances started")
+			logger.Debugf("verifying instances started")
 			successfulInstances := []*types.UnikInstance{}
 			unikInstances, err := d.cpi.ListUnikInstances()
 			if err != nil {
-				lxlog.Errorf(logrus.Fields{"err": err}, "could not get unik instance list")
+				logger.WithErr(err).Errorf("could not get unik instance list")
 			}
 			for _, unikInstance := range unikInstances {
 			CheckIds:
@@ -231,76 +256,92 @@ func (d *UnikDaemon) registerHandlers() {
 					}
 				}
 			}
-			lxlog.Infof(logrus.Fields{"instance_ids": instanceIds}, instancesStr+" instances started of unikernel "+unikernelName)
+			logger.WithFields(lxlog.Fields{
+				"instance_ids": instanceIds,
+			}).Infof(instancesStr+" instances started of unikernel "+unikernelName)
 			return successfulInstances, nil
 		})
 	})
 	d.server.Post("/unikernels/:unikernel_name/push", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func() (interface{}, error) {
+		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
 			unikernelName := params["unikernel_name"]
-			lxlog.Debugf(logrus.Fields{"unikernelName": unikernelName}, "pushing unikernel to unikhub.tk")
+			logger.WithFields(lxlog.Fields{
+				"unikernelName": unikernelName,
+			}).Debugf("pushing unikernel to unikhub.tk")
 			err := d.cpi.Push(unikernelName)
 			if err != nil {
 				return nil, lxerrors.New("could not push unikernel to unikhub", err)
 			}
-			lxlog.Infof(logrus.Fields{"unikernelName": unikernelName}, "unikernel pushed")
+			logger.WithFields(lxlog.Fields{
+				"unikernelName": unikernelName,
+			}).Infof("unikernel pushed")
 			return unikernelName, nil
 		})
 	})
 	d.server.Post("/unikernels/:unikernel_name/pull", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func() (interface{}, error) {
+		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
 			unikernelName := params["unikernel_name"]
-			lxlog.Debugf(logrus.Fields{"unikernelName": unikernelName}, "pulling unikernel to unikhub.tk")
+			logger.WithFields(lxlog.Fields{
+				"unikernelName": unikernelName,
+			}).Debugf("pulling unikernel to unikhub.tk")
 			err := d.cpi.Pull(unikernelName)
 			if err != nil {
 				return nil, lxerrors.New("could not pull unikernel to unikhub", err)
 			}
-			lxlog.Infof(logrus.Fields{"unikernelName": unikernelName}, "unikernel pulled")
+			logger.WithFields(lxlog.Fields{
+				"unikernelName": unikernelName,
+			}).Infof("unikernel pulled")
 			return unikernelName, nil
 		})
 	})
 	d.server.Delete("/instances/:instance_id", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func() (interface{}, error) {
+		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
 			instanceId := params["instance_id"]
-			lxlog.Infof(logrus.Fields{"request": req}, "deleting instance "+instanceId)
+			logger.WithFields(lxlog.Fields{
+				"request": req,
+			}).Infof("deleting instance "+instanceId)
 			err := d.cpi.DeleteUnikInstance(instanceId)
 			if err != nil {
-				lxlog.Errorf(logrus.Fields{"err": err}, "could not delete instance "+instanceId)
+				logger.WithErr(err).Errorf("could not delete instance "+instanceId)
 				return nil, err
 			}
 			return nil, err
 		})
 	})
 	d.server.Delete("/unikernels/:unikernel_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func() (interface{}, error) {
+		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
 			unikernelName := params["unikernel_name"]
 			if unikernelName == "" {
-				lxlog.Errorf(logrus.Fields{"request": fmt.Sprintf("%v", req)}, "unikernel must be named")
+				logger.WithFields(lxlog.Fields{
+					"request": fmt.Sprintf("%v", req),
+				}).Errorf("unikernel must be named")
 				return nil, lxerrors.New("unikernel must be named", nil)
 			}
 			forceStr := req.URL.Query().Get("force")
-			lxlog.Infof(logrus.Fields{"request": req}, "deleting instance "+unikernelName)
+			logger.WithFields(lxlog.Fields{
+				"request": req,
+			}).Infof("deleting instance "+unikernelName)
 			force := false
 			if strings.ToLower(forceStr) == "true" {
 				force = true
 			}
 			err := d.cpi.DeleteUnikernelByName(unikernelName, force)
 			if err != nil {
-				lxlog.Errorf(logrus.Fields{"err": err}, "could not delete unikernel "+unikernelName)
+				logger.WithErr(err).Errorf("could not delete unikernel "+unikernelName)
 				return nil, err
 			}
 			return nil, nil
 		})
 	})
 	d.server.Get("/instances/:instance_id/logs", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func() (interface{}, error) {
+		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
 			unikInstanceId := params["instance_id"]
 			follow := req.URL.Query().Get("follow")
 			res.Write([]byte("getting logs for " + unikInstanceId + "...\n"))
 			if f, ok := res.(http.Flusher); ok {
 				f.Flush()
 			} else {
-				lxlog.Errorf(logrus.Fields{}, "no flush!")
+				logger.Errorf("no flush!")
 				return nil, lxerrors.New("not a flusher", nil)
 			}
 			if strings.ToLower(follow) == "true" {
@@ -313,31 +354,37 @@ func (d *UnikDaemon) registerHandlers() {
 				output := ioutils.NewWriteFlusher(res)
 				err := d.cpi.StreamLogs(unikInstanceId, output, deleteOnDisconnect)
 				if err != nil {
-					lxlog.Warnf(logrus.Fields{"err": err, "unikInstanceId": unikInstanceId}, "streaming logs stopped")
+					logger.WithErr(err).WithFields(lxlog.Fields{
+						"unikInstanceId": unikInstanceId,
+					}).Warnf("streaming logs stopped")
 					return nil, err
 				}
 			}
 			logs, err := d.cpi.GetLogs(unikInstanceId)
 			if err != nil {
-				lxlog.Errorf(logrus.Fields{"err": err, "unikInstanceId": unikInstanceId}, "failed to perform get logs request")
+				logger.WithErr(err).WithFields(lxlog.Fields{
+					"unikInstanceId": unikInstanceId,
+				}).Errorf("failed to perform get logs request")
 				return nil, err
 			}
 			return logs, nil
 		})
 	})
 	d.server.Get("/volumes", func(res http.ResponseWriter, req *http.Request) {
-		streamOrRespond(res, req, func() (interface{}, error) {
-			lxlog.Debugf(logrus.Fields{}, "listing volumes started")
+		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
+			logger.Debugf("listing volumes started")
 			volumes, err := d.cpi.ListVolumes()
 			if err != nil {
 				return nil, lxerrors.New("could not retrieve volumes", err)
 			}
-			lxlog.Infof(logrus.Fields{"volumes": volumes}, "volumes")
+			logger.WithFields(lxlog.Fields{
+				"volumes": volumes,
+			}).Infof("volumes")
 			return volumes, nil
 		})
 	})
 	d.server.Post("/volumes/:volume_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func() (interface{}, error) {
+		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
 			volumeName := params["volume_name"]
 			sizeStr := req.URL.Query().Get("size")
 			if sizeStr == "" {
@@ -347,17 +394,21 @@ func (d *UnikDaemon) registerHandlers() {
 			if err != nil {
 				return nil, lxerrors.New("could not parse given size", err)
 			}
-			lxlog.Debugf(logrus.Fields{"size": size, "name": volumeName}, "creating volume started")
+			logger.WithFields(lxlog.Fields{
+				"size": size, "name": volumeName,
+			}).Debugf("creating volume started")
 			volume, err := d.cpi.CreateVolume(volumeName, size)
 			if err != nil {
 				return nil, lxerrors.New("could not create volume", err)
 			}
-			lxlog.Infof(logrus.Fields{"volume": volume}, "volume created")
+			logger.WithFields(lxlog.Fields{
+				"volume": volume,
+			}).Infof("volume created")
 			return volume, nil
 		})
 	})
 	d.server.Delete("/volumes/:volume_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func() (interface{}, error) {
+		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
 			volumeName := params["volume_name"]
 			forceStr := req.URL.Query().Get("force")
 			force := false
@@ -365,46 +416,60 @@ func (d *UnikDaemon) registerHandlers() {
 				force = true
 			}
 
-			lxlog.Debugf(logrus.Fields{"force": force, "name": volumeName}, "deleting volume started")
+			logger.WithFields(lxlog.Fields{
+				"force": force, "name": volumeName,
+			}).Debugf("deleting volume started")
 			err := d.cpi.DeleteVolume(volumeName, force)
 			if err != nil {
 				return nil, lxerrors.New("could not create volume", err)
 			}
-			lxlog.Infof(logrus.Fields{"volume": volumeName}, "volume deleted")
+			logger.WithFields(lxlog.Fields{
+				"volume": volumeName,
+			}).Infof("volume deleted")
 			return volumeName, nil
 		})
 	})
 	d.server.Post("/instances/:instance_id/volumes/:volume_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func() (interface{}, error) {
+		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
 			volumeName := params["volume_name"]
 			instanceId := params["instance_id"]
 			device := req.URL.Query().Get("device")
 			if device == "" {
 				return nil, lxerrors.New("must provide a device name in URL query", nil)
 			}
-			lxlog.Debugf(logrus.Fields{"instance": instanceId, "volume": volumeName}, "attaching volume to instance")
+			logger.WithFields(lxlog.Fields{
+				"instance": instanceId,
+				"volume": volumeName,
+			}).Debugf("attaching volume to instance")
 			err := d.cpi.AttachVolume(volumeName, instanceId, device)
 			if err != nil {
 				return nil, lxerrors.New("could not attach volume to instance", err)
 			}
-			lxlog.Infof(logrus.Fields{"instance": instanceId, "volume": volumeName}, "volume attached")
+			logger.WithFields(lxlog.Fields{
+				"instance": instanceId,
+				"volume": volumeName,
+			}).Infof("volume attached")
 			return volumeName, nil
 		})
 	})
 	d.server.Post("/volumes/:volume_name/detach", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func() (interface{}, error) {
+		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
 			volumeName := params["volume_name"]
 			forceStr := req.URL.Query().Get("force")
 			force := false
 			if strings.ToLower(forceStr) == "true" {
 				force = true
 			}
-			lxlog.Debugf(logrus.Fields{"volume": volumeName}, "detaching volume from any instance")
+			logger.WithFields(lxlog.Fields{
+				"volume": volumeName,
+			}).Debugf("detaching volume from any instance")
 			err := d.cpi.DetachVolume(volumeName, force)
 			if err != nil {
 				return nil, lxerrors.New("could not attach volume to instance", err)
 			}
-			lxlog.Infof(logrus.Fields{"volume": volumeName}, "volume detached")
+			logger.WithFields(lxlog.Fields{
+				"volume": volumeName,
+			}).Infof("volume detached")
 			return volumeName, nil
 		})
 	})

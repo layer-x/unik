@@ -34,12 +34,12 @@ func customLogger() martini.Handler {
 			}
 		}
 
-		lxlog.Debugf(logrus.Fields{}, fmt.Sprintf("Started %s %s for %s", req.Method, req.URL.Path, addr))
+		lxlog.Debugf(fmt.Sprintf("Started %s %s for %s", req.Method, req.URL.Path, addr))
 
 		rw := res.(martini.ResponseWriter)
 		c.Next()
 
-		lxlog.Debugf(logrus.Fields{}, fmt.Sprintf("Completed %v %s in %v\n", rw.Status(), http.StatusText(rw.Status()), time.Since(start)))
+		lxlog.Debugf(fmt.Sprintf("Completed %v %s in %v\n", rw.Status(), http.StatusText(rw.Status()), time.Since(start)))
 	}
 }
 

@@ -5,15 +5,16 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/unik/pkg/daemon/ec2/ec2_metada_client"
+"github.com/layer-x/layerx-commons/lxlog"
 )
 
 
-func DetachVolume(volumeNameOrId string, force bool) error {
-	ec2Client, err := ec2_metada_client.NewEC2Client()
+func DetachVolume(logger *lxlog.LxLogger, volumeNameOrId string, force bool) error {
+	ec2Client, err := ec2_metada_client.NewEC2Client(logger)
 	if err != nil {
 		return lxerrors.New("could not start ec2 client session", err)
 	}
-	volume, err := GetVolumeByIdOrName(volumeNameOrId)
+	volume, err := GetVolumeByIdOrName(logger, volumeNameOrId)
 	if err != nil {
 		return lxerrors.New("could not find volume "+volumeNameOrId, err)
 	}

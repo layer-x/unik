@@ -4,14 +4,15 @@ import (
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"net/http"
 	"github.com/layer-x/unik/pkg/types"
+"github.com/layer-x/layerx-commons/lxlog"
 )
 
 //const hubUrl = "http://www.unikhub.tk/"
 const hubUrl = "www.unikhub.tk"
 
-func Push(unikernelName string) error {
+func Push(logger *lxlog.LxLogger, unikernelName string) error {
 	var unikernel *types.Unikernel
-	unikernels, err := ListUnikernels()
+	unikernels, err := ListUnikernels(logger)
 	if err != nil {
 		return lxerrors.New("getting unikernel list", err)
 	}
