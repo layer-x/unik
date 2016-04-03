@@ -37,6 +37,29 @@ irqstack:
 
 .globl _start
 _start:
+  /* turn on debugging */
+  bl enable_jtag
+
+  /* make page table */
+  /* thanks: http://www.embedded-bits.co.uk/2011/mmucode/ */
+  ldr r0, =identity_page_table
+  /* Set Translation Table Base 0 (TTB0) */
+  mcr p15, 0, r0, c2, c0, 0
+
+  mov     r0, #0
+	mcr	p15, 0, r0, c8, c7, 0	/* Invalidate TLBs */
+
+
+  /* disable access checks and set domain*/
+  mov r0, #0x3
+  mcr p15, 0, r0, c3, c0, 0
+
+  /* turn on mmu */
+  mrc p15, 0, r0, c1, c0, 0
+  orr r0, r0, #0x1
+  mcr p15, 0, r0, c1, c0, 0
+
+
 	/* set undefined stack */
 	mrs r0, cpsr
 	bic r0, r0, #0x1f

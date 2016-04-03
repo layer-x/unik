@@ -43,19 +43,7 @@
 
 #include <rpi/boardreg.h>
 
-#define SYSTIMERCLO 0x20003004
-#define GPFSEL0     0x20200000
-#define GPFSEL1     0x20200004
-#define GPFSEL2     0x20200008
-#define GPSET0      0x2020001C
-#define GPCLR0      0x20200028
-#define GPPUD       0x20200094
-#define GPPUDCLK0   0x20200098
-
-extern void PUT32 ( unsigned int, unsigned int );
-extern unsigned int GET32 ( unsigned int );
-
-extern void dummy ( unsigned int );
+#include "enable_jtag.h"
 
 static void
 loadmem(void)
@@ -92,39 +80,59 @@ static char cmdline[] = "\n"
 "	}\n"
 "}\n";
 
+
+// in asm..
+extern void PUT32 ( unsigned int, unsigned int );
+extern unsigned int GET32 ( unsigned int );
+extern void dummy ( unsigned int );
+ void enable_jtag(void) {
+	//for jtag
+
+#define SYSTIMERCLO 0x20003004
+#define GPFSEL0     0x20200000
+#define GPFSEL1     0x20200004
+#define GPFSEL2     0x20200008
+#define GPSET0      0x2020001C
+#define GPCLR0      0x20200028
+#define GPPUD       0x20200094
+#define GPPUDCLK0   0x20200098
+
+	//alt4 = 0b011 3
+	//alt5 = 0b010 2
+
+	unsigned int ra;
+
+	PUT32(GPPUD,0);
+	for(ra=0;ra<150;ra++) dummy(ra);
+	PUT32(GPPUDCLK0,(1<<4)|(1<<22)|(1<<24)|(1<<25)|(1<<27));
+	for(ra=0;ra<150;ra++) dummy(ra);
+	PUT32(GPPUDCLK0,0);
+
+	ra=GET32(GPFSEL0);
+	ra&=~(7<<12); //gpio4
+	ra|=2<<12; //gpio4 alt5 ARM_TDI
+	PUT32(GPFSEL0,ra);
+
+	ra=GET32(GPFSEL2);
+	ra&=~(7<<6); //gpio22
+	ra|=3<<6; //alt4 ARM_TRST
+	ra&=~(7<<12); //gpio24
+	ra|=3<<12; //alt4 ARM_TDO
+	ra&=~(7<<15); //gpio25
+	ra|=3<<15; //alt4 ARM_TCK
+	ra&=~(7<<21); //gpio27
+	ra|=3<<21; //alt4 ARM_TMS
+	PUT32(GPFSEL2,ra);
+
+}
+
+
 void
 arm_boot(void)
 {
 
+  // enable_jtag();
 
-    //for jtag
-
-    //alt4 = 0b011 3
-    //alt5 = 0b010 2
-
-    unsigned int ra;
-
-    PUT32(GPPUD,0);
-    for(ra=0;ra<150;ra++) dummy(ra);
-    PUT32(GPPUDCLK0,(1<<4)|(1<<22)|(1<<24)|(1<<25)|(1<<27));
-    for(ra=0;ra<150;ra++) dummy(ra);
-    PUT32(GPPUDCLK0,0);
-
-    ra=GET32(GPFSEL0);
-    ra&=~(7<<12); //gpio4
-    ra|=2<<12; //gpio4 alt5 ARM_TDI
-    PUT32(GPFSEL0,ra);
-
-    ra=GET32(GPFSEL2);
-    ra&=~(7<<6); //gpio22
-    ra|=3<<6; //alt4 ARM_TRST
-    ra&=~(7<<12); //gpio24
-    ra|=3<<12; //alt4 ARM_TDO
-    ra&=~(7<<15); //gpio25
-    ra|=3<<15; //alt4 ARM_TCK
-    ra&=~(7<<21); //gpio27
-    ra|=3<<21; //alt4 ARM_TMS
-    PUT32(GPFSEL2,ra);
 	extern char vector_start[], vector_end[];
 
 	bmk_memcpy((void *)0, vector_start, vector_end - vector_start);
