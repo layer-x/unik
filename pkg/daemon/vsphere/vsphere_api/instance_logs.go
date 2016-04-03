@@ -52,7 +52,7 @@ func StreamLogs(unikState *state.UnikState, creds Creds, unikInstanceId string, 
 				if f, ok := w.(http.Flusher); ok {
 					f.Flush()
 				} else {
-					lxlog.Errorf(logrus.Fields{}, "no flush!")
+					lxlog.Errorf("no flush!")
 					return lxerrors.New("w is not a flusher", nil)
 				}
 

@@ -4,10 +4,11 @@ import (
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/unik/pkg/types"
 	"strings"
+"github.com/layer-x/layerx-commons/lxlog"
 )
 
-func GetUnikInstanceByPrefixOrName(unikInstanceIdPrefixOrName string) (*types.UnikInstance, error) {
-	unikInstances, err := ListUnikInstances()
+func GetUnikInstanceByPrefixOrName(logger *lxlog.LxLogger, unikInstanceIdPrefixOrName string) (*types.UnikInstance, error) {
+	unikInstances, err := ListUnikInstances(logger)
 	if err != nil {
 		return nil, lxerrors.New("failed to retrieve known instances", err)
 	}

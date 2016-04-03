@@ -1,7 +1,6 @@
 package ec2api
 
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/layerx-commons/lxerrors"
@@ -11,12 +10,14 @@ import (
 	"github.com/layer-x/unik/pkg/types"
 )
 
-func ListUnikernels() ([]*types.Unikernel, error) {
-	ec2Client, err := ec2_metada_client.NewEC2Client()
+func ListUnikernels(logger *lxlog.LxLogger) ([]*types.Unikernel, error) {
+	ec2Client, err := ec2_metada_client.NewEC2Client(logger)
 	if err != nil {
 		return nil, lxerrors.New("could not start ec2 client session", err)
 	}
-	lxlog.Debugf(logrus.Fields{"client": ec2Client}, "retrieved client")
+	logger.WithFields(lxlog.Fields{
+		"client": ec2Client,
+	}).Debugf("retrieved client")
 	describeImagesInput := &ec2.DescribeImagesInput{
 		Filters: []*ec2.Filter{
 			&ec2.Filter{
@@ -29,13 +30,17 @@ func ListUnikernels() ([]*types.Unikernel, error) {
 	if err != nil {
 		return nil, lxerrors.New("running 'describe images'", err)
 	}
-	lxlog.Debugf(logrus.Fields{"images": describeImagesOutput.Images}, "retrieved images")
+	logger.WithFields(lxlog.Fields{
+		"images": describeImagesOutput.Images,
+	}).Debugf("retrieved images")
 
 	allUnikernels := []*types.Unikernel{}
 	for _, image := range describeImagesOutput.Images {
 		unikernel := unik_ec2_utils.GetUnikernelMetadata(image)
 		if unikernel != nil {
-			lxlog.Debugf(logrus.Fields{"unikernel": unikernel}, "found unikernel")
+			logger.WithFields(lxlog.Fields{
+				"unikernel": unikernel,
+			}).Debugf("found unikernel")
 			allUnikernels = append(allUnikernels, unikernel)
 		}
 	}

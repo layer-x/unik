@@ -6,13 +6,12 @@ import (
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"io/ioutil"
 	"strings"
-"github.com/Sirupsen/logrus"
 )
 
-func WrapJavaApplication(javaWrapperDir, appSourceDir string) (string, string, string, error) {
+func WrapJavaApplication(logger *lxlog.LxLogger, javaWrapperDir, appSourceDir string) (string, string, string, error) {
 	copyJarWrapper := exec.Command("cp", "-r", "../../containers/osvcompiler/jar-wrapper/", javaWrapperDir)
 	javaWrapperDir += "/jar-wrapper"
-	lxlog.LogCommand(copyJarWrapper, true)
+	logger.LogCommand(copyJarWrapper, true)
 	err := copyJarWrapper.Run()
 	if err != nil {
 		return "", "", "", lxerrors.New("copying java wrapper failed", err)
@@ -40,7 +39,13 @@ func WrapJavaApplication(javaWrapperDir, appSourceDir string) (string, string, s
 	if err != nil {
 		return "", "", "", lxerrors.New("retreiving main class from app", err)
 	}
-	lxlog.Infof(logrus.Fields{"pom": appPom, "groupid": appPom.ChigroupId, "artifactId": appPom.ChiartifactId, "version": appPom.Chiversion, "mainClassName": mainClassName}, "parsed app pom.xml, gathered relevant fields")
+	logger.WithFields(lxlog.Fields{
+		"pom": appPom,
+		"groupid": appPom.ChigroupId,
+		"artifactId": appPom.ChiartifactId,
+		"version": appPom.Chiversion,
+		"mainClassName": mainClassName,
+	}).Infof("parsed app pom.xml, gathered relevant fields")
 
 	wrapperMainContentBytes, err := ioutil.ReadFile(javaWrapperDir + "/src/main/java/com/emc/wrapper/Wrapper.java")
 	if err != nil {

@@ -5,20 +5,21 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/unik/pkg/daemon/ec2/ec2_metada_client"
+"github.com/layer-x/layerx-commons/lxlog"
 )
 
 const UNIKERNEL_APP_NAME = "UNIKERNEL_APP_NAME"
 const UNIKERNEL_ID = "UNIKERNEL_ID"
 
-func DeleteUnikernel(unikernelId string, force bool) error {
-	unikInstances, err := ListUnikInstances()
+func DeleteUnikernel(logger *lxlog.LxLogger, unikernelId string, force bool) error {
+	unikInstances, err := ListUnikInstances(logger)
 	if err != nil {
 		return lxerrors.New("could not check to see running unik instances", err)
 	}
 	for _, instance := range unikInstances {
 		if instance.UnikernelId == unikernelId {
 			if force == true {
-				err = DeleteUnikInstance(instance.UnikInstanceID)
+				err = DeleteUnikInstance(logger, instance.UnikInstanceID)
 				if err != nil {
 					return lxerrors.New("could not delete unik instance "+instance.UnikInstanceID, err)
 				}
@@ -27,7 +28,7 @@ func DeleteUnikernel(unikernelId string, force bool) error {
 			}
 		}
 	}
-	ec2Client, err := ec2_metada_client.NewEC2Client()
+	ec2Client, err := ec2_metada_client.NewEC2Client(logger)
 	if err != nil {
 		return lxerrors.New("could not start ec2 client session", err)
 	}
@@ -38,15 +39,15 @@ func DeleteUnikernel(unikernelId string, force bool) error {
 	if err != nil {
 		return lxerrors.New("could not deregister ami for unikernel "+unikernelId, err)
 	}
-	err = DeleteArtifacts(unikernelId)
+	err = DeleteArtifacts(logger, unikernelId)
 	if err != nil {
 		return lxerrors.New("could not delete snapshot or volume for unikernel "+unikernelId, err)
 	}
 	return nil
 }
 
-func DeleteArtifacts(unikernelId string) error {
-	ec2Client, err := ec2_metada_client.NewEC2Client()
+func DeleteArtifacts(logger *lxlog.LxLogger, unikernelId string) error {
+	ec2Client, err := ec2_metada_client.NewEC2Client(logger)
 	if err != nil {
 		return lxerrors.New("could not start ec2 client session", err)
 	}
@@ -80,8 +81,8 @@ func DeleteArtifacts(unikernelId string) error {
 	return lxerrors.New("snapshot not found for unikernel "+unikernelId, err)
 }
 
-func DeleteArtifactsForUnikernel(unikernelName string) error {
-	ec2Client, err := ec2_metada_client.NewEC2Client()
+func DeleteArtifactsForUnikernel(logger *lxlog.LxLogger, unikernelName string) error {
+	ec2Client, err := ec2_metada_client.NewEC2Client(logger)
 	if err != nil {
 		return lxerrors.New("could not start ec2 client session", err)
 	}

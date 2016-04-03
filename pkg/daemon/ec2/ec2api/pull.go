@@ -9,9 +9,10 @@ import (
 "github.com/aws/aws-sdk-go/aws"
 	"github.com/layer-x/unik/pkg/daemon/ec2/ec2_metada_client"
 	"github.com/aws/aws-sdk-go/service/ec2"
+"github.com/layer-x/layerx-commons/lxlog"
 )
 
-func Pull(unikernelName string) error {
+func Pull(logger *lxlog.LxLogger, unikernelName string) error {
 	_, data, err := lxhttpclient.Get(hubUrl, "/unikernels", nil)
 	if err != nil {
 		return lxerrors.New("retreiving public unikernel list", err)
@@ -32,7 +33,7 @@ func Pull(unikernelName string) error {
 		return lxerrors.New("unikernel "+unikernelName+" not found in unik hub", nil)
 	}
 
-	ec2Client, err := ec2_metada_client.NewEC2Client()
+	ec2Client, err := ec2_metada_client.NewEC2Client(logger)
 	if err != nil {
 		return lxerrors.New("could not start ec2 client session", err)
 	}

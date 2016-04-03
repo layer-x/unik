@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/go-martini/martini"
 	"github.com/layer-x/layerx-commons/lxerrors"
@@ -18,10 +17,11 @@ import (
 )
 
 func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
+	logger := lxlog.New()
 	m.Get("/v1.20/containers/json", func(res http.ResponseWriter, req *http.Request) {
 		unikInstances, err := ec2api.ListUnikInstances()
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err}, "could not get unik instance list")
+			logger.WithErr(err).Errorf("could not get unik instance list")
 			lxmartini.Respond(res, lxerrors.New("could not get unik instance list", err))
 			return
 		}
@@ -30,13 +30,15 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 			dockerInstance := convertUnikInstance(instance)
 			dockerInstances = append(dockerInstances, dockerInstance)
 		}
-		lxlog.Debugf(logrus.Fields{"dockerInstances": dockerInstances}, "Listing all unik instances for docker")
+		logger.WithFields(lxlog.Fields{
+			"dockerInstances": dockerInstances,
+		}).Debugf("Listing all unik instances for docker")
 		lxmartini.Respond(res, dockerInstances)
 	})
 	m.Get("/v1.20/images/json", func(res http.ResponseWriter, req *http.Request) {
 		unikernels, err := ec2api.ListUnikernels()
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err}, "could not get unikernel list")
+			logger.WithErr(err).Errorf("could not get unikernel list")
 			lxmartini.Respond(res, lxerrors.New("could not get unikernel list", err))
 			return
 		}
@@ -45,47 +47,62 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 			dockerInstance := convertUnikernel(unikernel)
 			dockerUnikernels = append(dockerUnikernels, dockerInstance)
 		}
-		lxlog.Debugf(logrus.Fields{"dockerUnikernels": dockerUnikernels}, "Listing all unikernels for docker")
+		logger.WithFields(lxlog.Fields{
+			"dockerUnikernels": dockerUnikernels,
+		}).Debugf("Listing all unikernels for docker")
 		lxmartini.Respond(res, dockerUnikernels)
 	})
 	m.Post("/v1.20/containers/create", func(res http.ResponseWriter, req *http.Request) {
 		defer req.Body.Close()
 		body, err := ioutil.ReadAll(req.Body)
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"req": req, "err": err}, "could not read request body")
+			logger.WithErr(err).WithFields(lxlog.Fields{
+				"req": req,
+			}).Errorf("could not read request body")
 			lxmartini.Respond(res, lxerrors.New("could not read request body", err))
 			return
 		}
 		var runRequest DockerRunRequest
 		err = json.Unmarshal(body, &runRequest)
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"body": string(body), "err": err}, "could not unmarshal body to docker run request json")
+			logger.WithErr(err).WithFields(lxlog.Fields{
+				"body": string(body),
+			}).Errorf("could not unmarshal body to docker run request json")
 			lxmartini.Respond(res, lxerrors.New("could not unmarshal body to docker run request json", err))
 			return
 		}
 		instanceName := runRequest.Hostname
 		unikernelName := runRequest.Image
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err, "instancess": 1, "unikernel_name": unikernelName}, "invalid input for field 'instances'")
+			logger.WithErr(err).WithFields(lxlog.Fields{
+				"instancess": 1, 
+				"unikernel_name": unikernelName,
+			}).Errorf("invalid input for field 'instances'")
 			lxmartini.Respond(res, err)
 			return
 		}
 		instanceIds, err := ec2api.RunUnikInstance(unikernelName, instanceName, 1, nil, nil)
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err, "unikernel_name": unikernelName}, "launching 1 instances of unikernel " + unikernelName + " for docker")
+			logger.WithErr(err).WithFields(lxlog.Fields{
+				"unikernel_name": unikernelName,
+			}).Errorf("launching 1 instances of unikernel " + unikernelName + " for docker")
 			lxmartini.Respond(res, err)
 			return
 		}
-		lxlog.Infof(logrus.Fields{"instance_ids": instanceIds, "request": runRequest}, "1 instances started of unikernel " + unikernelName + " for docker")
+		logger.WithFields(lxlog.Fields{
+			"instance_ids": instanceIds, "request": runRequest,
+		}).Infof("1 instances started of unikernel " + unikernelName + " for docker")
 		lxmartini.Respond(res, DockerRunResponse{Id: instanceName})
 	})
 	m.Get("/v1.20/containers/:instance_id/logs", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		lxlog.Infof(logrus.Fields{"req": req}, "received docker logs request")
+		logger.WithFields(lxlog.Fields{
+			"req": req,
+		}).Infof("received docker logs request")
 		unikInstanceId := params["instance_id"]
 		hijacker := res.(http.Hijacker)
 		conn, _, err := hijacker.Hijack()
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err}, "failed to hijack connection")
+			logger.WithErr(err).Errorf("failed to hijack connection")
 			lxmartini.Respond(res, err)
 			return
 		}
@@ -105,7 +122,7 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 
 		logs, err := ec2api.GetLogs(unikInstanceId)
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err}, "failed to get logs")
+			logger.WithErr(err).Errorf("failed to get logs")
 			lxmartini.Respond(res, err)
 			return
 		}
@@ -117,7 +134,9 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 		unikInstanceId := params["instance_id"]
 		unikInstance, err := ec2api.GetUnikInstanceByPrefixOrName(unikInstanceId)
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err, "unikInstanceId": unikInstanceId}, "could not get unik instance")
+			logger.WithErr(err).WithFields(lxlog.Fields{
+				"unikInstanceId": unikInstanceId,
+			}).Errorf("could not get unik instance")
 			lxmartini.Respond(res, err)
 			return
 		}
@@ -127,14 +146,14 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 	m.Get("/v1.22/containers/json", func(res http.ResponseWriter, req *http.Request) {
 		unikInstances, err := ec2api.ListUnikInstances()
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err}, "could not get unik instance list")
+			logger.WithErr(err).Errorf("could not get unik instance list")
 			lxmartini.Respond(res, lxerrors.New("could not get unik instance list", err))
 			return
 		}
 		dockerInstances := []*DockerUnikInstanceVerbose{}
 		unikernels, err := ec2api.ListUnikernels()
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err}, "could not get unikernel list")
+			logger.WithErr(err).Errorf("could not get unikernel list")
 			lxmartini.Respond(res, lxerrors.New("could not get unikernel list", err))
 			return
 		}
@@ -148,13 +167,15 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 			}
 			dockerInstances = append(dockerInstances, dockerInstance)
 		}
-		lxlog.Debugf(logrus.Fields{"dockerInstances": dockerInstances}, "Listing all unik instances for docker")
+		logger.WithFields(lxlog.Fields{
+			"dockerInstances": dockerInstances,
+		}).Debugf("Listing all unik instances for docker")
 		lxmartini.Respond(res, dockerInstances)
 	})
 	m.Get("/v1.22/images/json", func(res http.ResponseWriter, req *http.Request) {
 		unikernels, err := ec2api.ListUnikernels()
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err}, "could not get unikernel list")
+			logger.WithErr(err).Errorf("could not get unikernel list")
 			lxmartini.Respond(res, lxerrors.New("could not get unikernel list", err))
 			return
 		}
@@ -163,47 +184,63 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 			dockerInstance := convertUnikernel(unikernel)
 			dockerUnikernels = append(dockerUnikernels, dockerInstance)
 		}
-		lxlog.Debugf(logrus.Fields{"dockerUnikernels": dockerUnikernels}, "Listing all unikernels for docker")
+		logger.WithFields(lxlog.Fields{
+			"dockerUnikernels": dockerUnikernels,
+		}).Debugf("Listing all unikernels for docker")
 		lxmartini.Respond(res, dockerUnikernels)
 	})
 	m.Post("/v1.22/containers/create", func(res http.ResponseWriter, req *http.Request) {
 		defer req.Body.Close()
 		body, err := ioutil.ReadAll(req.Body)
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"req": req, "err": err}, "could not read request body")
+			logger.WithErr(err).WithFields(lxlog.Fields{
+				"req": req,
+			}).Errorf("could not read request body")
 			lxmartini.Respond(res, lxerrors.New("could not read request body", err))
 			return
 		}
 		var runRequest DockerRunRequest
 		err = json.Unmarshal(body, &runRequest)
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"body": string(body), "err": err}, "could not unmarshal body to docker run request json")
+			logger.WithErr(err).WithFields(lxlog.Fields{
+				"body": string(body),
+			}).Errorf("could not unmarshal body to docker run request json")
 			lxmartini.Respond(res, lxerrors.New("could not unmarshal body to docker run request json", err))
 			return
 		}
 		instanceName := runRequest.Hostname
 		unikernelName := runRequest.Image
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err, "instancess": 1, "unikernel_name": unikernelName}, "invalid input for field 'instances'")
+			logger.WithErr(err).WithFields(lxlog.Fields{
+				"instancess": 1, 
+				"unikernel_name": unikernelName,
+			}).Errorf("invalid input for field 'instances'")
 			lxmartini.Respond(res, err)
 			return
 		}
 		instanceIds, err := ec2api.RunUnikInstance(unikernelName, instanceName, 1, nil, nil)
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err, "unikernel_name": unikernelName}, "launching 1 instances of unikernel " + unikernelName + " for docker")
+			logger.WithErr(err).WithFields(lxlog.Fields{
+				"unikernel_name": unikernelName,
+			}).Errorf("launching 1 instances of unikernel " + unikernelName + " for docker")
 			lxmartini.Respond(res, err)
 			return
 		}
-		lxlog.Infof(logrus.Fields{"instance_ids": instanceIds, "request": runRequest}, "1 instances started of unikernel " + unikernelName + " for docker")
+		logger.WithFields(lxlog.Fields{
+			"instance_ids": instanceIds, 
+			"request": runRequest,
+		}).Infof("1 instances started of unikernel " + unikernelName + " for docker")
 		lxmartini.Respond(res, DockerRunResponse{Id: instanceIds[0]})
 	})
 	m.Get("/v1.22/containers/:instance_id/logs", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		lxlog.Infof(logrus.Fields{"req": req}, "received docker logs request")
+		logger.WithFields(lxlog.Fields{
+			"req": req,
+		}).Infof("received docker logs request")
 		unikInstanceId := params["instance_id"]
 		hijacker := res.(http.Hijacker)
 		conn, _, err := hijacker.Hijack()
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err}, "failed to hijack connection")
+			logger.WithErr(err).Errorf("failed to hijack connection")
 			lxmartini.Respond(res, err)
 			return
 		}
@@ -223,7 +260,7 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 
 		logs, err := ec2api.GetLogs(unikInstanceId)
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err}, "failed to get logs")
+			logger.WithErr(err).Errorf("failed to get logs")
 			lxmartini.Respond(res, err)
 			return
 		}
@@ -232,59 +269,22 @@ func AddDockerApi(m *martini.ClassicMartini) *martini.ClassicMartini {
 		}
 	})
 	m.Post("/v1.22/containers/:instance_id/start", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		lxlog.Infof(logrus.Fields{"req": req}, "received docker start container request")
+		logger.WithFields(lxlog.Fields{
+			"req": req,
+		}).Infof("received docker start container request")
 		res.WriteHeader(http.StatusNoContent)
 	})
 	m.Get("/v1.22/containers/:instance_id/json", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
 		unikInstanceId := params["instance_id"]
 		unikInstance, err := ec2api.GetUnikInstanceByPrefixOrName(unikInstanceId)
 		if err != nil {
-			lxlog.Errorf(logrus.Fields{"err": err, "unikInstanceId": unikInstanceId}, "could not get unik instance")
+			logger.WithErr(err).WithFields(lxlog.Fields{
+				"unikInstanceId": unikInstanceId,
+			}).Errorf("could not get unik instance")
 			lxmartini.Respond(res, err)
 			return
 		}
 		lxmartini.Respond(res, convertUnikInstanceVerbose(unikInstance))
 	})
-
-	//	m.Post("/v1.20/containers/:instance_id/attach", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-	//		unikInstanceId := params["instance_id"]
-	//
-	//		hijacker := res.(http.Hijacker)
-	//		conn, _, err := hijacker.Hijack()
-	//		if err != nil {
-	//			panic(err)
-	//		}
-	//		defer conn.Close()
-	//		// Flush the options to make sure the client sets the raw mode
-	//		conn.Write([]byte{})
-	//		//		inStream := conn.(io.ReadCloser)
-	//		outStream := conn.(io.Writer)
-	//		outStream.Write([]byte("getting logs for "+unikInstanceId+"...\n"))
-	//
-	//		//		if c.Upgrade {
-	//		//			fmt.Fprintf(outStream, "HTTP/1.1 101 UPGRADED\r\nContent-Type: application/vnd.docker.raw-stream\r\nConnection: Upgrade\r\nUpgrade: tcp\r\n\r\n")
-	//		//		} else {
-	//		fmt.Fprintf(outStream, "HTTP/1.1 200 OK\r\nContent-Type: application/vnd.docker.raw-stream\r\n\r\n")
-	//		//		}
-	//
-	//
-	//		outStream.Write([]byte("getting logs for "+unikInstanceId+"...\n"))
-	//		//		if f, ok := res.(http.Flusher); ok {
-	//		//			f.Flush()
-	//		//		} else {
-	//		//			lxlog.Errorf(logrus.Fields{}, "no flush!")
-	//		//			lxmartini.Respond(res, "no flush!")
-	//		//			return
-	//		//		}
-	//		//		output := ioutils.NewWriteFlusher(outStream)
-	//		//		defer output.Close()
-	//
-	//		err = ec2api.StreamLogs(unikInstanceId, outStream)
-	//		if err != nil {
-	//			lxlog.Warnf(logrus.Fields{"err":err, "unikInstanceId": unikInstanceId}, "streaming logs stopped")
-	//			lxmartini.Respond(res, err)
-	//			return
-	//		}
-	//	})
 	return m
 }

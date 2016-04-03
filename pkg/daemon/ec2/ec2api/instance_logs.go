@@ -2,7 +2,6 @@ package ec2api
 
 import (
 	"fmt"
-	"github.com/Sirupsen/logrus"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/layerx-commons/lxlog"
 	"io"
@@ -12,8 +11,8 @@ import (
 	"github.com/layer-x/layerx-commons/lxhttpclient"
 )
 
-func GetLogs(unikInstanceId string) (string, error) {
-	unikInstance, err := GetUnikInstanceByPrefixOrName(unikInstanceId)
+func GetLogs(logger *lxlog.LxLogger, unikInstanceId string) (string, error) {
+	unikInstance, err := GetUnikInstanceByPrefixOrName(logger, unikInstanceId)
 	if err != nil {
 		return "", lxerrors.New("failed to retrieve unik instance", err)
 	}
@@ -25,22 +24,24 @@ func GetLogs(unikInstanceId string) (string, error) {
 		return "", lxerrors.New("performing GET on "+unikInstance.PublicIp+":9876/logs", err)
 	}
 
-	lxlog.Debugf(logrus.Fields{"response length": len(logs)}, "received console logs from unik instance at "+unikInstance.PublicIp)
+	logger.WithFields(lxlog.Fields{
+		"response length": len(logs),
+	}).Debugf("received console logs from unik instance at "+unikInstance.PublicIp)
 	return fmt.Sprintf("begin logs for unik instance: %s\n"+
 		"%s",
 		unikInstance.UnikInstanceID,
 		string(logs)), nil
 }
 
-func StreamLogs(unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error {
+func StreamLogs(logger *lxlog.LxLogger, unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error {
 	if deleteInstanceOnDisconnect {
-		defer DeleteUnikInstance(unikInstanceId)
+		defer DeleteUnikInstance(logger, unikInstanceId)
 	}
 
 	linesCounted := -1
 	for {
 		time.Sleep(100 * time.Millisecond)
-		currentLogs, err := GetLogs(unikInstanceId)
+		currentLogs, err := GetLogs(logger, unikInstanceId)
 		if err != nil {
 			return lxerrors.New("could not get logs for unik instance "+unikInstanceId, err)
 		}
@@ -52,20 +53,24 @@ func StreamLogs(unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect b
 				if f, ok := w.(http.Flusher); ok {
 					f.Flush()
 				} else {
-					lxlog.Errorf(logrus.Fields{}, "no flush!")
+					logger.Errorf("no flush!")
 					return lxerrors.New("w is not a flusher", nil)
 				}
 
 				_, err = w.Write([]byte(logLines[linesCounted] + "\n")) //ignore errors; close comes from external
 				if err != nil {
-					lxlog.Warnf(logrus.Fields{"lines_written": linesCounted}, "writer closed by external source")
+					logger.WithFields(lxlog.Fields{
+						"lines_written": linesCounted,
+					}).Warnf("writer closed by external source")
 					return nil
 				}
 			}
 		}
 		_, err = w.Write([]byte{0}) //ignore errors; close comes from external
 		if err != nil {
-			lxlog.Warnf(logrus.Fields{"lines_written": linesCounted, "err": err}, "writer closed by external source")
+			logger.WithErr(err).WithFields(lxlog.Fields{
+				"lines_written": linesCounted,
+			}).Warnf("writer closed by external source")
 			return nil
 		}
 		if len(logLines)-1 == linesCounted {

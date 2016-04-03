@@ -5,27 +5,26 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/unik/pkg/daemon/ec2/ec2_metada_client"
-"github.com/Sirupsen/logrus"
 "github.com/layer-x/layerx-commons/lxlog"
 )
 
 
-func AttachVolume(volumeNameOrId, unikInstanceId, deviceName string) error {
+func AttachVolume(logger *lxlog.LxLogger, volumeNameOrId, unikInstanceId, deviceName string) error {
 	if deviceName == "" {
 		return lxerrors.New("device name must be specified", nil)
 	}
-	ec2Client, err := ec2_metada_client.NewEC2Client()
+	ec2Client, err := ec2_metada_client.NewEC2Client(logger)
 	if err != nil {
 		return lxerrors.New("could not start ec2 client session", err)
 	}
-	volume, err := GetVolumeByIdOrName(volumeNameOrId)
+	volume, err := GetVolumeByIdOrName(logger, volumeNameOrId)
 	if err != nil {
 		return lxerrors.New("could not find volume "+volumeNameOrId, err)
 	}
 	if volume.IsAttached() {
 		return lxerrors.New("volume " + volume.Name + " is already attached to instance "+volume.Attachments[0].InstanceId, err)
 	}
-	unikInstance, err := GetUnikInstanceByPrefixOrName(unikInstanceId)
+	unikInstance, err := GetUnikInstanceByPrefixOrName(logger, unikInstanceId)
 	if err != nil {
 		return lxerrors.New("failed to retrieve unik instance", err)
 	}
@@ -53,8 +52,8 @@ func AttachVolume(volumeNameOrId, unikInstanceId, deviceName string) error {
 	if err != nil {
 		return lxerrors.New("failed to tag volume " + volume.Name, err)
 	}
-	lxlog.Debugf(logrus.Fields{"output": createTagsOutput}, "tagged volume " + volume.Name)
-	lxlog.Infof(logrus.Fields{"output": attachVolumeOutput}, "attached volume " + volume.Name+ " to instance "+ unikInstanceId)
+	logger.WithFields(lxlog.Fields{"output": createTagsOutput}).Debugf("tagged volume " + volume.Name)
+	logger.WithFields(lxlog.Fields{"output": attachVolumeOutput}).Infof("attached volume " + volume.Name+ " to instance "+ unikInstanceId)
 
 	return nil
 }

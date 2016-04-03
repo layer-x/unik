@@ -10,7 +10,6 @@ import (
 	"time"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"github.com/Sirupsen/logrus"
 )
 
 const MAX_RETRIES = 5
@@ -48,7 +47,7 @@ func getAZ() (string, error) {
 	return az, nil
 }
 
-func NewEC2Client() (*unikEc2Client, error) {
+func NewEC2Client(logger *lxlog.LxLogger) (*unikEc2Client, error) {
 	if ec2ClientSingleton == nil {
 		var err error
 		availabilityZone, err = getAZ()
@@ -62,7 +61,7 @@ func NewEC2Client() (*unikEc2Client, error) {
 		session := session.New()
 		session.Config.WithMaxRetries(MAX_RETRIES)
 		session.Handlers.Send.PushFront(func(r *request.Request) {
-			lxlog.Debugf(logrus.Fields{"request": r}, "request sent to aws")
+			logger.WithFields(lxlog.Fields{"request": r}).Debugf("request sent to aws")
 		})
 		ec2ClientSingleton = ec2.New(session, &aws.Config{
 			Region: aws.String(region),
@@ -319,6 +318,21 @@ func (c *unikEc2Client) ModifyImageAttribute(input *ec2.ModifyImageAttributeInpu
 	var retries uint
 	for {
 		output, err := c.ec2Client.ModifyImageAttribute(input)
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return output, err
+		}
+		time.Sleep((1 << retries) * time.Second)
+		retries++
+		if retries > MAX_RETRIES {
+			return nil, err
+		}
+	}
+}
+
+func (c *unikEc2Client) ImportVolume(input *ec2.ImportVolumeInput) (*ec2.ImportVolumeOutput, error) {
+	var retries uint
+	for {
+		output, err := c.ec2Client.ImportVolume(input)
 		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
 			return output, err
 		}

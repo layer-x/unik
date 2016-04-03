@@ -56,33 +56,6 @@ func convertUnikInstancev21(unikInstance *types.UnikInstance) *DockerUnikInstanc
 	}
 }
 
-//func convertUnikInstanceInspect(unikInstance *types.UnikInstance) *dockertypes.ContainerJSON {
-//	size := 100000
-//	var running bool
-//	var removalInProgress bool
-//	if unikInstance.State == "running" {
-//		running = true
-//	}
-//	if unikInstance.State == "shutting-down" {
-//		removalInProgress = true
-//	}
-//	return &dockertypes.ContainerJSON{
-//		ContainerJSONBase: dockertypes.ContainerJSONBase{
-//			ID: unikInstance.UnikInstanceID,
-//			Name: unikInstance.UnikInstanceName,
-//			Image: unikInstance.UnikernelName,
-//			Created: unikInstance.Created.Unix(),
-//			Args: []string{"N/A"},
-//			State: &container.State{
-//				Running: running,
-//				RemovalInProgress: removalInProgress,
-//			},
-//			SizeRw: &size,
-//			SizeRootFs: &size,
-//		},
-//	}
-//}
-
 type DockerUnikInstanceVerbose struct {
 	ID string `json:"Id"`
 	Names []string `json:"Names"`

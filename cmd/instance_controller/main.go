@@ -13,7 +13,6 @@ import (
 	"bufio"
 	"strings"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"github.com/Sirupsen/logrus"
 	"os"
 	"github.com/layer-x/unik/pkg/unik_client"
 )
@@ -47,16 +46,23 @@ func main() {
 	}
 	errc := make(chan error)
 
-	lxlog.Infof(logrus.Fields{"unik_ip": url, "port": port},"instance controller initialized with port "+port)
+	logger := lxlog.New()
+
+	logger.WithFields(lxlog.Fields{
+		"unik_ip": url, "port": port,
+	}).Infof("instance controller initialized with port "+port)
 
 	go monitorInstance(url, instanceName, errc)
 	go followLogs(url, instanceName, errc)
 	go func(){
-		lxlog.Infof(logrus.Fields{}, "waiting on remote ip")
+		logger.Infof("waiting on remote ip")
 		for {
 			if remoteAddr != "" {
-				lxlog.Infof(logrus.Fields{"ip": remoteAddr+":3000", "port": port}, "received public ip for instance")
-				startRedirectServer(port, remoteAddr+":3000", errc)
+				logger.WithFields(lxlog.Fields{
+					"ip": remoteAddr+":3000",
+					"port": port,
+				}).Infof("received public ip for instance")
+				startRedirectServer(logger, port, remoteAddr+":3000", errc)
 				break
 			}
 			time.Sleep(2000 * time.Millisecond)
@@ -76,13 +82,13 @@ func main() {
 					volumeName += "_instance"+os.Getenv("CF_INSTANCE_INDEX")
 				}
 				size := vol.Size
-				lxlog.Infof(logrus.Fields{
+				logger.WithFields(lxlog.Fields{
 					"instanceName": instanceName,
 					"deviceName": deviceName,
 					"volumeName": volumeName,
 					"size": size,
-				},"attaching volume to instance")
-				err = retryCreateAndAttachVolume(url, instanceName, volumeName, deviceName, size, 30)
+				}).Infof("attaching volume to instance")
+				err = retryCreateAndAttachVolume(logger, url, instanceName, volumeName, deviceName, size, 30)
 				if err != nil {
 					panic(err)
 				}
@@ -91,7 +97,7 @@ func main() {
 	}()
 	err = <-errc
 	lxhttpclient.Delete(url, "/instances/"+instanceName, nil)
-	lxlog.Fatalf(logrus.Fields{"error": err, "instanceName": instanceName, "url": url, "env": *envStrPtr}, "unk instance controller terminated!")
+	logger.WithErr(err).WithFields(lxlog.Fields{"error": err, "instanceName": instanceName, "url": url, "env": *envStrPtr}).Fatalf("unk instance controller terminated!")
 }
 
 func bootInstance(url, unikernelName, envStr, envDelimiter, envPairDelimiter string) (string, error) {
@@ -173,7 +179,7 @@ func getUnikInstance(url, instanceName string) (*types.UnikInstance, error) {
 	return nil, lxerrors.New("could not find unik instance " + instanceName, nil)
 }
 
-func retryCreateAndAttachVolume(url, instanceName, volumeName, deviceName string, size, retries int) error {
+func retryCreateAndAttachVolume(logger *lxlog.LxLogger, url, instanceName, volumeName, deviceName string, size, retries int) error {
 	client := unik_client.NewUnikClient(url)
 	_, err := client.CreateVolume(volumeName, size)
 	if err != nil {
@@ -186,14 +192,14 @@ func retryCreateAndAttachVolume(url, instanceName, volumeName, deviceName string
 	_, err = client.AttachVolume(volumeName, instanceName, deviceName)
 	if  err != nil {
 		if retries > 0 {
-			return retryCreateAndAttachVolume(url, instanceName, volumeName, deviceName, size, retries-1)
+			return retryCreateAndAttachVolume(logger, url, instanceName, volumeName, deviceName, size, retries-1)
 			time.Sleep(5 * time.Second)
-			lxlog.Infof(logrus.Fields{
+			logger.WithFields(lxlog.Fields{
 				"url": url,
 				"instanceName": instanceName,
 				"volumeName": volumeName,
 				"deviceName": deviceName,
-			},"failed to attach volume, retrying %v more times", retries)
+			}).Infof("failed to attach volume, retrying %v more times", retries)
 		} else {
 			return lxerrors.New("error attaching volume", err)
 		}

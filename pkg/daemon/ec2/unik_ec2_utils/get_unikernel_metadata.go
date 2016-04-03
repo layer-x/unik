@@ -1,9 +1,7 @@
 package unik_ec2_utils
 
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/layer-x/layerx-commons/lxlog"
 	"github.com/layer-x/unik/pkg/types"
 	"time"
 )
@@ -25,7 +23,6 @@ func GetUnikernelMetadata(image *ec2.Image) *types.Unikernel {
 	layout := "2006-01-02T15:04:05.000Zs"
 	createdTime, err := time.Parse(layout, *image.CreationDate)
 	if err != nil {
-		lxlog.Debugf(logrus.Fields{"time": createdTime}, "Time: "+createdTime.String())
 		unikernel.Created = createdTime.Unix()
 	}
 	return unikernel

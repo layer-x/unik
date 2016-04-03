@@ -3,9 +3,7 @@ import (
 	"github.com/vmware/photon-controller-go-sdk/photon"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"fmt"
-	"flag"
 	"github.com/layer-x/layerx-commons/lxlog"
-"github.com/Sirupsen/logrus"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi"
 "golang.org/x/net/context"
@@ -36,8 +34,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	client, err := govmomi.NewClient(ctx, "https://192.168.0.29:443", true)
+	logger := lxlog.New()
 	if err != nil {
-		lxlog.Fatalf(logrus.Fields{"err": err}, "failed!")
+		logger.Fatalf(logrus.Fields{"err": err}, "failed!")
 	}
 	f := find.NewFinder(client, true)
 	ds, err := f.DefaultDatacenter(ctx)

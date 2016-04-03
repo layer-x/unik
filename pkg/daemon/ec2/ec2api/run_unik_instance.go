@@ -1,7 +1,6 @@
 package ec2api
 
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/layer-x/layerx-commons/lxerrors"
@@ -14,8 +13,8 @@ import (
 	"encoding/json"
 )
 
-func RunUnikInstance(unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {
-	unikernels, err := ListUnikernels()
+func RunUnikInstance(logger *lxlog.LxLogger, unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {
+	unikernels, err := ListUnikernels(logger)
 	instanceIds := []string{}
 	if err != nil {
 		return instanceIds, lxerrors.New("could not retrieve unikernel list", err)
@@ -24,7 +23,7 @@ func RunUnikInstance(unikernelName, instanceName string, instances int64, tags m
 	for _, unikernel := range unikernels {
 		if unikernel.UnikernelName == unikernelName {
 			unikernelFound = true
-			ec2Client, err := ec2_metada_client.NewEC2Client()
+			ec2Client, err := ec2_metada_client.NewEC2Client(logger)
 			if err != nil {
 				return instanceIds, lxerrors.New("could not start ec2 client session", err)
 			}
@@ -37,7 +36,10 @@ func RunUnikInstance(unikernelName, instanceName string, instances int64, tags m
 				return instanceIds, lxerrors.New("could not convert unik instance data struct to json", err)
 			}
 			encodedData := base64.StdEncoding.EncodeToString(data)
-			lxlog.Debugf(logrus.Fields{"unikinstancedata": string(data), "encoded_bytes": len(encodedData)}, "metadata for running unikinstance")
+			logger.WithFields(lxlog.Fields{
+				"unikinstancedata": string(data), 
+				"encoded_bytes": len(encodedData),
+			}).Debugf("metadata for running unikinstance")
 			startInstancesInput := &ec2.RunInstancesInput{
 				ImageId:  aws.String(unikernel.Id),
 				InstanceType: aws.String("m1.small"),
@@ -45,12 +47,16 @@ func RunUnikInstance(unikernelName, instanceName string, instances int64, tags m
 				MinCount: aws.Int64(instances),
 				UserData: aws.String(encodedData),
 			}
-			lxlog.Debugf(logrus.Fields{"input": startInstancesInput}, "starting instance for unikernel "+unikernelName)
+			logger.WithFields(lxlog.Fields{
+				"input": startInstancesInput,
+			}).Debugf("starting instance for unikernel "+unikernelName)
 			reservation, err := ec2Client.RunInstances(startInstancesInput)
 			if err != nil {
 				return instanceIds, lxerrors.New("failed to run instance for unikernel "+unikernelName, err)
 			}
-			lxlog.Debugf(logrus.Fields{"reservation": reservation}, "started instance for unikernel "+unikernelName)
+			logger.WithFields(lxlog.Fields{
+				"reservation": reservation,
+			}).Debugf("started instance for unikernel "+unikernelName)
 			for _, instance := range reservation.Instances {
 				if unikernel.Id == *instance.ImageId {
 					instanceId := unikernelName + "_" + uuid.New()
@@ -78,12 +84,16 @@ func RunUnikInstance(unikernelName, instanceName string, instances int64, tags m
 							},
 						},
 					}
-					lxlog.Debugf(logrus.Fields{"tags": createTagsInput}, "tagging instance for unikernel "+instanceId)
+					logger.WithFields(lxlog.Fields{
+						"tags": createTagsInput,
+					}).Debugf("tagging instance for unikernel "+instanceId)
 					createTagsOutput, err := ec2Client.CreateTags(createTagsInput)
 					if err != nil {
 						return instanceIds, lxerrors.New("failed to tag instance for unikernel "+unikernelName, err)
 					}
-					lxlog.Debugf(logrus.Fields{"output": createTagsOutput}, "tagged instance for unikernel "+instanceId)
+					logger.WithFields(lxlog.Fields{
+						"output": createTagsOutput,
+					}).Debugf("tagged instance for unikernel "+instanceId)
 					instanceIds = append(instanceIds, instanceId)
 				}
 			}
