@@ -39,7 +39,7 @@ func NewUnikVsphereCPI(logger *lxlog.LxLogger, rawUrl, user, password string) *U
 		unikState = state.NewCleanState(u)
 	}
 	logger.WithFields(lxlog.Fields{
-		"state": unikState,,
+		"state": unikState,
 	}).Infof("loaded unik state")
 	return &UnikVsphereCPI{
 		creds: vsphere_api.Creds{

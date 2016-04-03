@@ -32,7 +32,7 @@ func BuildJavaUnikernel(logger *lxlog.LxLogger, unikernelName, unikernelCompilat
 		}).Infof("cleaned up files")
 	}()
 
-	artifactId, groupId, version, err := osv.WrapJavaApplication(javaWrapperDir, unikernelCompilationDir)
+	artifactId, groupId, version, err := osv.WrapJavaApplication(logger, javaWrapperDir, unikernelCompilationDir)
 	if err != nil {
 		return lxerrors.New("generating java wrapper application " + unikernelCompilationDir, err)
 	}

@@ -11,7 +11,7 @@ import (
 )
 
 func ListUnikInstances(logger *lxlog.LxLogger) ([]*types.UnikInstance, error) {
-	ec2Client, err := ec2_metada_client.NewEC2Client()
+	ec2Client, err := ec2_metada_client.NewEC2Client(logger)
 	if err != nil {
 		return nil, lxerrors.New("could not start ec2 client session", err)
 	}
@@ -32,7 +32,7 @@ func ListUnikInstances(logger *lxlog.LxLogger) ([]*types.UnikInstance, error) {
 
 	for _, reservation := range describeInstancesOutput.Reservations {
 		for _, instance := range reservation.Instances {
-			unikInstance, err := unik_ec2_utils.GetUnikInstanceMetadata(instance)
+			unikInstance, err := unik_ec2_utils.GetUnikInstanceMetadata(logger, instance)
 			if unikInstance != nil && err == nil {
 				logger.WithFields(lxlog.Fields{
 					"UnikInstance": unikInstance.UnikInstanceID,

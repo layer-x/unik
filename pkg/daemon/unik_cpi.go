@@ -16,12 +16,12 @@ type UnikCPI interface {
 	DeleteUnikInstance(logger *lxlog.LxLogger, unikInstanceId string) error
 	DeleteVolume(logger *lxlog.LxLogger, volumeNameOrId string, force bool) error
 	DetachVolume(logger *lxlog.LxLogger, volumeNameOrId string, force bool) error
-	GetUnikInstanceByPrefixOrName(logger *lxlog.LxLogger, unikInstanceIdPrefixOrName string) (logger *lxlog.LxLogger, *types.UnikInstance, error)
+	GetUnikInstanceByPrefixOrName(logger *lxlog.LxLogger, unikInstanceIdPrefixOrName string) (*types.UnikInstance, error)
 	GetVolumeByIdOrName(logger *lxlog.LxLogger, volumeIdOrName string) (*types.Volume, error)
 	GetLogs(logger *lxlog.LxLogger, unikInstanceId string) (string, error)
-	ListUnikInstances(logger *lxlog.LxLogger, ) ([]*types.UnikInstance, error)
-	ListUnikernels(logger *lxlog.LxLogger, ) ([]*types.Unikernel, error)
-	ListVolumes(logger *lxlog.LxLogger, ) ([]*types.Volume, error)
+	ListUnikInstances(logger *lxlog.LxLogger) ([]*types.UnikInstance, error)
+	ListUnikernels(logger *lxlog.LxLogger) ([]*types.Unikernel, error)
+	ListVolumes(logger *lxlog.LxLogger) ([]*types.Volume, error)
 	RunUnikInstance(logger *lxlog.LxLogger, unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error)
 	StreamLogs(logger *lxlog.LxLogger, unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error
 	Push(logger *lxlog.LxLogger, unikernelName string) error

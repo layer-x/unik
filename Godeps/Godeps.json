@@ -2,16 +2,35 @@
 	"ImportPath": "github.com/layer-x/unik",
 	"GoVersion": "go1.6",
 	"Packages": [
-		"github.com/layer-x/layerx-commons/lxfileutils"
+		"github.com/layer-x/layerx-commons/lxmartini"
 	],
 	"Deps": [
 		{
-			"ImportPath": "github.com/layer-x/layerx-commons/lxerrors",
-			"Rev": "93558eb0e996523057815e59662e0af15297a6b0"
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.10.0",
+			"Rev": "4b6ea7319e214d98c938f12692336f7ca9348d6b"
 		},
 		{
-			"ImportPath": "github.com/layer-x/layerx-commons/lxfileutils",
-			"Rev": "93558eb0e996523057815e59662e0af15297a6b0"
+			"ImportPath": "github.com/codegangsta/inject",
+			"Comment": "v1.0-rc1-10-g33e0aa1",
+			"Rev": "33e0aa1cb7c019ccc3fbe049a8262a6403d30504"
+		},
+		{
+			"ImportPath": "github.com/go-martini/martini",
+			"Comment": "v1.0-168-g1766d4b",
+			"Rev": "1766d4b551f29d93db1e721e19b15580699e26cc"
+		},
+		{
+			"ImportPath": "github.com/layer-x/layerx-commons/lxerrors",
+			"Rev": "74e4bd267348b1ebac669568d0e324672a73cea2"
+		},
+		{
+			"ImportPath": "github.com/layer-x/layerx-commons/lxlog",
+			"Rev": "74e4bd267348b1ebac669568d0e324672a73cea2"
+		},
+		{
+			"ImportPath": "github.com/layer-x/layerx-commons/lxmartini",
+			"Rev": "74e4bd267348b1ebac669568d0e324672a73cea2"
 		}
 	]
 }

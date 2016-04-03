@@ -83,7 +83,7 @@ func (d *UnikDaemon) registerHandlers() {
 				res.WriteHeader(http.StatusNoContent)
 			}
 		}
-		jsonObject, err := action()
+		jsonObject, err := action(logger)
 		if err != nil {
 			lxmartini.Respond(res, err)
 			logger.WithErr(err).Errorf("error performing action")
@@ -475,12 +475,12 @@ func (d *UnikDaemon) registerHandlers() {
 	})
 }
 
-func (d *UnikDaemon) addDockerHandlers() {
-	d.server = docker_api.AddDockerApi(d.server)
+func (d *UnikDaemon) addDockerHandlers(logger *lxlog.LxLogger) {
+	d.server = docker_api.AddDockerApi(logger, d.server)
 }
 
-func (d *UnikDaemon) Start(port int) {
+func (d *UnikDaemon) Start(logger *lxlog.LxLogger, port int) {
 	d.registerHandlers()
-	d.addDockerHandlers()
+	d.addDockerHandlers(logger)
 	d.server.RunOnAddr(fmt.Sprintf(":%v", port))
 }
