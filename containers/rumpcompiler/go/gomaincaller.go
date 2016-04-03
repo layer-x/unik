@@ -40,59 +40,41 @@ func gomaincaller() {
 
 	fmt.Printf("Beginning bootstrap...")
 
-	client := http.Client{
-		Transport: &http.Transport{
-			Dial: dialTimeout,
-		},
+	retries := 0
+	err = errors.New("enter loop")
+	for err != nil && retries < 3 {
+		fmt.Printf("listening for Unik backend UDP Heartbeat...")
+		err = bootstrapMulticast(instanceData)
+		retries++
+		if err == nil {
+			fmt.Printf("multicast bootstrap finished!\n")
+		}
 	}
-	resp, err := client.Get("http://169.254.169.254/latest/user-data")
-	if err == nil {
-		fmt.Printf("I am an EC2 instance! Retreiving boostrapping information from http://169.254.169.254/latest/user-data...")
-		defer resp.Body.Close()
-		data, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
+	if err != nil {
+		fmt.Printf("mdns bootstrap failed, attempting to reach ec2 metadata server...\n")
+		client := http.Client{
+			Transport: &http.Transport{
+				Dial: dialTimeout,
+			},
 		}
-		err = json.Unmarshal(data, &instanceData)
-		if err != nil {
-			log.Fatal(err)
-		}
-		for key, value := range instanceData.Env {
-			os.Setenv(key, value)
-		}
-	} else { //if AWS user-data doesnt work, try multicast
-		fmt.Printf("Not an EC2 instance: "+err.Error()+" listening for Unik backend UDP Heartbeat...")
-		//get MAC Addr (needed for vsphere)
-		ifaces, err := net.Interfaces()
-		if err != nil {
-			log.Fatal("retrieving network interfaces" + err.Error())
-		}
-		macAddress := ""
-		for _, iface := range ifaces {
-			fmt.Printf("found an interface: %v\n", iface)
-			if iface.Name != "lo" {
-				macAddress = iface.HardwareAddr.String()
+		resp, err := client.Get("http://169.254.169.254/latest/user-data")
+		if err == nil {
+			fmt.Printf("I am an EC2 instance! Retreiving boostrapping information from http://169.254.169.254/latest/user-data...")
+			defer resp.Body.Close()
+			data, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Fatal(err)
 			}
-		}
-		if macAddress == "" {
-			log.Fatal("could not find mac address")
-		}
-
-		resp, err := http.Get("http://"+getUnikIp()+":3001/bootstrap?mac_address=" + macAddress)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer resp.Body.Close()
-		data, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = json.Unmarshal(data, &instanceData)
-		if err != nil {
-			log.Fatal(err)
-		}
-		for key, value := range instanceData.Env {
-			os.Setenv(key, value)
+			err = json.Unmarshal(data, &instanceData)
+			if err != nil {
+				log.Fatal(err)
+			}
+			for key, value := range instanceData.Env {
+				os.Setenv(key, value)
+			}
+			fmt.Printf("ec2 bootstrap finished!\n")
+		} else {
+			log.Printf("failed to bootstrap... moving on without registering to unik backend... err: %s\n", err.Error())
 		}
 	}
 
@@ -101,9 +83,47 @@ func gomaincaller() {
 	mux.HandleFunc("/logs", func(res http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(res, "logs: %s", string(logs.Bytes()))
 	})
+	fmt.Printf("starting log server\n")
 	go http.ListenAndServe(":9876", mux)
 
+	fmt.Printf("running main\n")
 	main()
+}
+
+func bootstrapMulticast(instanceData UnikInstanceData) error {
+	//get MAC Addr (needed for vsphere)
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return errors.New("retrieving network interfaces" + err.Error())
+	}
+	macAddress := ""
+	for _, iface := range ifaces {
+		fmt.Printf("found an interface: %v\n", iface)
+		if iface.Name != "lo" {
+			macAddress = iface.HardwareAddr.String()
+		}
+	}
+	if macAddress == "" {
+		return errors.New("could not find mac address")
+	}
+
+	resp, err := http.Get("http://" + getUnikIp() + ":3001/bootstrap?mac_address=" + macAddress)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(data, &instanceData)
+	if err != nil {
+		return err
+	}
+	for key, value := range instanceData.Env {
+		os.Setenv(key, value)
+	}
+	return nil
 }
 
 func getUnikIp() string {
@@ -113,13 +133,13 @@ func getUnikIp() string {
 		Port: 9876,
 	})
 	if err != nil {
-		log.Fatalf("error listening for udp4: "+err.Error())
+		log.Fatalf("error listening for udp4: " + err.Error())
 	}
 	for {
 		data := make([]byte, 4096)
 		_, remoteAddr, err := socket.ReadFromUDP(data)
 		if err != nil {
-			log.Fatalf("error reading from udp: "+err.Error())
+			log.Fatalf("error reading from udp: " + err.Error())
 		}
 		fmt.Printf("recieved an ip: %s with data: %s", remoteAddr.IP.String(), string(data))
 		if strings.Contains(string(data), "unik") {
@@ -148,7 +168,7 @@ func teeStdout(writer io.Writer) error {
 		for {
 			_, err := io.Copy(multi, reader)
 			if err != nil {
-				log.Fatalf("copying pipe reader to multi writer: "+err.Error())
+				log.Fatalf("copying pipe reader to multi writer: " + err.Error())
 			}
 		}
 	}()
@@ -168,7 +188,7 @@ func teeStderr(writer io.Writer) error {
 		for {
 			_, err := io.Copy(multi, reader)
 			if err != nil {
-				log.Fatalf("copying pipe reader to multi writer: "+err.Error())
+				log.Fatalf("copying pipe reader to multi writer: " + err.Error())
 			}
 		}
 	}()
