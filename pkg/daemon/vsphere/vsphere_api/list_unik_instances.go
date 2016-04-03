@@ -6,10 +6,11 @@ import (
 	"github.com/docker/go/canonical/json"
 	"github.com/layer-x/unik/pkg/daemon/state"
 	vspheretypes "github.com/vmware/govmomi/vim25/types"
+"github.com/layer-x/layerx-commons/lxlog"
 )
 
-func ListUnikInstances(unikState *state.UnikState, creds Creds) ([]*types.UnikInstance, error) {
-	client, err := vsphere_utils.NewVsphereClient(creds.URL)
+func ListUnikInstances(logger *lxlog.LxLogger, unikState *state.UnikState, creds Creds) ([]*types.UnikInstance, error) {
+	client, err := vsphere_utils.NewVsphereClient(creds.URL, logger)
 	if err != nil {
 		return nil, lxerrors.New("creating new vsphere client ", err)
 	}

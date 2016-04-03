@@ -1,6 +1,5 @@
 package vsphere_api
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/layer-x/layerx-commons/lxlog"
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/unik/pkg/types"
@@ -10,9 +9,11 @@ import (
 	"github.com/layer-x/unik/pkg/daemon/vsphere/vsphere_utils"
 )
 
-func BuildGolangUnikernel(unikState *state.UnikState, unikernelName, unikernelId, unikernelCompilationDir, vmdkFolder string, vsphereClient *vsphere_utils.VsphereClient) error {
-
-	lxlog.Infof(logrus.Fields{"path": unikernelCompilationDir, "unikernel_name": unikernelName}, "building golang unikernel")
+func BuildGolangUnikernel(logger *lxlog.LxLogger, unikState *state.UnikState, unikernelName, unikernelId, unikernelCompilationDir, vmdkFolder string, vsphereClient *vsphere_utils.VsphereClient) error {
+	logger.WithFields(lxlog.Fields{
+		"path": unikernelCompilationDir, 
+		"unikernel_name": unikernelName,
+	}).Infof("building golang unikernel")
 
 	buildUnikernelCommand := exec.Command("docker", "run",
 		"--rm",
@@ -20,13 +21,17 @@ func BuildGolangUnikernel(unikState *state.UnikState, unikernelName, unikernelId
 		"-v", unikernelCompilationDir + ":/opt/code",
 		"rumpcompiler-go-hw",
 	)
-	lxlog.Infof(logrus.Fields{"cmd": buildUnikernelCommand.Args}, "running build kernel command")
-	lxlog.LogCommand(buildUnikernelCommand, true)
+	logger.WithFields(lxlog.Fields{
+		"cmd": buildUnikernelCommand.Args,
+	}).Infof("running build kernel command")
+	logger.LogCommand(buildUnikernelCommand, true)
 	err := buildUnikernelCommand.Run()
 	if err != nil {
 		return lxerrors.New("building unikernel kernel failed", err)
 	}
-	lxlog.Infof(logrus.Fields{"unikernel_name": unikernelName}, "unikernel .bin created")
+	logger.WithFields(lxlog.Fields{
+		"unikernel_name": unikernelName,
+	}).Infof("unikernel .bin created")
 
 	buildImageCommand := exec.Command("docker", "run",
 		"--rm",
@@ -37,13 +42,17 @@ func BuildGolangUnikernel(unikState *state.UnikState, unikernelName, unikernelId
 		"-mode",
 		"vmware",
 	)
-	lxlog.Infof(logrus.Fields{"cmd": buildImageCommand.Args}, "runninig build image command")
-	lxlog.LogCommand(buildImageCommand, true)
+	logger.WithFields(lxlog.Fields{
+		"cmd": buildImageCommand.Args,
+	}).Infof("runninig build image command")
+	logger.LogCommand(buildImageCommand, true)
 	err = buildImageCommand.Run()
 	if err != nil {
 		return lxerrors.New("building unikernel image failed", err)
 	}
-	lxlog.Infof(logrus.Fields{"unikernel_name": unikernelName}, "unikernel image created")
+	logger.WithFields(lxlog.Fields{
+		"unikernel_name": unikernelName,
+	}).Infof("unikernel image created")
 
 	vsphereClient.Mkdir("unik") //ignore errors since it may already exist
 	err = vsphereClient.Mkdir(vmdkFolder)
@@ -63,12 +72,14 @@ func BuildGolangUnikernel(unikState *state.UnikState, unikernelName, unikernelId
 		Path: vmdkFolder+"/root.vmdk",
 	}
 
-	err = unikState.Save()
+	err = unikState.Save(logger)
 	if err != nil {
 		return lxerrors.New("failed to save updated unikernel index", err)
 	}
 
-	lxlog.Infof(logrus.Fields{"unikernel": unikernelId}, "saved unikernel index")
+	logger.WithFields(lxlog.Fields{
+		"unikernel": unikernelId,
+	}).Infof("saved unikernel index")
 	return nil
 }
 

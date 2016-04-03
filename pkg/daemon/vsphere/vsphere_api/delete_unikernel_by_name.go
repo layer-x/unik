@@ -2,16 +2,17 @@ package vsphere_api
 import (
 "github.com/layer-x/layerx-commons/lxerrors"
 "github.com/layer-x/unik/pkg/daemon/state"
+	"github.com/layer-x/layerx-commons/lxlog"
 )
 
-func DeleteUnikernelByName(unikState *state.UnikState, creds Creds, unikernelName string, force bool) error {
-	unikernels, err := ListUnikernels(unikState)
+func DeleteUnikernelByName(logger *lxlog.LxLogger, unikState *state.UnikState, creds Creds, unikernelName string, force bool) error {
+	unikernels, err := ListUnikernels(logger, unikState)
 	if err != nil {
 		return lxerrors.New("could not get unikernel list", err)
 	}
 	for _, unikernel := range unikernels {
 		if unikernel.UnikernelName == unikernelName {
-			err = DeleteUnikernel(unikState, creds, unikernel.Id, force)
+			err = DeleteUnikernel(logger, unikState, creds, unikernel.Id, force)
 			if err != nil {
 				return lxerrors.New("could not delete unikernel "+unikernel.Id, err)
 			}

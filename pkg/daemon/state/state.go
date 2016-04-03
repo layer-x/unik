@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"github.com/layer-x/unik/pkg/daemon/vsphere/vsphere_utils"
 	"os"
+	"github.com/layer-x/layerx-commons/lxlog"
 )
 
 var DEFAULT_UNIK_STATE_FILE = os.Getenv("HOME")+"state.json"
@@ -36,8 +37,8 @@ func NewCleanState(u *url.URL) *UnikState {
 	}
 }
 
-func NewStateFromVsphere(u *url.URL) (*UnikState, error) {
-	vsphereClient, err := vsphere_utils.NewVsphereClient(u)
+func NewStateFromVsphere(u *url.URL, logger *lxlog.LxLogger) (*UnikState, error) {
+	vsphereClient, err := vsphere_utils.NewVsphereClient(u, logger)
 	if err != nil {
 		return nil, lxerrors.New("initiating vsphere client connection", err)
 	}
@@ -59,7 +60,7 @@ func NewStateFromVsphere(u *url.URL) (*UnikState, error) {
 	return &unikState, nil
 }
 
-func (state *UnikState) Save() error {
+func (state *UnikState) Save(logger *lxlog.LxLogger) error {
 	state.lock.Lock()
 	defer state.lock.Unlock()
 	state.Saved = time.Now()
@@ -71,7 +72,7 @@ func (state *UnikState) Save() error {
 	if err != nil {
 		return lxerrors.New("could not write state file " + DEFAULT_UNIK_STATE_FILE, err)
 	}
-	vsphereClient, err := vsphere_utils.NewVsphereClient(state.u)
+	vsphereClient, err := vsphere_utils.NewVsphereClient(state.u, logger)
 	if err != nil {
 		return lxerrors.New("initiating vsphere client connection", err)
 	}

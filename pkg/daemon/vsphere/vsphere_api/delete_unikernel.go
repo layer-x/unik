@@ -2,25 +2,24 @@ package vsphere_api
 import (
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"github.com/Sirupsen/logrus"
 "github.com/layer-x/unik/pkg/daemon/state"
 	"github.com/layer-x/unik/pkg/daemon/vsphere/vsphere_utils"
 )
 
-func DeleteUnikernel(unikState *state.UnikState, creds Creds, unikernelId string, force bool) error {
-	vsphereClient, err := vsphere_utils.NewVsphereClient(creds.URL)
+func DeleteUnikernel(logger *lxlog.LxLogger, unikState *state.UnikState, creds Creds, unikernelId string, force bool) error {
+	vsphereClient, err := vsphere_utils.NewVsphereClient(creds.URL, logger)
 	if err != nil {
 		return lxerrors.New("initiating vsphere client connection", err)
 	}
 
-	unikInstances, err := ListUnikInstances(unikState, creds)
+	unikInstances, err := ListUnikInstances(logger, unikState, creds)
 	if err != nil {
 		return lxerrors.New("could not check to see running unik instances", err)
 	}
 	for _, instance := range unikInstances {
 		if instance.UnikernelId == unikernelId {
 			if force == true {
-				err = DeleteUnikInstance(unikState, creds, instance.UnikInstanceID)
+				err = DeleteUnikInstance(logger, unikState, creds, instance.UnikInstanceID)
 				if err != nil {
 					return lxerrors.New("could not delete unik instance "+instance.UnikInstanceID, err)
 				}
@@ -29,7 +28,10 @@ func DeleteUnikernel(unikState *state.UnikState, creds Creds, unikernelId string
 			}
 		}
 	}
-	lxlog.Infof(logrus.Fields{"unikernel": unikernelId, "force": force}, "deleting unikernel")
+	logger.WithFields(lxlog.Fields{
+		"unikernel": unikernelId,
+		"force": force,
+	}).Infof("deleting unikernel")
 
 	if _, ok := unikState.Unikernels[unikernelId]; ok {
 		err = vsphereClient.Rmdir("unik/"+unikernelId)
@@ -38,7 +40,7 @@ func DeleteUnikernel(unikState *state.UnikState, creds Creds, unikernelId string
 		}
 		delete(unikState.Unikernels, unikernelId)
 
-		err = unikState.Save()
+		err = unikState.Save(logger)
 		if err != nil {
 			return lxerrors.New("failed to save updated unikernel index", err)
 		}
