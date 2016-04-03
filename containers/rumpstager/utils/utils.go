@@ -345,7 +345,9 @@ func ToRumpJson(c model.RumpConfig) (string, error) {
 	for _, b := range blk {
 
 		blkjson, err := json.Marshal(b)
-		return "", err
+		if err != nil {
+			return "", err
+		}
 		blks += fmt.Sprintf("\"blk\": %s,", string(blkjson))
 	}
 	var jsonString string

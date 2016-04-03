@@ -113,6 +113,8 @@ func (s *QEmuVolumeStager) CreateRoot(kernelPath string, c model.RumpConfig) err
 	if err != nil {
 		return err
 	}
+	log.WithFields(log.Fields{"rumpconfig": c, "jsonConfig": jsonString}).Debug("about to create boot image")
+
 	err = utils.CreateBootImageWithSize(imgFile, kernelPath, jsonString, device.MegaBytes(100))
 	if err != nil {
 		return err
