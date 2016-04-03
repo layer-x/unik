@@ -39,7 +39,7 @@ How to run QEMU to reproduce issue:
 
 Then to debug (on OSX):
 
-    docker run --rm -ti --net="host" -v $PWD/prog/:/tmp/p rump-hw-debug
+    docker run --rm -ti --net="host" -v $PWD/:/opt/prog rumpdebugger-gdb-hw
     /opt/gdb-7.11/gdb/gdb -ex 'target remote 192.168.99.1:1234' /opt/prog/program.bin
 
 [Reference](https://github.com/rumpkernel/wiki/wiki/Howto%3A-Debugging-Rumprun-with-gdb)
@@ -183,3 +183,10 @@ then it failed on a bunch of other not defined functions:
 some of those are in ./dev/ic/mpt_debug.c so tried to add this file to makefile.
 
 which seemed to finally bake!
+
+
+VMware uses scsi with vendor id 0x1000 and device id 0x0030
+which qemu doesn't emulate, so can't test with qemu, as the driver for the qemu scsi is a different one.
+
+gdb server in fusion:
+http://wiki.osdev.org/VMware

@@ -7,6 +7,12 @@ To run (from the folder where the unikernel is):
 
     docker run --rm -v /dev:/dev --privileged -v $PWD/:/unikernel/ rumpstager -mode vmware|aws
 
+or with volumes
+
+
+    docker run --rm -v /dev:/dev --privileged -v $PWD/:/unikernel/ rumpstager -mode vmware|aws -v dir-in-pwd:/where/to/mount
+
+
 ## rumpcompiler
 
 Compile code to a rump unikernel.
