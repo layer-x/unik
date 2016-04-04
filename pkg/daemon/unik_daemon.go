@@ -13,14 +13,14 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-"github.com/layer-x/unik/pkg/daemon/ec2"
-"github.com/layer-x/unik/pkg/daemon/vsphere"
-"github.com/layer-x/unik/pkg/daemon/docker_api"
+	"github.com/layer-x/unik/pkg/daemon/ec2"
+	"github.com/layer-x/unik/pkg/daemon/vsphere"
+	"github.com/layer-x/unik/pkg/daemon/docker_api"
 )
 
 type UnikDaemon struct {
 	server *martini.ClassicMartini
-	cpi UnikCPI
+	cpi    UnikCPI
 }
 
 func NewUnikDaemon(provider string, opts map[string]string) *UnikDaemon {
@@ -31,13 +31,13 @@ func NewUnikDaemon(provider string, opts map[string]string) *UnikDaemon {
 		cpi = ec2.NewUnikEC2CPI()
 		break
 	case "vsphere":
-		vsphereCpi := vsphere.NewUnikVsphereCPI(opts["vsphereUrl"], opts["vsphereUser"], opts["vspherePass"])
-		vsphereCpi.StartInstanceDiscovery()
-		vsphereCpi.ListenForBootstrap(3001)
+		vsphereCpi := vsphere.NewUnikVsphereCPI(logger, opts["vsphereUrl"], opts["vsphereUser"], opts["vspherePass"])
+		vsphereCpi.StartInstanceDiscovery(logger)
+		vsphereCpi.ListenForBootstrap(logger, 3001)
 		cpi = vsphereCpi
 		break
 	default:
-		logger.Fatalf("Unrecognized provider "+provider)
+		logger.Fatalf("Unrecognized provider " + provider)
 	}
 	return &UnikDaemon{
 		server: lxmartini.QuietMartini(),
@@ -83,7 +83,7 @@ func (d *UnikDaemon) registerHandlers() {
 				res.WriteHeader(http.StatusNoContent)
 			}
 		}
-		jsonObject, err := action()
+		jsonObject, err := action(logger)
 		if err != nil {
 			lxmartini.Respond(res, err)
 			logger.WithErr(err).Errorf("error performing action")
@@ -98,7 +98,7 @@ func (d *UnikDaemon) registerHandlers() {
 
 	d.server.Get("/instances", func(res http.ResponseWriter, req *http.Request) {
 		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
-			unikInstances, err := d.cpi.ListUnikInstances()
+			unikInstances, err := d.cpi.ListUnikInstances(logger)
 			if err != nil {
 				logger.WithErr(err).Errorf("could not get unik instance list")
 			} else {
@@ -111,7 +111,7 @@ func (d *UnikDaemon) registerHandlers() {
 	})
 	d.server.Get("/unikernels", func(res http.ResponseWriter, req *http.Request) {
 		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
-			unikernels, err := d.cpi.ListUnikernels()
+			unikernels, err := d.cpi.ListUnikernels(logger)
 			if err != nil {
 				logger.WithErr(err).Errorf("could not get unikernel list")
 			} else {
@@ -147,7 +147,7 @@ func (d *UnikDaemon) registerHandlers() {
 			logger.WithFields(lxlog.Fields{
 				"unikernelName": unikernelName, "force": force, "uploadedTar": uploadedTar,
 			}).Debugf("building unikernel")
-			err = d.cpi.BuildUnikernel(unikernelName, force, uploadedTar, handler)
+			err = d.cpi.BuildUnikernel(logger, unikernelName, force, uploadedTar, handler)
 			if err != nil {
 				logger.WithErr(err).WithFields(lxlog.Fields{
 					"form": fmt.Sprintf("%v", req.Form), "unikernel_name": unikernelName,
@@ -155,7 +155,7 @@ func (d *UnikDaemon) registerHandlers() {
 				logger.WithFields(lxlog.Fields{
 
 				}).Warnf("cleaning up unikernel build artifacts (volumes, snapshots)")
-				snapshotErr := d.cpi.DeleteArtifactsForUnikernel(unikernelName)
+				snapshotErr := d.cpi.DeleteArtifactsForUnikernel(logger, unikernelName)
 				if snapshotErr != nil {
 					logger.WithErr(err).WithFields(lxlog.Fields{
 						"unikernel_name": unikernelName,
@@ -164,7 +164,7 @@ func (d *UnikDaemon) registerHandlers() {
 				return nil, err
 			}
 			logger.Debugf("verifying unikernel succeeded")
-			unikernels, err := d.cpi.ListUnikernels()
+			unikernels, err := d.cpi.ListUnikernels(logger)
 			if err != nil {
 				logger.WithErr(err).Errorf("could not get unikernel list")
 				return nil, err
@@ -174,7 +174,7 @@ func (d *UnikDaemon) registerHandlers() {
 					return unikernel, nil
 				}
 			}
-				return "unikernel created", nil
+			return "unikernel created", nil
 		})
 	})
 	d.server.Post("/unikernels/:unikernel_name/run", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
@@ -237,18 +237,18 @@ func (d *UnikDaemon) registerHandlers() {
 				env[splitEnv[0]] = splitEnv[1]
 			}
 
-			instanceIds, err := d.cpi.RunUnikInstance(unikernelName, instanceName, int64(instances), tags, env)
+			instanceIds, err := d.cpi.RunUnikInstance(logger, unikernelName, instanceName, int64(instances), tags, env)
 			if err != nil {
 				return nil, err
 			}
 			logger.Debugf("verifying instances started")
 			successfulInstances := []*types.UnikInstance{}
-			unikInstances, err := d.cpi.ListUnikInstances()
+			unikInstances, err := d.cpi.ListUnikInstances(logger)
 			if err != nil {
 				logger.WithErr(err).Errorf("could not get unik instance list")
 			}
 			for _, unikInstance := range unikInstances {
-			CheckIds:
+				CheckIds:
 				for _, instanceId := range instanceIds {
 					if unikInstance.UnikInstanceID == instanceId {
 						successfulInstances = append(successfulInstances, unikInstance)
@@ -258,7 +258,7 @@ func (d *UnikDaemon) registerHandlers() {
 			}
 			logger.WithFields(lxlog.Fields{
 				"instance_ids": instanceIds,
-			}).Infof(instancesStr+" instances started of unikernel "+unikernelName)
+			}).Infof(instancesStr + " instances started of unikernel " + unikernelName)
 			return successfulInstances, nil
 		})
 	})
@@ -268,7 +268,7 @@ func (d *UnikDaemon) registerHandlers() {
 			logger.WithFields(lxlog.Fields{
 				"unikernelName": unikernelName,
 			}).Debugf("pushing unikernel to unikhub.tk")
-			err := d.cpi.Push(unikernelName)
+			err := d.cpi.Push(logger, unikernelName)
 			if err != nil {
 				return nil, lxerrors.New("could not push unikernel to unikhub", err)
 			}
@@ -284,7 +284,7 @@ func (d *UnikDaemon) registerHandlers() {
 			logger.WithFields(lxlog.Fields{
 				"unikernelName": unikernelName,
 			}).Debugf("pulling unikernel to unikhub.tk")
-			err := d.cpi.Pull(unikernelName)
+			err := d.cpi.Pull(logger, unikernelName)
 			if err != nil {
 				return nil, lxerrors.New("could not pull unikernel to unikhub", err)
 			}
@@ -299,10 +299,10 @@ func (d *UnikDaemon) registerHandlers() {
 			instanceId := params["instance_id"]
 			logger.WithFields(lxlog.Fields{
 				"request": req,
-			}).Infof("deleting instance "+instanceId)
-			err := d.cpi.DeleteUnikInstance(instanceId)
+			}).Infof("deleting instance " + instanceId)
+			err := d.cpi.DeleteUnikInstance(logger, instanceId)
 			if err != nil {
-				logger.WithErr(err).Errorf("could not delete instance "+instanceId)
+				logger.WithErr(err).Errorf("could not delete instance " + instanceId)
 				return nil, err
 			}
 			return nil, err
@@ -320,14 +320,14 @@ func (d *UnikDaemon) registerHandlers() {
 			forceStr := req.URL.Query().Get("force")
 			logger.WithFields(lxlog.Fields{
 				"request": req,
-			}).Infof("deleting instance "+unikernelName)
+			}).Infof("deleting instance " + unikernelName)
 			force := false
 			if strings.ToLower(forceStr) == "true" {
 				force = true
 			}
-			err := d.cpi.DeleteUnikernelByName(unikernelName, force)
+			err := d.cpi.DeleteUnikernelByName(logger, unikernelName, force)
 			if err != nil {
-				logger.WithErr(err).Errorf("could not delete unikernel "+unikernelName)
+				logger.WithErr(err).Errorf("could not delete unikernel " + unikernelName)
 				return nil, err
 			}
 			return nil, nil
@@ -352,7 +352,7 @@ func (d *UnikDaemon) registerHandlers() {
 				}
 
 				output := ioutils.NewWriteFlusher(res)
-				err := d.cpi.StreamLogs(unikInstanceId, output, deleteOnDisconnect)
+				err := d.cpi.StreamLogs(logger, unikInstanceId, output, deleteOnDisconnect)
 				if err != nil {
 					logger.WithErr(err).WithFields(lxlog.Fields{
 						"unikInstanceId": unikInstanceId,
@@ -360,7 +360,7 @@ func (d *UnikDaemon) registerHandlers() {
 					return nil, err
 				}
 			}
-			logs, err := d.cpi.GetLogs(unikInstanceId)
+			logs, err := d.cpi.GetLogs(logger, unikInstanceId)
 			if err != nil {
 				logger.WithErr(err).WithFields(lxlog.Fields{
 					"unikInstanceId": unikInstanceId,
@@ -373,7 +373,7 @@ func (d *UnikDaemon) registerHandlers() {
 	d.server.Get("/volumes", func(res http.ResponseWriter, req *http.Request) {
 		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
 			logger.Debugf("listing volumes started")
-			volumes, err := d.cpi.ListVolumes()
+			volumes, err := d.cpi.ListVolumes(logger)
 			if err != nil {
 				return nil, lxerrors.New("could not retrieve volumes", err)
 			}
@@ -397,7 +397,7 @@ func (d *UnikDaemon) registerHandlers() {
 			logger.WithFields(lxlog.Fields{
 				"size": size, "name": volumeName,
 			}).Debugf("creating volume started")
-			volume, err := d.cpi.CreateVolume(volumeName, size)
+			volume, err := d.cpi.CreateVolume(logger, volumeName, size)
 			if err != nil {
 				return nil, lxerrors.New("could not create volume", err)
 			}
@@ -419,7 +419,7 @@ func (d *UnikDaemon) registerHandlers() {
 			logger.WithFields(lxlog.Fields{
 				"force": force, "name": volumeName,
 			}).Debugf("deleting volume started")
-			err := d.cpi.DeleteVolume(volumeName, force)
+			err := d.cpi.DeleteVolume(logger, volumeName, force)
 			if err != nil {
 				return nil, lxerrors.New("could not create volume", err)
 			}
@@ -441,7 +441,7 @@ func (d *UnikDaemon) registerHandlers() {
 				"instance": instanceId,
 				"volume": volumeName,
 			}).Debugf("attaching volume to instance")
-			err := d.cpi.AttachVolume(volumeName, instanceId, device)
+			err := d.cpi.AttachVolume(logger, volumeName, instanceId, device)
 			if err != nil {
 				return nil, lxerrors.New("could not attach volume to instance", err)
 			}
@@ -463,7 +463,7 @@ func (d *UnikDaemon) registerHandlers() {
 			logger.WithFields(lxlog.Fields{
 				"volume": volumeName,
 			}).Debugf("detaching volume from any instance")
-			err := d.cpi.DetachVolume(volumeName, force)
+			err := d.cpi.DetachVolume(logger, volumeName, force)
 			if err != nil {
 				return nil, lxerrors.New("could not attach volume to instance", err)
 			}
@@ -475,12 +475,12 @@ func (d *UnikDaemon) registerHandlers() {
 	})
 }
 
-func (d *UnikDaemon) addDockerHandlers() {
-	d.server = docker_api.AddDockerApi(d.server)
+func (d *UnikDaemon) addDockerHandlers(logger *lxlog.LxLogger) {
+	d.server = docker_api.AddDockerApi(logger, d.server)
 }
 
-func (d *UnikDaemon) Start(port int) {
+func (d *UnikDaemon) Start(logger *lxlog.LxLogger, port int) {
 	d.registerHandlers()
-	d.addDockerHandlers()
+	d.addDockerHandlers(logger)
 	d.server.RunOnAddr(fmt.Sprintf(":%v", port))
 }

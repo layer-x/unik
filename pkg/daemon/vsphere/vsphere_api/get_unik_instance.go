@@ -4,10 +4,11 @@ import (
 "strings"
 "github.com/layer-x/unik/pkg/types"
 "github.com/layer-x/unik/pkg/daemon/state"
+"github.com/layer-x/layerx-commons/lxlog"
 )
 
-func GetUnikInstanceByPrefixOrName(unikState *state.UnikState, creds Creds, unikInstanceIdPrefixOrName string) (*types.UnikInstance, error) {
-	unikInstances, err := ListUnikInstances(unikState, creds)
+func GetUnikInstanceByPrefixOrName(logger *lxlog.LxLogger, unikState *state.UnikState, creds Creds, unikInstanceIdPrefixOrName string) (*types.UnikInstance, error) {
+	unikInstances, err := ListUnikInstances(logger, unikState, creds)
 	if err != nil {
 		return nil, lxerrors.New("failed to retrieve known instances", err)
 	}

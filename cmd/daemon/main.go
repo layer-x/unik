@@ -52,5 +52,5 @@ func main() {
 	}
 
 	unikDaemon := daemon.NewUnikDaemon(*provider, opts)
-	unikDaemon.Start(3000)
+	unikDaemon.Start(logger, 3000)
 }

@@ -1,6 +1,5 @@
 package vsphere_api
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/layer-x/layerx-commons/lxlog"
 	"github.com/layer-x/unik/pkg/types"
 	"time"
@@ -11,9 +10,9 @@ import (
 	"github.com/layer-x/unik/pkg/daemon/state"
 )
 
-func RunUnikInstance(unikState *state.UnikState, creds Creds, unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {
+func RunUnikInstance(logger *lxlog.LxLogger, unikState *state.UnikState, creds Creds, unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {
 	instanceIds := []string{}
-	unikernels, err := ListUnikernels(unikState)
+	unikernels, err := ListUnikernels(logger, unikState)
 	if err != nil {
 		return instanceIds, lxerrors.New("could not retrieve unikernel list", err)
 	}
@@ -28,12 +27,14 @@ func RunUnikInstance(unikState *state.UnikState, creds Creds, unikernelName, ins
 		return instanceIds, lxerrors.New("could not find a unikernel with name "+unikernelName, nil)
 	}
 
-	vsphereClient, err := vsphere_utils.NewVsphereClient(creds.URL)
+	vsphereClient, err := vsphere_utils.NewVsphereClient(creds.URL, logger)
 	if err != nil {
 		return instanceIds, lxerrors.New("initiating vsphere client connection", err)
 	}
 
-	lxlog.Debugf(logrus.Fields{"path": targetUnikernel.Path}, "deploying unikernel vmdk")
+	logger.WithFields(lxlog.Fields{
+		"path": targetUnikernel.Path,
+	}).Debugf("deploying unikernel vmdk")
 
 	unikInstanceData := types.UnikInstanceData{
 		Tags: tags,
@@ -44,7 +45,9 @@ func RunUnikInstance(unikState *state.UnikState, creds Creds, unikernelName, ins
 		if instanceName == "" {
 			instanceName = unikInstanceId
 		}
-		lxlog.Debugf(logrus.Fields{"instance": unikInstanceId}, "starting instance for unikernel "+unikernelName)
+		logger.WithFields(lxlog.Fields{
+			"instance": unikInstanceId,
+		}).Debugf("starting instance for unikernel "+unikernelName)
 
 		unikInstanceMetadata := &types.UnikInstance{
 			UnikInstanceID: unikInstanceId,
