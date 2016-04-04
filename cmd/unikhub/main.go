@@ -24,7 +24,7 @@ import (
 const hubDataFile = "/var/unik/data.json"
 
 func main() {
-	logger := lxlog.New()
+	logger := lxlog.New("unikhub-main")
 	hub, err := NewHubFromData()
 	if err != nil {
 		hub = NewCleanHub()

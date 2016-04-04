@@ -22,15 +22,15 @@
 		},
 		{
 			"ImportPath": "github.com/layer-x/layerx-commons/lxerrors",
-			"Rev": "74e4bd267348b1ebac669568d0e324672a73cea2"
+			"Rev": "6a3cd43768d602dcc3d2ba991c4fd41c6cbaf84c"
 		},
 		{
 			"ImportPath": "github.com/layer-x/layerx-commons/lxlog",
-			"Rev": "74e4bd267348b1ebac669568d0e324672a73cea2"
+			"Rev": "6a3cd43768d602dcc3d2ba991c4fd41c6cbaf84c"
 		},
 		{
 			"ImportPath": "github.com/layer-x/layerx-commons/lxmartini",
-			"Rev": "74e4bd267348b1ebac669568d0e324672a73cea2"
+			"Rev": "6a3cd43768d602dcc3d2ba991c4fd41c6cbaf84c"
 		}
 	]
 }

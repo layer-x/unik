@@ -15,7 +15,7 @@ func main() {
 	vsphereUser := flag.String("vsphere-user", "", "user for vsphere")
 	vspherePass := flag.String("vsphere-pass", "", "password for vsphere")
 	flag.Parse()
-	logger := lxlog.New()
+	logger := lxlog.New("unik-daemon-main")
 	if *debugMode == "true" {
 		logger.SetLogLevel(lxlog.DebugLevel)
 	}

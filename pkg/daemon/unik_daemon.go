@@ -24,7 +24,7 @@ type UnikDaemon struct {
 }
 
 func NewUnikDaemon(provider string, opts map[string]string) *UnikDaemon {
-	logger := lxlog.New()
+	logger := lxlog.New("unik-daemon-setup")
 	var cpi UnikCPI
 	switch provider{
 	case "ec2":
@@ -48,7 +48,7 @@ func NewUnikDaemon(provider string, opts map[string]string) *UnikDaemon {
 func (d *UnikDaemon) registerHandlers() {
 	streamOrRespond := func(res http.ResponseWriter, req *http.Request, action func(logger *lxlog.LxLogger) (interface{}, error)) {
 		verbose := req.URL.Query().Get("verbose")
-		logger := lxlog.New()
+		logger := lxlog.New("unik-daemon-request-handler")
 		if strings.ToLower(verbose) == "true" {
 			httpOutStream := ioutils.NewWriteFlusher(res)
 			uuid := uuid.New()
