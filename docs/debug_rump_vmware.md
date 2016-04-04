@@ -66,7 +66,7 @@ To src-netbsd/sys/rump/dev/lib/libpci/Makefile add **"ppb.c"** to the list of so
 
 rebuild.
 
-# WORK IN PROGRESS - Add scsi controller support to rump:
+# Add scsi controller support to rump:
 How to run QEMU to reproduce issue:
 
     qemu-system-x86_64 -drive file=root.img,format=raw,if=scsi -device pci-bridge,chassis_nr=2  -device e1000,netdev=mynet0,mac=54:54:00:55:55:55,bus=pci.1,addr=1 -netdev user,id=mynet0,net=192.168.76.0/24,dhcpstart=192.168.76.9 -curses -s -S
@@ -190,3 +190,33 @@ which qemu doesn't emulate, so can't test with qemu, as the driver for the qemu 
 
 gdb server in fusion:
 http://wiki.osdev.org/VMware
+
+basically add to fusion .vmx file:
+
+    debugStub.listen.guest64 = "TRUE"
+    debugStub.listen.guest64.remote = "TRUE"
+
+
+and run
+
+    docker run --rm -ti --net="host" -v $PWD/:/opt/prog rumpdebugger-gdb-hw
+    /opt/gdb-7.11/gdb/gdb -ex 'target remote 192.168.99.1:8864' /opt/prog/program.bin
+
+
+Drive seems to be loaded, but still not hard drive detected.  :(
+
+from boot log you can see scsi device.
+will try to add it with mkdev
+
+makedevnodes(dev_t devtype, const char *basename, char minchar,
+        devmajor_t maj, devminor_t minnum, int nnodes)
+
+change: /opt/rumprun/src-netbsd/sys/rump/dev/lib/libscsipi/scsipi_component.c
+
+and add:
+#include <sys/disklabel.h>
+...
+    FLAWLESSCALL(rump_vfs_makedevnodes(S_IFBLK, "/dev/sd1", 'a',
+        bmaj, 1*MAXPARTITIONS, 8));
+    FLAWLESSCALL(rump_vfs_makedevnodes(S_IFCHR, "/dev/rsd1", 'a',
+        cmaj, 1*MAXPARTITIONS, 8));

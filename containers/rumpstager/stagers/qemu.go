@@ -58,7 +58,7 @@ func (s *QEmuVolumeStager) CreateVolumesMulti(volumes map[string]model.Volume, c
 		i++
 		blk := model.Blk{
 			Source:     "dev",
-			Path:       fmt.Sprintf(s.DeviceFilePrefix+"%da", 1+i),
+			Path:       fmt.Sprintf(s.DeviceFilePrefix+"%da", i),
 			FSType:     "blk",
 			MountPoint: mntPoint,
 		}
