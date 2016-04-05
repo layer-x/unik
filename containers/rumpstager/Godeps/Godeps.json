@@ -394,6 +394,16 @@
 			"Rev": "060d7da055ba6ec5ea7a31f116332fe5efa04ce0"
 		},
 		{
+			"ImportPath": "github.com/gogo/protobuf/proto",
+			"Comment": "v0.1-125-g82d16f7",
+			"Rev": "82d16f734d6d871204a3feb1a73cb220cc92574c"
+		},
+		{
+			"ImportPath": "github.com/gopherjs/gopherjs/js",
+			"Comment": "go1.5-21-g5237fb7",
+			"Rev": "5237fb74cab046c15b795c1bfe689abfc95411ba"
+		},
+		{
 			"ImportPath": "github.com/jmespath/go-jmespath",
 			"Comment": "0.2.1",
 			"Rev": "53d419364047eb08a64c29471db23c60ea585b85"
@@ -403,8 +413,49 @@
 			"Rev": "8ddce2a84170772b95dd5d576c48d517b22cac63"
 		},
 		{
+			"ImportPath": "github.com/layer-x/layerx-commons/lxerrors",
+			"Rev": "4b7dc19ff2a5dcd28a1affdf870ffc9301bd1d37"
+		},
+		{
+			"ImportPath": "github.com/layer-x/layerx-commons/lxfileutils",
+			"Rev": "4b7dc19ff2a5dcd28a1affdf870ffc9301bd1d37"
+		},
+		{
+			"ImportPath": "github.com/layer-x/layerx-commons/lxhttpclient",
+			"Rev": "4b7dc19ff2a5dcd28a1affdf870ffc9301bd1d37"
+		},
+		{
+			"ImportPath": "github.com/layer-x/layerx-commons/lxlog",
+			"Rev": "4b7dc19ff2a5dcd28a1affdf870ffc9301bd1d37"
+		},
+		{
+			"ImportPath": "github.com/layer-x/unik/pkg/daemon/ec2/ec2_metada_client",
+			"Rev": "4ff887bccd408a5884d53f2488596cf7424f0a30"
+		},
+		{
+			"ImportPath": "github.com/layer-x/unik/pkg/daemon/ec2/ec2api",
+			"Rev": "4ff887bccd408a5884d53f2488596cf7424f0a30"
+		},
+		{
+			"ImportPath": "github.com/layer-x/unik/pkg/daemon/ec2/unik_ec2_utils",
+			"Rev": "4ff887bccd408a5884d53f2488596cf7424f0a30"
+		},
+		{
+			"ImportPath": "github.com/layer-x/unik/pkg/daemon/osv",
+			"Rev": "4ff887bccd408a5884d53f2488596cf7424f0a30"
+		},
+		{
+			"ImportPath": "github.com/layer-x/unik/pkg/types",
+			"Rev": "4ff887bccd408a5884d53f2488596cf7424f0a30"
+		},
+		{
 			"ImportPath": "github.com/lsegal/gucumber",
 			"Rev": "e8116c9c66e641e9f81fc0a79fac923dfc646378"
+		},
+		{
+			"ImportPath": "github.com/pborman/uuid",
+			"Comment": "v1.0-11-gc55201b",
+			"Rev": "c55201b036063326c5b1b89ccfe45a184973d073"
 		},
 		{
 			"ImportPath": "github.com/pmezard/go-difflib/difflib",
@@ -433,6 +484,14 @@
 			"ImportPath": "github.com/stretchr/testify/require",
 			"Comment": "v1.0-83-gd797d25",
 			"Rev": "d797d25e0fa6d53be3b1a216d24e868d6a1912ef"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "b6d7b1396ec874c3b00f6c84cd4301a17c56c8ed"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "833a04a10549a95dc34458c195cbad61bbb6cb4d"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/ast/astutil",

@@ -33,4 +33,5 @@ type RumpConfig struct {
 type Volume struct {
 	Path string
 	Size int64
+	Name string
 }
