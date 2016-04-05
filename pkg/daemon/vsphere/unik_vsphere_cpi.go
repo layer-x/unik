@@ -113,8 +113,8 @@ func (cpi *UnikVsphereCPI) AttachVolume(logger *lxlog.LxLogger, volumeNameOrId, 
 	return lxerrors.New("method not implemented", nil)
 }
 
-func (cpi *UnikVsphereCPI) BuildUnikernel(logger *lxlog.LxLogger, unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
-	return vsphere_api.BuildUnikernel(logger, cpi.unikState, cpi.creds, unikernelName, force, uploadedTar, handler)
+func (cpi *UnikVsphereCPI) BuildUnikernel(logger *lxlog.LxLogger, unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader, desiredVolumes []*types.VolumeSpec) error {
+	return vsphere_api.BuildUnikernel(logger, cpi.unikState, cpi.creds, unikernelName, force, uploadedTar, handler, desiredVolumes)
 }
 
 func (cpi *UnikVsphereCPI) CreateVolume(logger *lxlog.LxLogger, volumeName string, size int) (*types.Volume, error) {

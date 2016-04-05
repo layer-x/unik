@@ -14,6 +14,9 @@ import (
 	"github.com/layer-x/unik/containers/rumpstager/device"
 	"github.com/layer-x/unik/containers/rumpstager/model"
 	"github.com/layer-x/unik/containers/rumpstager/utils"
+	"github.com/layer-x/unik/pkg/types"
+	"encoding/json"
+	"github.com/layer-x/unik/pkg/daemon/ec2/ec2api"
 )
 
 func init() {
@@ -87,9 +90,24 @@ func (s *AWSStager) Stage(appName, kernelPath string, volumes map[string]model.V
 		return err
 	}
 	// convert the point points to the block devices created during configuration
+	//and tag the ami with the device mappings
+	deviceCount := 0
 	for res := range results {
 		log.WithFields(log.Fields{"snap": res.BlockDevice.SnapshotId, "mntPoint": res.MntPoint, "dev": mountToDevice[res.MntPoint]}).Debug("Adding result to map")
 		deviceToSnapId[mountToDevice[res.MntPoint]] = res.BlockDevice
+		deviceJson, err := json.Marshal(types.DeviceMapping{
+			DeviceName: mountToDevice[res.MntPoint],
+			DefaultSnapshotId: *res.BlockDevice.SnapshotId,
+			MountPoint: res.MntPoint,
+		})
+		if deviceCount < 9 { //cannot support more than 10 tags at this time
+			err = s.addTag(*res.BlockDevice.SnapshotId, fmt.Sprintf(ec2api.UNIK_DEVICE_MAPPING+"%v", deviceCount), string(deviceJson))
+			if err != nil {
+				log.WithError(err).Errorf("failed to tag snapshot %s", *res.BlockDevice.SnapshotId)
+			} else {
+				deviceCount++
+			}
+		}
 	}
 
 	if len(deviceToSnapId) != (len(mountToDevice)) {
@@ -396,7 +414,7 @@ func (s *AWSStager) registerImage(appName string, snapmapping map[string]ec2.Ebs
 		}
 	}
 
-	err = s.addTag(*imageout.ImageId, "UNIKERNEL_APP_NAME", appName)
+	err = s.addTag(*imageout.ImageId, ec2api.UNIKERNEL_APP_NAME, appName)
 	if err != nil {
 		return err
 	}

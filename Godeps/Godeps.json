@@ -465,23 +465,23 @@
 		},
 		{
 			"ImportPath": "github.com/layer-x/layerx-commons/lxerrors",
-			"Rev": "3d0a82942d75ba88e1962665691743bb8986fadf"
+			"Rev": "77b618bed66d2d9a1453ad51c3d94ced9bb5111a"
 		},
 		{
 			"ImportPath": "github.com/layer-x/layerx-commons/lxfileutils",
-			"Rev": "3d0a82942d75ba88e1962665691743bb8986fadf"
+			"Rev": "77b618bed66d2d9a1453ad51c3d94ced9bb5111a"
 		},
 		{
 			"ImportPath": "github.com/layer-x/layerx-commons/lxhttpclient",
-			"Rev": "3d0a82942d75ba88e1962665691743bb8986fadf"
+			"Rev": "77b618bed66d2d9a1453ad51c3d94ced9bb5111a"
 		},
 		{
 			"ImportPath": "github.com/layer-x/layerx-commons/lxlog",
-			"Rev": "3d0a82942d75ba88e1962665691743bb8986fadf"
+			"Rev": "77b618bed66d2d9a1453ad51c3d94ced9bb5111a"
 		},
 		{
 			"ImportPath": "github.com/layer-x/layerx-commons/lxmartini",
-			"Rev": "3d0a82942d75ba88e1962665691743bb8986fadf"
+			"Rev": "77b618bed66d2d9a1453ad51c3d94ced9bb5111a"
 		},
 		{
 			"ImportPath": "github.com/lsegal/gucumber",

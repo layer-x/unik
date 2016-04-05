@@ -8,7 +8,7 @@ import (
 
 type UnikCPI interface {
 	AttachVolume(logger *lxlog.LxLogger, volumeNameOrId, unikInstanceId, deviceName string) error
-	BuildUnikernel(logger *lxlog.LxLogger, unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error
+	BuildUnikernel(logger *lxlog.LxLogger, unikernelName, force string, uploadedTar multipart.File, header *multipart.FileHeader, desiredVolumes []*types.VolumeSpec) error
 	CreateVolume(logger *lxlog.LxLogger, volumeName string, size int) (*types.Volume, error)
 	DeleteArtifactsForUnikernel(logger *lxlog.LxLogger, unikernelName string) error
 	DeleteUnikernel(logger *lxlog.LxLogger, unikernelId string, force bool) error

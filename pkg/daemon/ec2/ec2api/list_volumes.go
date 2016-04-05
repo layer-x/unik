@@ -18,7 +18,7 @@ func ListVolumes(logger *lxlog.LxLogger) ([]*types.Volume, error) {
 		Filters: []*ec2.Filter{
 			&ec2.Filter{
 				Name:   aws.String("tag-key"),
-				Values: []*string{aws.String(UNIK_VOLUME_NAME)},
+				Values: []*string{aws.String(UNIK_DEVICE_MAPPING)},
 			},
 		},
 	}

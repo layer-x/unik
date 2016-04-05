@@ -11,7 +11,7 @@ import (
 
 func init() {
 
-	stager := &VMwareVolumeStager{&QEmuVolumeStager{"/dev/sd", ".", true}}
+	stager := &VMwareVolumeStager{&QEmuVolumeStager{"/dev/sd", ".", false}}
 	registerStager("vmware", stager)
 
 }

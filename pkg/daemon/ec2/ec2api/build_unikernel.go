@@ -4,12 +4,12 @@ import (
 	"github.com/layer-x/layerx-commons/lxerrors"
 	"github.com/layer-x/layerx-commons/lxfileutils"
 	"github.com/layer-x/layerx-commons/lxlog"
-	"io"
 	"mime/multipart"
 	"os"
-	"path/filepath"
 	"strings"
 	"io/ioutil"
+	"github.com/layer-x/unik/pkg/types"
+	"fmt"
 )
 
 const (
@@ -18,7 +18,7 @@ const (
 	unknown_type = iota
 )
 
-func BuildUnikernel(logger *lxlog.LxLogger, unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
+func BuildUnikernel(logger *lxlog.LxLogger, unikernelName, force string, uploadedTar multipart.File, header *multipart.FileHeader, desiredVolumes []*types.VolumeSpec) error {
 	unikernels, err := ListUnikernels(logger)
 	if err != nil {
 		return lxerrors.New("could not retrieve list of unikernels", err)
@@ -57,32 +57,52 @@ func BuildUnikernel(logger *lxlog.LxLogger, unikernelName, force string, uploade
 		"path": unikernelCompilationDir, 
 		"unikernel_name": unikernelName,
 	}).Infof("created output directory for unikernel")
-	savedTar, err := os.OpenFile(unikernelCompilationDir +filepath.Base(handler.Filename), os.O_CREATE|os.O_RDWR, 0666)
+
+	bytesWritten, err := lxfileutils.UntarFileToDirectory(unikernelCompilationDir, uploadedTar, header)
 	if err != nil {
-		return lxerrors.New("creating empty file for copying to", err)
-	}
-	defer savedTar.Close()
-	bytesWritten, err := io.Copy(savedTar, uploadedTar)
-	if err != nil {
-		return lxerrors.New("copying uploaded file to disk", err)
+		return lxerrors.New("untarring unikernel source to compilation dir", err)
 	}
 	logger.WithFields(lxlog.Fields{
 		"bytes": bytesWritten,
 	}).Infof("file written to disk")
-	err = lxfileutils.Untar(savedTar.Name(), unikernelCompilationDir)
-	if err != nil {
-		logger.WithFields(lxlog.Fields{
-			"saved tar name":savedTar.Name(),
-		}).Warnf("failed to untar using gzip, trying again without")
-		err = lxfileutils.UntarNogzip(savedTar.Name(), unikernelCompilationDir)
-		if err != nil {
-			return lxerrors.New("untarring saved tar", err)
-		}
-	}
+
 	logger.WithFields(lxlog.Fields{
-		"path": unikernelCompilationDir, 
+		"path": unikernelCompilationDir,
 		"unikernel_name": unikernelName,
 	}).Infof("unikernel tarball untarred")
+
+	//Note: we do some modification of the volume specs here to prep them for AMI staging
+	for i, desiredVolume := range desiredVolumes {
+		//case 1: no data provided
+		if desiredVolume.DataFolder == "" {
+			dataFolder := fmt.Sprintf("%sempty%v", unikernelCompilationDir, i)
+			err = os.MkdirAll(dataFolder, 0666)
+			if err != nil {
+				return lxerrors.New("creating empty directory for empty snapshot for desired volume mapping "+desiredVolume.MountPoint, err)
+			}
+			logger.WithFields(lxlog.Fields{
+				"dataFolder": dataFolder,
+			}).Infof("empty data folder created for blank snapshot")
+			desiredVolume.DataFolder = dataFolder
+		} else { //case 2: data folder provided as a tarball
+			dataFolder := fmt.Sprintf("%s%s", unikernelCompilationDir, desiredVolume.DataFolder)
+			err = os.MkdirAll(dataFolder, 0666)
+			if err != nil {
+				return lxerrors.New("creating directory for data snapshot for desired volume mapping "+desiredVolume.MountPoint, err)
+			}
+			bytesWritten, err := lxfileutils.UntarFileToDirectory(dataFolder, desiredVolume.DataTar, desiredVolume.DataTarHeader)
+			if err != nil {
+				return lxerrors.New("untarring data volume to disk to prepare snapshot", err)
+			}
+			logger.WithFields(lxlog.Fields{
+				"bytes": bytesWritten,
+				"dataFolder": dataFolder,
+				"desiredVolume.DataTar": desiredVolume.DataTar,
+				"desiredVolume.DataTarHeader": desiredVolume.DataTarHeader,
+			}).Infof("data volume written to disk")
+			desiredVolume.DataFolder = dataFolder
+		}
+	}
 
 	sourceType, err := determineUnikernelType(unikernelCompilationDir)
 	if err != nil {
@@ -91,8 +111,11 @@ func BuildUnikernel(logger *lxlog.LxLogger, unikernelName, force string, uploade
 
 	switch sourceType {
 	case golang_type:
-		return BuildGolangUnikernel(logger, unikernelName, unikernelCompilationDir)
+		return BuildGolangUnikernel(logger, unikernelName, unikernelCompilationDir, desiredVolumes)
 	case java_type:
+		if len(desiredVolumes) > 0 {
+			return lxerrors.New("multi-volume support is not enabled for OSv at this time", nil)
+		}
 		return BuildJavaUnikernel(logger, unikernelName, unikernelCompilationDir)
 	default:
 		return lxerrors.New("could not determine source type. root directory of source must contain either pom.xml for java, or *.go file for golang", nil)

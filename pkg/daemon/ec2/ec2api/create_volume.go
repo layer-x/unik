@@ -8,7 +8,7 @@ import (
 	"github.com/layer-x/layerx-commons/lxlog"
 )
 
-const UNIK_VOLUME_NAME = "UNIK_VOLUME_NAME"
+const UNIK_DEVICE_MAPPING = "UNIK_DEVICE_MAPPING"
 
 func CreateVolume(logger *lxlog.LxLogger, volumeName string, size int) (*types.Volume, error) {
 	_, err := GetVolumeByIdOrName(logger, volumeName)
@@ -38,7 +38,7 @@ func CreateVolume(logger *lxlog.LxLogger, volumeName string, size int) (*types.V
 				Value: aws.String(volumeName),
 			},
 			&ec2.Tag{
-				Key:   aws.String(UNIK_VOLUME_NAME),
+				Key:   aws.String(UNIK_DEVICE_MAPPING),
 				Value: aws.String(volumeName),
 			},
 		},

@@ -8,6 +8,7 @@ import (
 	"github.com/layer-x/unik/containers/rumpstager/device"
 	"github.com/layer-x/unik/containers/rumpstager/model"
 	"github.com/layer-x/unik/containers/rumpstager/utils"
+	"io/ioutil"
 )
 
 const DefaultDeviceFilePrefix = "/dev/ld"
@@ -49,8 +50,8 @@ func (s *QEmuVolumeStager) CreateVolumesMulti(volumes map[string]model.Volume, c
 	var i int
 
 	for mntPoint, localFolder := range volumes {
-
-		imgFile := path.Join(s.buildDir, fmt.Sprintf("data%02d.img", i))
+		diskFile := fmt.Sprintf("data%02d.img", i)
+		imgFile := path.Join(s.buildDir, diskFile)
 		err := utils.CreateSingleVolume(imgFile, localFolder)
 		if err != nil {
 			return err
@@ -61,6 +62,7 @@ func (s *QEmuVolumeStager) CreateVolumesMulti(volumes map[string]model.Volume, c
 			Path:       fmt.Sprintf(s.DeviceFilePrefix+"%da", i),
 			FSType:     "blk",
 			MountPoint: mntPoint,
+			DiskFile: diskFile,
 		}
 
 		c.Blk = append(c.Blk, blk)
@@ -119,8 +121,19 @@ func (s *QEmuVolumeStager) CreateRoot(kernelPath string, c model.RumpConfig) err
 	if err != nil {
 		return err
 	}
+	log.WithFields(log.Fields{"rumpconfig": c, "path": s.buildDir +"rumpconfig.json"}).Debug("writing rump config json to build dir")
 
-	return nil
+	return s.WriteRumpConfig(c)
+}
+
+func (s *QEmuVolumeStager) WriteRumpConfig(c model.RumpConfig) error {
+	outFile := path.Join(s.buildDir, "rumpconfig.json")
+
+	jsonString, err := utils.ToRumpJson(c)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(outFile, []byte(jsonString), 0777)
 }
 
 func addDhcpNet(c model.RumpConfig) model.RumpConfig {
