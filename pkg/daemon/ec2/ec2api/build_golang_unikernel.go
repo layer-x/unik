@@ -38,12 +38,16 @@ func BuildGolangUnikernel(logger *lxlog.LxLogger, unikernelName, unikernelCompil
 		}
 	}
 
-	stageUnikernelCommand := exec.Command("docker", "run",
+	args := append([]string{
+		"run",
 		"--rm",
 		"--privileged",
 		"-v", "/dev:/dev",
-		"-v", unikernelCompilationDir +":/unikernel",
-		"rumpstager", "-mode", "aws", "-a", unikernelName, volumeArgs...)
+		"-v", unikernelCompilationDir + ":/unikernel",
+		"rumpstager", "-mode", "aws", "-a", unikernelName,
+	}, volumeArgs...)
+
+	stageUnikernelCommand := exec.Command("docker", args...)
 
 	logger.LogCommand(stageUnikernelCommand, true)
 	err = stageUnikernelCommand.Run()

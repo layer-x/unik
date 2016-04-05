@@ -51,7 +51,8 @@ func BuildGolangUnikernel(logger *lxlog.LxLogger, unikState *state.UnikState, un
 		}
 	}
 
-	buildImageCommand := exec.Command("docker", "run",
+	args := append([]string{
+		"run",
 		"--rm",
 		"--privileged",
 		"-v", "/dev:/dev",
@@ -59,8 +60,9 @@ func BuildGolangUnikernel(logger *lxlog.LxLogger, unikState *state.UnikState, un
 		"rumpstager",
 		"-mode",
 		"vmware",
-		volumeArgs...,
-	)
+	}, volumeArgs...)
+
+	buildImageCommand := exec.Command("docker", args...)
 
 	logger.WithFields(lxlog.Fields{
 		"cmd": buildImageCommand.Args,

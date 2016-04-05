@@ -6,6 +6,6 @@ type VolumeSpec struct {
 	MountPoint    string
 	DataFolder    string
 	Size          int64
-	DataTar       *multipart.File
+	DataTar       multipart.File
 	DataTarHeader *multipart.FileHeader
 }

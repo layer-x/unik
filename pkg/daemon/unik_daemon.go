@@ -176,7 +176,7 @@ func (d *UnikDaemon) registerHandlers() {
 						//create an empty volume as default snapshot for these volumes
 						desiredVolumes = append(desiredVolumes, &types.VolumeSpec{
 							MountPoint: volOpt,
-							Size: size,
+							Size: int64(size),
 						})
 					}
 				}
