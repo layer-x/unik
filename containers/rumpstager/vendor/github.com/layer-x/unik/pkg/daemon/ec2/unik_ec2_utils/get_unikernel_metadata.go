@@ -9,7 +9,7 @@ import (
 )
 
 const UNIKERNEL_NAME = "UNIKERNEL_APP_NAME"
-const UNIK_DEVICE_MAPPING = "UNIK_DEVICE_MAPPING"
+const UNIK_BLOCK_DEVICE = "UNIK_BLOCK_DEVICE"
 
 func GetUnikernelMetadata(image *ec2.Image) *types.Unikernel {
 	unikernel := &types.Unikernel{}
@@ -17,7 +17,7 @@ func GetUnikernelMetadata(image *ec2.Image) *types.Unikernel {
 		if *tag.Key == UNIKERNEL_NAME {
 			unikernel.UnikernelName = *tag.Value
 		}
-		if strings.Contains(*tag.Key, UNIK_DEVICE_MAPPING) {
+		if strings.Contains(*tag.Key, UNIK_BLOCK_DEVICE) {
 			var deviceMapping types.DeviceMapping
 			err := json.Unmarshal([]byte(*tag.Value), &deviceMapping)
 			if err == nil {

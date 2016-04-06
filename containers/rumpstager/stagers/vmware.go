@@ -7,6 +7,7 @@ import (
 	"github.com/layer-x/unik/containers/rumpstager/model"
 
 	"github.com/layer-x/unik/containers/rumpstager/shell"
+	"errors"
 )
 
 func init() {
@@ -44,6 +45,10 @@ func (s *VMwareVolumeStager) Stage(appName, kernelPath string, volumes map[strin
 	}
 
 	return nil
+}
+
+func (s *VMwareVolumeStager) CreateDataVolume(mntPoint, deviceName, localFolder string) error {
+	return errors.New("not implemented")
 }
 
 func addVMwareNet(c model.RumpConfig) model.RumpConfig {

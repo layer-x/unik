@@ -13,7 +13,7 @@ import (
 	"encoding/json"
 )
 
-func RunUnikInstance(logger *lxlog.LxLogger, unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {
+func RunUnikInstance(logger *lxlog.LxLogger, unikernelName, instanceName string, instances int64, persistVolumes bool, mntSnapshotMap map[string]string, tags map[string]string, env map[string]string) ([]string, error) {
 	unikernels, err := ListUnikernels(logger)
 	instanceIds := []string{}
 	if err != nil {
@@ -40,12 +40,29 @@ func RunUnikInstance(logger *lxlog.LxLogger, unikernelName, instanceName string,
 				"unikinstancedata": string(data), 
 				"encoded_bytes": len(encodedData),
 			}).Debugf("metadata for running unikinstance")
+
+			blockDeviceMappings := []*ec2.BlockDeviceMapping{}
+			for _, device := range unikernel.Devices {
+				snapshotId, ok := mntSnapshotMap[device.MountPoint]
+				if !ok {
+					snapshotId = device.DefaultSnapshotId
+				}
+				blockDeviceMappings = append(blockDeviceMappings, &ec2.BlockDeviceMapping{
+					DeviceName: aws.String(device.DeviceName),
+					Ebs: &ec2.EbsBlockDevice{
+						DeleteOnTermination: aws.Bool(!persistVolumes),
+						SnapshotId: aws.String(snapshotId),
+					},
+				})
+			}
+
 			startInstancesInput := &ec2.RunInstancesInput{
 				ImageId:  aws.String(unikernel.Id),
 				InstanceType: aws.String("m1.small"),
 				MaxCount: aws.Int64(instances),
 				MinCount: aws.Int64(instances),
 				UserData: aws.String(encodedData),
+				BlockDeviceMappings: blockDeviceMappings,
 			}
 			logger.WithFields(lxlog.Fields{
 				"input": startInstancesInput,

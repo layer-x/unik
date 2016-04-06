@@ -19,7 +19,7 @@ var (
 	availabilityZone string
 )
 
-type unikEc2Client struct {
+type UnikEc2Client struct {
 	ec2Client *ec2.EC2
 	AvailabilityZone string
 }
@@ -47,7 +47,7 @@ func getAZ() (string, error) {
 	return az, nil
 }
 
-func NewEC2Client(logger *lxlog.LxLogger) (*unikEc2Client, error) {
+func NewEC2Client(logger *lxlog.LxLogger) (*UnikEc2Client, error) {
 	if ec2ClientSingleton == nil {
 		var err error
 		availabilityZone, err = getAZ()
@@ -67,14 +67,14 @@ func NewEC2Client(logger *lxlog.LxLogger) (*unikEc2Client, error) {
 			Region: aws.String(region),
 		})
 	}
-	return &unikEc2Client{
+	return &UnikEc2Client{
 		ec2Client: ec2ClientSingleton,
 		AvailabilityZone: availabilityZone,
 	}, nil
 }
 
 
-func (c *unikEc2Client) TerminateInstances(input *ec2.TerminateInstancesInput) (*ec2.TerminateInstancesOutput, error) {
+func (c *UnikEc2Client) TerminateInstances(input *ec2.TerminateInstancesInput) (*ec2.TerminateInstancesOutput, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.TerminateInstances(input)
@@ -89,7 +89,7 @@ func (c *unikEc2Client) TerminateInstances(input *ec2.TerminateInstancesInput) (
 	}
 }
 
-func (c *unikEc2Client) DeregisterImage(input *ec2.DeregisterImageInput) (*ec2.DeregisterImageOutput, error) {
+func (c *UnikEc2Client) DeregisterImage(input *ec2.DeregisterImageInput) (*ec2.DeregisterImageOutput, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.DeregisterImage(input)
@@ -104,7 +104,7 @@ func (c *unikEc2Client) DeregisterImage(input *ec2.DeregisterImageInput) (*ec2.D
 	}
 }
 
-func (c *unikEc2Client) DescribeSnapshots(input *ec2.DescribeSnapshotsInput) (*ec2.DescribeSnapshotsOutput, error) {
+func (c *UnikEc2Client) DescribeSnapshots(input *ec2.DescribeSnapshotsInput) (*ec2.DescribeSnapshotsOutput, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.DescribeSnapshots(input)
@@ -119,7 +119,7 @@ func (c *unikEc2Client) DescribeSnapshots(input *ec2.DescribeSnapshotsInput) (*e
 	}
 }
 
-func (c *unikEc2Client) DeleteSnapshot(input *ec2.DeleteSnapshotInput) (*ec2.DeleteSnapshotOutput, error) {
+func (c *UnikEc2Client) DeleteSnapshot(input *ec2.DeleteSnapshotInput) (*ec2.DeleteSnapshotOutput, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.DeleteSnapshot(input)
@@ -134,7 +134,7 @@ func (c *unikEc2Client) DeleteSnapshot(input *ec2.DeleteSnapshotInput) (*ec2.Del
 	}
 }
 
-func (c *unikEc2Client) DeleteVolume(input *ec2.DeleteVolumeInput) (*ec2.DeleteVolumeOutput, error) {
+func (c *UnikEc2Client) DeleteVolume(input *ec2.DeleteVolumeInput) (*ec2.DeleteVolumeOutput, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.DeleteVolume(input)
@@ -149,7 +149,7 @@ func (c *unikEc2Client) DeleteVolume(input *ec2.DeleteVolumeInput) (*ec2.DeleteV
 	}
 }
 
-func (c *unikEc2Client) GetConsoleOutput(input *ec2.GetConsoleOutputInput) (*ec2.GetConsoleOutputOutput, error) {
+func (c *UnikEc2Client) GetConsoleOutput(input *ec2.GetConsoleOutputInput) (*ec2.GetConsoleOutputOutput, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.GetConsoleOutput(input)
@@ -164,7 +164,7 @@ func (c *unikEc2Client) GetConsoleOutput(input *ec2.GetConsoleOutputInput) (*ec2
 	}
 }
 
-func (c *unikEc2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
+func (c *UnikEc2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.DescribeInstances(input)
@@ -179,7 +179,7 @@ func (c *unikEc2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*e
 	}
 }
 
-func (c *unikEc2Client) DescribeImages(input *ec2.DescribeImagesInput) (*ec2.DescribeImagesOutput, error) {
+func (c *UnikEc2Client) DescribeImages(input *ec2.DescribeImagesInput) (*ec2.DescribeImagesOutput, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.DescribeImages(input)
@@ -194,7 +194,7 @@ func (c *unikEc2Client) DescribeImages(input *ec2.DescribeImagesInput) (*ec2.Des
 	}
 }
 
-func (c *unikEc2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reservation, error) {
+func (c *UnikEc2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reservation, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.RunInstances(input)
@@ -209,7 +209,7 @@ func (c *unikEc2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reserva
 	}
 }
 
-func (c *unikEc2Client) CreateTags(input *ec2.CreateTagsInput) (*ec2.CreateTagsOutput, error) {
+func (c *UnikEc2Client) CreateTags(input *ec2.CreateTagsInput) (*ec2.CreateTagsOutput, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.CreateTags(input)
@@ -224,7 +224,7 @@ func (c *unikEc2Client) CreateTags(input *ec2.CreateTagsInput) (*ec2.CreateTagsO
 	}
 }
 
-func (c *unikEc2Client) DescribeInstanceAttribute(input *ec2.DescribeInstanceAttributeInput) (*ec2.DescribeInstanceAttributeOutput, error) {
+func (c *UnikEc2Client) DescribeInstanceAttribute(input *ec2.DescribeInstanceAttributeInput) (*ec2.DescribeInstanceAttributeOutput, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.DescribeInstanceAttribute(input)
@@ -239,7 +239,7 @@ func (c *unikEc2Client) DescribeInstanceAttribute(input *ec2.DescribeInstanceAtt
 	}
 }
 
-func (c *unikEc2Client) CreateVolume(input *ec2.CreateVolumeInput) (*ec2.Volume, error) {
+func (c *UnikEc2Client) CreateVolume(input *ec2.CreateVolumeInput) (*ec2.Volume, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.CreateVolume(input)
@@ -254,7 +254,7 @@ func (c *unikEc2Client) CreateVolume(input *ec2.CreateVolumeInput) (*ec2.Volume,
 	}
 }
 
-func (c *unikEc2Client) DescribeVolumes(input *ec2.DescribeVolumesInput) (*ec2.DescribeVolumesOutput, error) {
+func (c *UnikEc2Client) DescribeVolumes(input *ec2.DescribeVolumesInput) (*ec2.DescribeVolumesOutput, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.DescribeVolumes(input)
@@ -269,7 +269,7 @@ func (c *unikEc2Client) DescribeVolumes(input *ec2.DescribeVolumesInput) (*ec2.D
 	}
 }
 
-func (c *unikEc2Client) AttachVolume(input *ec2.AttachVolumeInput) (*ec2.VolumeAttachment, error) {
+func (c *UnikEc2Client) AttachVolume(input *ec2.AttachVolumeInput) (*ec2.VolumeAttachment, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.AttachVolume(input)
@@ -284,7 +284,7 @@ func (c *unikEc2Client) AttachVolume(input *ec2.AttachVolumeInput) (*ec2.VolumeA
 	}
 }
 
-func (c *unikEc2Client) DetachVolume(input *ec2.DetachVolumeInput) (*ec2.VolumeAttachment, error) {
+func (c *UnikEc2Client) DetachVolume(input *ec2.DetachVolumeInput) (*ec2.VolumeAttachment, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.DetachVolume(input)
@@ -299,7 +299,37 @@ func (c *unikEc2Client) DetachVolume(input *ec2.DetachVolumeInput) (*ec2.VolumeA
 	}
 }
 
-func (c *unikEc2Client) CopyImage(input *ec2.CopyImageInput) (*ec2.CopyImageOutput, error) {
+func (c *UnikEc2Client) WaitUntilVolumeAvailable(input *ec2.DescribeVolumesInput) error {
+	var retries uint
+	for {
+		err := c.ec2Client.WaitUntilVolumeAvailable(input)
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return err
+		}
+		time.Sleep((1 << retries) * time.Second)
+		retries++
+		if retries > MAX_RETRIES {
+			return err
+		}
+	}
+}
+
+func (c *UnikEc2Client) WaitUntilVolumeInUse(input *ec2.DescribeVolumesInput) error {
+	var retries uint
+	for {
+		err := c.ec2Client.WaitUntilVolumeInUse(input)
+		if err == nil || !strings.Contains(err.Error(), "RequestLimitExceeded") {
+			return err
+		}
+		time.Sleep((1 << retries) * time.Second)
+		retries++
+		if retries > MAX_RETRIES {
+			return err
+		}
+	}
+}
+
+func (c *UnikEc2Client) CopyImage(input *ec2.CopyImageInput) (*ec2.CopyImageOutput, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.CopyImage(input)
@@ -314,7 +344,7 @@ func (c *unikEc2Client) CopyImage(input *ec2.CopyImageInput) (*ec2.CopyImageOutp
 	}
 }
 
-func (c *unikEc2Client) ModifyImageAttribute(input *ec2.ModifyImageAttributeInput) (*ec2.ModifyImageAttributeOutput, error) {
+func (c *UnikEc2Client) ModifyImageAttribute(input *ec2.ModifyImageAttributeInput) (*ec2.ModifyImageAttributeOutput, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.ModifyImageAttribute(input)
@@ -329,7 +359,7 @@ func (c *unikEc2Client) ModifyImageAttribute(input *ec2.ModifyImageAttributeInpu
 	}
 }
 
-func (c *unikEc2Client) ImportVolume(input *ec2.ImportVolumeInput) (*ec2.ImportVolumeOutput, error) {
+func (c *UnikEc2Client) ImportVolume(input *ec2.ImportVolumeInput) (*ec2.ImportVolumeOutput, error) {
 	var retries uint
 	for {
 		output, err := c.ec2Client.ImportVolume(input)

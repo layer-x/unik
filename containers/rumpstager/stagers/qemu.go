@@ -9,6 +9,7 @@ import (
 	"github.com/layer-x/unik/containers/rumpstager/model"
 	"github.com/layer-x/unik/containers/rumpstager/utils"
 	"io/ioutil"
+	"errors"
 )
 
 const DefaultDeviceFilePrefix = "/dev/ld"
@@ -44,6 +45,10 @@ func (s *QEmuVolumeStager) Stage(appName, kernelPath string, volumes map[string]
 	}
 
 	return s.CreateRoot(kernelPath, c)
+}
+
+func (s *QEmuVolumeStager) CreateDataVolume(mntPoint, deviceName, localFolder string) error {
+	return errors.New("not implemented")
 }
 
 func (s *QEmuVolumeStager) CreateVolumesMulti(volumes map[string]model.Volume, c *model.RumpConfig) error {
