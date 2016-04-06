@@ -88,6 +88,8 @@ func CreateBootImageOnFile(rootFile string, sizeOfFile device.DiskSize, progPath
 	}
 	defer rootLo.Release()
 
+	// use device mapper to rename the lo device to something that grub likes more.
+	// like hda!
 	grubDiskName := "hda"
 	rootBlkDev := device.NewDevice(0, sizeInSectors, rootLodName, grubDiskName)
 	rootDevice, err := rootBlkDev.Acquire()
@@ -110,6 +112,7 @@ func CreateBootImageOnFile(rootFile string, sizeOfFile device.DiskSize, progPath
 
 	part := parts[0]
 	if dmPart, ok := part.(*device.DeviceMapperDevice); ok {
+		// TODO: is this needed?
 		dmPart.DeviceName = grubDiskName + "1"
 	}
 
