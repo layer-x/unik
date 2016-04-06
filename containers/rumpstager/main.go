@@ -118,6 +118,11 @@ func main() {
 	var mode Mode = "single"
 	flag.Var(&mode, "mode", getModes())
 
+	dataVolumeMode := flag.Bool("datamode", false, "use this flag to stage a single volume for mounting to an existing unikernel image")
+	dataVolumeLocalFolder := flag.String("datadir", "/datadir", "path to local folder where data will be copied from")
+	dataVolumeMountPoint := flag.String("datamountpoint", "", "filename the unikernel is expecting this volume to be mounted to")
+	dataVolumeDeviceName := flag.String("datadevicename", "", "device name (for mapping between device and mount point)")
+
 	flag.Parse()
 
 	//	DeviceFilePrefix := DefaultDeviceFilePrefix
@@ -149,8 +154,14 @@ func main() {
 	os.Chdir(*buildcontextdir)
 
 	if stager, ok := stagers.Stagers[string(mode)]; ok {
-
-		stager.Stage(*appName, *programName, conf.Volumes, c)
+		if *dataVolumeMode {
+			err := stager.CreateDataVolume(*dataVolumeMountPoint, *dataVolumeDeviceName, *dataVolumeLocalFolder)
+			if err != nil {
+				panic("failed to create data volume: "+err.Error())
+			}
+		} else {
+			stager.Stage(*appName, *programName, conf.Volumes, c)
+		}
 	} else {
 		log.Panic("No stager!!")
 

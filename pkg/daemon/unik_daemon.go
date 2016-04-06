@@ -24,7 +24,7 @@ type UnikDaemon struct {
 }
 
 func NewUnikDaemon(provider string, opts map[string]string) *UnikDaemon {
-	logger := lxlog.New()
+	logger := lxlog.New("daemon-setup")
 	var cpi UnikCPI
 	switch provider{
 	case "ec2":
@@ -46,9 +46,9 @@ func NewUnikDaemon(provider string, opts map[string]string) *UnikDaemon {
 }
 
 func (d *UnikDaemon) registerHandlers() {
-	streamOrRespond := func(res http.ResponseWriter, req *http.Request, action func(logger *lxlog.LxLogger) (interface{}, error)) {
+	streamOrRespond := func(res http.ResponseWriter, req *http.Request, actionName string, action func(logger *lxlog.LxLogger) (interface{}, error)) {
 		verbose := req.URL.Query().Get("verbose")
-		logger := lxlog.New()
+		logger := lxlog.New(actionName)
 		if strings.ToLower(verbose) == "true" {
 			httpOutStream := ioutils.NewWriteFlusher(res)
 			uuid := uuid.New()
@@ -97,7 +97,7 @@ func (d *UnikDaemon) registerHandlers() {
 	}
 
 	d.server.Get("/instances", func(res http.ResponseWriter, req *http.Request) {
-		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
+		streamOrRespond(res, req, "get-instances", func(logger *lxlog.LxLogger) (interface{}, error) {
 			unikInstances, err := d.cpi.ListUnikInstances(logger)
 			if err != nil {
 				logger.WithErr(err).Errorf("could not get unik instance list")
@@ -110,7 +110,7 @@ func (d *UnikDaemon) registerHandlers() {
 		})
 	})
 	d.server.Get("/unikernels", func(res http.ResponseWriter, req *http.Request) {
-		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
+		streamOrRespond(res, req, "get-unikernels", func(logger *lxlog.LxLogger) (interface{}, error) {
 			unikernels, err := d.cpi.ListUnikernels(logger)
 			if err != nil {
 				logger.WithErr(err).Errorf("could not get unikernel list")
@@ -123,7 +123,7 @@ func (d *UnikDaemon) registerHandlers() {
 		})
 	})
 	d.server.Post("/unikernels/:unikernel_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
+		streamOrRespond(res, req, "build-unikernel", func(logger *lxlog.LxLogger) (interface{}, error) {
 			err := req.ParseMultipartForm(0)
 			if err != nil {
 				return nil, err
@@ -138,16 +138,58 @@ func (d *UnikDaemon) registerHandlers() {
 			logger.WithFields(lxlog.Fields{
 				"form": req.Form,
 			}).Debugf("parsing form file marked 'tarfile'")
-			uploadedTar, handler, err := req.FormFile("tarfile")
+			uploadedTar, header, err := req.FormFile("tarfile")
 			if err != nil {
 				return nil, err
 			}
 			defer uploadedTar.Close()
 			force := req.FormValue("force")
+
+			var desiredVolumes []*types.VolumeSpec
+			volumeOptionsString := req.FormValue("volume_opts")
+			if len(volumeOptionsString) > 0 {
+				//expected format:
+				//"folder1:/dev1,folder2:/dev2,/dev"
+				volumeOptions := strings.Split(volumeOptionsString, ",")
+				for _, volOpt := range volumeOptions {
+					//volopt can have 2 formats:
+					//"folder:/devicename" or "INT:/devicename" where int is size
+					components := strings.Split(volOpt, ":")
+					if len(components) != 2 {
+						return nil, lxerrors.New("failed to parse volume options:"+volumeOptionsString+". be careful to not use special characters ':' or ',' in folder or device names", nil)
+					}
+					size, err := strconv.Atoi(components[0])
+					if err != nil { //assume a folder was given
+						dataFolder := components[0]
+						deviceName := components[1]
+						dataFolderTar, dataFolderTarHeader, err := req.FormFile(dataFolder)
+						if err != nil {
+							return nil, lxerrors.New("parsing form file "+dataFolder, err)
+						}
+						desiredVolumes = append(desiredVolumes, &types.VolumeSpec{
+							MountPoint: deviceName,
+							DataFolder: dataFolder,
+							DataTar: dataFolderTar,
+							DataTarHeader: dataFolderTarHeader,
+						})
+					} else {
+						//create an empty volume as default snapshot for these volumes
+						desiredVolumes = append(desiredVolumes, &types.VolumeSpec{
+							MountPoint: volOpt,
+							Size: int64(size),
+						})
+					}
+				}
+			}
+
 			logger.WithFields(lxlog.Fields{
-				"unikernelName": unikernelName, "force": force, "uploadedTar": uploadedTar,
+				"unikernelName": unikernelName,
+				"force": force,
+				"uploadedTar": uploadedTar,
+				"volume-spec": desiredVolumes,
 			}).Debugf("building unikernel")
-			err = d.cpi.BuildUnikernel(logger, unikernelName, force, uploadedTar, handler)
+
+			err = d.cpi.BuildUnikernel(logger, unikernelName, force, uploadedTar, header, desiredVolumes)
 			if err != nil {
 				logger.WithErr(err).WithFields(lxlog.Fields{
 					"form": fmt.Sprintf("%v", req.Form), "unikernel_name": unikernelName,
@@ -178,7 +220,7 @@ func (d *UnikDaemon) registerHandlers() {
 		})
 	})
 	d.server.Post("/unikernels/:unikernel_name/run", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
+		streamOrRespond(res, req, "run-unikernel", func(logger *lxlog.LxLogger) (interface{}, error) {
 			logger.WithFields(lxlog.Fields{
 				"request": req, "query": req.URL.Query(),
 			}).Debugf("recieved run request")
@@ -263,7 +305,7 @@ func (d *UnikDaemon) registerHandlers() {
 		})
 	})
 	d.server.Post("/unikernels/:unikernel_name/push", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
+		streamOrRespond(res, req, "push-unikernel", func(logger *lxlog.LxLogger) (interface{}, error) {
 			unikernelName := params["unikernel_name"]
 			logger.WithFields(lxlog.Fields{
 				"unikernelName": unikernelName,
@@ -279,7 +321,7 @@ func (d *UnikDaemon) registerHandlers() {
 		})
 	})
 	d.server.Post("/unikernels/:unikernel_name/pull", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
+		streamOrRespond(res, req, "pull-unikernel", func(logger *lxlog.LxLogger) (interface{}, error) {
 			unikernelName := params["unikernel_name"]
 			logger.WithFields(lxlog.Fields{
 				"unikernelName": unikernelName,
@@ -295,7 +337,7 @@ func (d *UnikDaemon) registerHandlers() {
 		})
 	})
 	d.server.Delete("/instances/:instance_id", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
+		streamOrRespond(res, req, "delete-instance", func(logger *lxlog.LxLogger) (interface{}, error) {
 			instanceId := params["instance_id"]
 			logger.WithFields(lxlog.Fields{
 				"request": req,
@@ -309,7 +351,7 @@ func (d *UnikDaemon) registerHandlers() {
 		})
 	})
 	d.server.Delete("/unikernels/:unikernel_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
+		streamOrRespond(res, req, "delete-unikernel", func(logger *lxlog.LxLogger) (interface{}, error) {
 			unikernelName := params["unikernel_name"]
 			if unikernelName == "" {
 				logger.WithFields(lxlog.Fields{
@@ -334,7 +376,7 @@ func (d *UnikDaemon) registerHandlers() {
 		})
 	})
 	d.server.Get("/instances/:instance_id/logs", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
+		streamOrRespond(res, req, "get-instance-logs", func(logger *lxlog.LxLogger) (interface{}, error) {
 			unikInstanceId := params["instance_id"]
 			follow := req.URL.Query().Get("follow")
 			res.Write([]byte("getting logs for " + unikInstanceId + "...\n"))
@@ -371,7 +413,7 @@ func (d *UnikDaemon) registerHandlers() {
 		})
 	})
 	d.server.Get("/volumes", func(res http.ResponseWriter, req *http.Request) {
-		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
+		streamOrRespond(res, req, "get-volumes", func(logger *lxlog.LxLogger) (interface{}, error) {
 			logger.Debugf("listing volumes started")
 			volumes, err := d.cpi.ListVolumes(logger)
 			if err != nil {
@@ -384,7 +426,7 @@ func (d *UnikDaemon) registerHandlers() {
 		})
 	})
 	d.server.Post("/volumes/:volume_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
+		streamOrRespond(res, req, "create-volume", func(logger *lxlog.LxLogger) (interface{}, error) {
 			volumeName := params["volume_name"]
 			sizeStr := req.URL.Query().Get("size")
 			if sizeStr == "" {
@@ -408,7 +450,7 @@ func (d *UnikDaemon) registerHandlers() {
 		})
 	})
 	d.server.Delete("/volumes/:volume_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
+		streamOrRespond(res, req, "delete-volume", func(logger *lxlog.LxLogger) (interface{}, error) {
 			volumeName := params["volume_name"]
 			forceStr := req.URL.Query().Get("force")
 			force := false
@@ -430,7 +472,7 @@ func (d *UnikDaemon) registerHandlers() {
 		})
 	})
 	d.server.Post("/instances/:instance_id/volumes/:volume_name", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
+		streamOrRespond(res, req, "attach-volume", func(logger *lxlog.LxLogger) (interface{}, error) {
 			volumeName := params["volume_name"]
 			instanceId := params["instance_id"]
 			device := req.URL.Query().Get("device")
@@ -453,7 +495,7 @@ func (d *UnikDaemon) registerHandlers() {
 		})
 	})
 	d.server.Post("/volumes/:volume_name/detach", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		streamOrRespond(res, req, func(logger *lxlog.LxLogger) (interface{}, error) {
+		streamOrRespond(res, req, "detach-volume", func(logger *lxlog.LxLogger) (interface{}, error) {
 			volumeName := params["volume_name"]
 			forceStr := req.URL.Query().Get("force")
 			force := false

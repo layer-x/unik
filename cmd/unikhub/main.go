@@ -16,7 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/layer-x/unik/pkg/daemon/ec2/unik_ec2_utils"
-	"github.com/Sirupsen/logrus"
 	"github.com/layer-x/layerx-commons/lxlog"
 	"log"
 	"strings"
@@ -25,7 +24,7 @@ import (
 const hubDataFile = "/var/unik/data.json"
 
 func main() {
-	fmt.Printf("remember to run as root\n")
+	logger := lxlog.New("unikhub-main")
 	hub, err := NewHubFromData()
 	if err != nil {
 		hub = NewCleanHub()
@@ -35,7 +34,7 @@ func main() {
 		res.Write([]byte(serveMainPage(hub)))
 	})
 	m.Post("/unikernels", func(res http.ResponseWriter, req *http.Request, params martini.Params) {
-		lxlog.Infof("reading in unikernel json")
+		logger.Infof("reading in unikernel json")
 		data, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			log.Fatal(err)
@@ -47,7 +46,7 @@ func main() {
 			fmt.Printf("received: " + string(data) + "\n")
 			log.Fatal(err)
 		}
-		ec2Client, err := ec2_metada_client.NewEC2Client()
+		ec2Client, err := ec2_metada_client.NewEC2Client(logger)
 		if err != nil {
 			log.Fatal(lxerrors.New("could not start ec2 client session", err))
 		}
@@ -56,7 +55,9 @@ func main() {
 			log.Fatal(err)
 		}
 		newName := unikernel.UnikernelName + "-public"
-		lxlog.Infof(logrus.Fields{"name": newName}, "copying image")
+		logger.WithFields(lxlog.Fields{
+			"name": newName,
+		}).Infof("copying image")
 		copyImageInput := &ec2.CopyImageInput{
 			Name: aws.String(newName),
 			SourceImageId: aws.String(unikernel.Id),
@@ -81,13 +82,17 @@ func main() {
 				},
 			},
 		}
-		lxlog.Infof(logrus.Fields{"tags": createTagsInput}, "tagging unikernel")
+		logger.WithFields(lxlog.Fields{
+			"tags": createTagsInput,
+		}).Infof("tagging unikernel")
 		_, err = ec2Client.CreateTags(createTagsInput)
 		if err != nil {
 			log.Fatal(lxerrors.New("failed to tag unikernel", err))
 		}
 
-		lxlog.Infof(logrus.Fields{"ami": newAmi}, "waiting for ami to become available")
+		logger.WithFields(lxlog.Fields{
+			"ami": newAmi,
+		}).Infof("waiting for ami to become available")
 		amiState := ""
 		retries := 0
 		for !strings.Contains(strings.ToLower(amiState), "available") && retries < 360 {
@@ -102,9 +107,13 @@ func main() {
 			for _, image := range describeOut.Images {
 				if *image.ImageId == newAmi {
 					amiState = *image.State
-					lxlog.Infof(logrus.Fields{"status": *image.State}, "ami found, status is")
+					logger.WithFields(lxlog.Fields{
+						"status": *image.State,
+					}).Infof("ami found, status is")
 				} else {
-					lxlog.Infof(logrus.Fields{"ami": *image.ImageId}, "these are not the amis you are looking for")
+					logger.WithFields(lxlog.Fields{
+						"ami": *image.ImageId,
+					}).Infof("these are not the amis you are looking for")
 				}
 			}
 			time.Sleep(5000 * time.Millisecond)
@@ -120,7 +129,9 @@ func main() {
 				},
 			},
 		}
-		lxlog.Infof(logrus.Fields{"modifyImageAttributeInput": modifyImageAttributeInput}, "making public")
+		logger.WithFields(lxlog.Fields{
+			"modifyImageAttributeInput": modifyImageAttributeInput,
+		}).Infof("making public")
 		_, err = ec2Client.ModifyImageAttribute(modifyImageAttributeInput)
 		if err != nil {
 			log.Fatal(err)

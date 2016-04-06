@@ -5,6 +5,7 @@ type Blk struct {
 	Path       string `json:"path"`
 	FSType     string `json:"fstype"`
 	MountPoint string `json:"mountpoint,omitempty"`
+	DiskFile   string `json:"diskfile,omitempty"`
 }
 
 type Method string

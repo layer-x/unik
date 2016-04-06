@@ -17,8 +17,8 @@ func (cpi *UnikEC2CPI) AttachVolume(logger *lxlog.LxLogger, volumeNameOrId, unik
 	return ec2api.AttachVolume(logger, volumeNameOrId, unikInstanceId, deviceName)
 }
 
-func (cpi *UnikEC2CPI) BuildUnikernel(logger *lxlog.LxLogger, unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader) error {
-	return ec2api.BuildUnikernel(logger, unikernelName, force, uploadedTar, handler)
+func (cpi *UnikEC2CPI) BuildUnikernel(logger *lxlog.LxLogger, unikernelName, force string, uploadedTar multipart.File, header *multipart.FileHeader, desiredVolumes []*types.VolumeSpec) error {
+	return ec2api.BuildUnikernel(logger, unikernelName, force, uploadedTar, header, desiredVolumes)
 }
 
 func (cpi *UnikEC2CPI) CreateVolume(logger *lxlog.LxLogger, volumeName string, size int) (*types.Volume, error) {

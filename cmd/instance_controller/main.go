@@ -46,7 +46,7 @@ func main() {
 	}
 	errc := make(chan error)
 
-	logger := lxlog.New()
+	logger := lxlog.New("unik-cf-instance-controller")
 
 	logger.WithFields(lxlog.Fields{
 		"unik_ip": url, "port": port,

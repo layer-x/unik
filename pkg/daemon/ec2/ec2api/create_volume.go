@@ -8,9 +8,20 @@ import (
 	"github.com/layer-x/layerx-commons/lxlog"
 )
 
-const UNIK_VOLUME_NAME = "UNIK_VOLUME_NAME"
+const UNIK_BLOCK_DEVICE = "UNIK_BLOCK_DEVICE"
 
 func CreateVolume(logger *lxlog.LxLogger, volumeName string, size int) (*types.Volume, error) {
+	args := append([]string{
+		"run",
+		"--rm",
+		"--privileged",
+		"-v", "/dev:/dev",
+		"-v", unikernelCompilationDir + ":/unikernel",
+		"rumpstager", "-mode", "aws", "-a", unikernelName,
+	}, volumeArgs...)
+
+
+
 	_, err := GetVolumeByIdOrName(logger, volumeName)
 	if err == nil {
 		return nil, lxerrors.New("cannot create, volume "+volumeName+" already exists", nil)
@@ -38,7 +49,7 @@ func CreateVolume(logger *lxlog.LxLogger, volumeName string, size int) (*types.V
 				Value: aws.String(volumeName),
 			},
 			&ec2.Tag{
-				Key:   aws.String(UNIK_VOLUME_NAME),
+				Key:   aws.String(UNIK_BLOCK_DEVICE),
 				Value: aws.String(volumeName),
 			},
 		},

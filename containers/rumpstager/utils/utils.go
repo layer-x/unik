@@ -47,19 +47,6 @@ func createSparseFile(filename string, size device.DiskSize) error {
 	return nil
 }
 
-func createBootImage(rootFile, progPath, jsonConfig string) error {
-	size, err := shell.GetDirSize(progPath)
-	if err != nil {
-		return err
-	}
-
-	// round up size to sectors
-	size = ((size + device.SectorSize) / device.SectorSize) * device.SectorSize
-
-	size = size + int64(device.MegaBytes(5).ToBytes())
-	return CreateBootImageWithSize(rootFile, progPath, jsonConfig, device.Bytes(size))
-}
-
 func CreateBootImageWithSize(rootFile, progPath, jsonConfig string, size device.DiskSize) error {
 	err := createSparseFile(rootFile, size)
 	if err != nil {
@@ -218,10 +205,6 @@ func formatDeviceAndCopyContents(folder string, dev device.BlockDevice) error {
 
 	shell.CopyDir(folder, mntPoint)
 	return nil
-}
-
-func getTempImageFile() string {
-	return "/tmp/root"
 }
 
 func CreateSingleVolume(rootFile string, folder model.Volume) error {

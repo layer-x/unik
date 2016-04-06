@@ -14,6 +14,9 @@ import (
 	"github.com/layer-x/unik/containers/rumpstager/device"
 	"github.com/layer-x/unik/containers/rumpstager/model"
 	"github.com/layer-x/unik/containers/rumpstager/utils"
+	"github.com/layer-x/unik/pkg/types"
+	"encoding/json"
+	"github.com/layer-x/unik/pkg/daemon/ec2/ec2api"
 )
 
 func init() {
@@ -71,7 +74,9 @@ type VolToDevice struct {
 const AWDRootDevice = "/dev/sda1"
 
 func (s *AWSStager) Stage(appName, kernelPath string, volumes map[string]model.Volume, c model.RumpConfig) error {
-
+	if len(volumes) > 9 {
+		return errors.New("currently do not support more than 9 volumes on an instance (limited by tags)")
+	}
 	// to avoid uploads that might take time we create the image by attaching aws volumes
 
 	deviceToSnapId := make(map[string]ec2.EbsBlockDevice)
@@ -87,9 +92,16 @@ func (s *AWSStager) Stage(appName, kernelPath string, volumes map[string]model.V
 		return err
 	}
 	// convert the point points to the block devices created during configuration
+	//and tag the ami with the device mappings
+	unikDevices := []*types.DeviceMapping{}
 	for res := range results {
 		log.WithFields(log.Fields{"snap": res.BlockDevice.SnapshotId, "mntPoint": res.MntPoint, "dev": mountToDevice[res.MntPoint]}).Debug("Adding result to map")
 		deviceToSnapId[mountToDevice[res.MntPoint]] = res.BlockDevice
+		unikDevices = append(unikDevices, &types.DeviceMapping{
+			DeviceName: mountToDevice[res.MntPoint],
+			DefaultSnapshotId: *res.BlockDevice.SnapshotId,
+			MountPoint: res.MntPoint,
+		})
 	}
 
 	if len(deviceToSnapId) != (len(mountToDevice)) {
@@ -98,7 +110,27 @@ func (s *AWSStager) Stage(appName, kernelPath string, volumes map[string]model.V
 	}
 
 	/// all should be ready for aws
-	s.registerImage(appName, deviceToSnapId)
+	s.registerImage(appName, deviceToSnapId, unikDevices)
+	return nil
+}
+
+func (s *AWSStager) CreateDataVolume(mntPoint, deviceName, localFolder string) error {
+	snap, err := s.createDataVolume(localFolder)
+	if err != nil {
+		return errors.New("creating data volume: "+err.Error())
+	}
+	deviceJson, err := json.Marshal(types.DeviceMapping{
+		DeviceName: deviceName,
+		DefaultSnapshotId: *snap.SnapshotId,
+		MountPoint: mntPoint,
+	})
+	if err != nil {
+		return errors.New("marshalling device metadata to json: "+err.Error())
+	}
+	err = s.addTag(*snap.SnapshotId, ec2api.UNIK_BLOCK_DEVICE, string(deviceJson))
+	if err != nil {
+		return errors.New("failed to tag snapshot " + *snap.SnapshotId+": "+err.Error())
+	}
 	return nil
 }
 
@@ -174,6 +206,16 @@ func (s *AWSStager) createVolumes(kernelPath string, volumes map[string]model.Vo
 	}()
 
 	return results, nil
+}
+
+func (s *AWSStager) createDataVolume(localFolder string) (*ec2.Snapshot, error) {
+	defaultDevice := "/dev/xvdf"
+	snap, err := s.copyToAws(defaultDevice, localFolder)
+	if err != nil {
+		log.WithField("err", err).Error("Failed creating data volume")
+		return nil, err
+	}
+	return snap, nil
 }
 
 func addAwsNet(c model.RumpConfig) model.RumpConfig {
@@ -347,7 +389,7 @@ func getBlockDeviceMapping(snapmapping map[string]ec2.EbsBlockDevice) []*ec2.Blo
 	return mapping
 }
 
-func (s *AWSStager) registerImage(appName string, snapmapping map[string]ec2.EbsBlockDevice) error {
+func (s *AWSStager) registerImage(appName string, snapmapping map[string]ec2.EbsBlockDevice, unikDevices []*types.DeviceMapping) error {
 
 	region, err := s.meta.Region()
 	if err != nil {
@@ -396,7 +438,19 @@ func (s *AWSStager) registerImage(appName string, snapmapping map[string]ec2.Ebs
 		}
 	}
 
-	err = s.addTag(*imageout.ImageId, "UNIKERNEL_APP_NAME", appName)
+	//todo: dont save the state in tags & support more than 9 devices
+	for i, device := range unikDevices {
+		deviceJson, err := json.Marshal(device)
+		if err != nil {
+			return err
+		}
+		err = s.addTag(*imageout.ImageId, fmt.Sprintf(ec2api.UNIK_BLOCK_DEVICE+"%v", i), string(deviceJson))
+		if err != nil {
+			return err
+		}
+	}
+
+	err = s.addTag(*imageout.ImageId, ec2api.UNIKERNEL_APP_NAME, appName)
 	if err != nil {
 		return err
 	}
