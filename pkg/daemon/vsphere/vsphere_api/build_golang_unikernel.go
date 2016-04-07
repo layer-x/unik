@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-func BuildGolangUnikernel(logger *lxlog.LxLogger, unikState *state.UnikState, unikernelName, unikernelId, unikernelCompilationDir, vmdkFolder string, vsphereClient *vsphere_utils.VsphereClient, desiredVolumes []*types.VolumeSpec) error {
+func BuildGolangUnikernel(logger lxlog.Logger, unikState *state.UnikState, unikernelName, unikernelId, unikernelCompilationDir, vmdkFolder string, vsphereClient *vsphere_utils.VsphereClient, desiredVolumes []*types.VolumeSpec) error {
 	logger.WithFields(lxlog.Fields{
 		"path": unikernelCompilationDir, 
 		"unikernel_name": unikernelName,

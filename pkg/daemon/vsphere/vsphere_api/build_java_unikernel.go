@@ -12,7 +12,7 @@ import (
 	"github.com/layer-x/unik/pkg/daemon/vsphere/vsphere_utils"
 )
 
-func BuildJavaUnikernel(logger *lxlog.LxLogger, unikState *state.UnikState, unikernelName, unikernelId, unikernelCompilationDir, vmdkFolder string, vsphereClient *vsphere_utils.VsphereClient) error {
+func BuildJavaUnikernel(logger lxlog.Logger, unikState *state.UnikState, unikernelName, unikernelId, unikernelCompilationDir, vmdkFolder string, vsphereClient *vsphere_utils.VsphereClient) error {
 	//create java-wrapper dir
 	javaWrapperDir, err := ioutil.TempDir(os.TempDir(), unikernelName+"-java-wrapper-dir")
 	if err != nil {

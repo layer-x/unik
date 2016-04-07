@@ -9,7 +9,7 @@ import (
 	"fmt"
 )
 
-func BuildGolangUnikernel(logger *lxlog.LxLogger, unikernelName, unikernelCompilationDir string, desiredVolumes []*types.VolumeSpec) error {
+func BuildGolangUnikernel(logger lxlog.Logger, unikernelName, unikernelCompilationDir string, desiredVolumes []*types.VolumeSpec) error {
 	logger.WithFields(lxlog.Fields{
 		"path": unikernelCompilationDir,
 		"unikernel_name": unikernelName,

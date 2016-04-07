@@ -10,7 +10,7 @@ import (
 	"github.com/layer-x/unik/pkg/types"
 )
 
-func ListUnikInstances(logger *lxlog.LxLogger) ([]*types.UnikInstance, error) {
+func ListUnikInstances(logger lxlog.Logger) ([]*types.UnikInstance, error) {
 	ec2Client, err := ec2_metada_client.NewEC2Client(logger)
 	if err != nil {
 		return nil, lxerrors.New("could not start ec2 client session", err)

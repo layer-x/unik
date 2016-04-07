@@ -12,7 +12,7 @@ import (
 "github.com/layer-x/layerx-commons/lxlog"
 )
 
-func Pull(logger *lxlog.LxLogger, unikernelName string) error {
+func Pull(logger lxlog.Logger, unikernelName string) error {
 	_, data, err := lxhttpclient.Get(hubUrl, "/unikernels", nil)
 	if err != nil {
 		return lxerrors.New("retreiving public unikernel list", err)

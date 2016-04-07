@@ -7,7 +7,7 @@ import (
 	"github.com/layer-x/layerx-commons/lxlog"
 )
 
-func handler(logger *lxlog.LxLogger, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
+func handler(logger lxlog.Logger, p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(lxlog.Fields{"url": r.URL}).Infof()
 		w.Header().Set("X-Unik", "from cf")
@@ -15,7 +15,7 @@ func handler(logger *lxlog.LxLogger, p *httputil.ReverseProxy) func(http.Respons
 	}
 }
 
-func startRedirectServer(logger *lxlog.LxLogger, port, remoteAddr string, errc chan error) {
+func startRedirectServer(logger lxlog.Logger, port, remoteAddr string, errc chan error) {
 	remoteAddr = "http://"+strings.TrimPrefix(remoteAddr, "http://")
 	remote, err := url.Parse(remoteAddr)
 	if err != nil {

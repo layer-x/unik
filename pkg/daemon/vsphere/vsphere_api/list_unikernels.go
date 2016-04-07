@@ -5,7 +5,7 @@ import (
 	"github.com/layer-x/unik/pkg/daemon/state"
 )
 
-func ListUnikernels(logger *lxlog.LxLogger, unikState *state.UnikState) ([]*types.Unikernel, error) {
+func ListUnikernels(logger lxlog.Logger, unikState *state.UnikState) ([]*types.Unikernel, error) {
 	unikernels := []*types.Unikernel{}
 	for _, unikernel := range unikState.Unikernels {
 		unikernels = append(unikernels, unikernel)

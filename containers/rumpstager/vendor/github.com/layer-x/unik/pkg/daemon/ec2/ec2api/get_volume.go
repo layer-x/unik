@@ -7,7 +7,7 @@ import (
 "github.com/layer-x/layerx-commons/lxlog"
 )
 
-func GetVolumeByIdOrName(logger *lxlog.LxLogger, volumeIdOrName string) (*types.Volume, error) {
+func GetVolumeByIdOrName(logger lxlog.Logger, volumeIdOrName string) (*types.Volume, error) {
 	volumes, err := ListVolumes(logger)
 	if err != nil {
 		return nil, lxerrors.New("failed to retrieve known volumes", err)

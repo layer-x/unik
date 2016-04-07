@@ -47,7 +47,7 @@ func getAZ() (string, error) {
 	return az, nil
 }
 
-func NewEC2Client(logger *lxlog.LxLogger) (*UnikEc2Client, error) {
+func NewEC2Client(logger lxlog.Logger) (*UnikEc2Client, error) {
 	if ec2ClientSingleton == nil {
 		var err error
 		availabilityZone, err = getAZ()

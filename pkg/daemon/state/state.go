@@ -37,7 +37,7 @@ func NewCleanState(u *url.URL) *UnikState {
 	}
 }
 
-func NewStateFromVsphere(u *url.URL, logger *lxlog.LxLogger) (*UnikState, error) {
+func NewStateFromVsphere(u *url.URL, logger lxlog.Logger) (*UnikState, error) {
 	vsphereClient, err := vsphere_utils.NewVsphereClient(u, logger)
 	if err != nil {
 		return nil, lxerrors.New("initiating vsphere client connection", err)
@@ -60,7 +60,7 @@ func NewStateFromVsphere(u *url.URL, logger *lxlog.LxLogger) (*UnikState, error)
 	return &unikState, nil
 }
 
-func (state *UnikState) Save(logger *lxlog.LxLogger) error {
+func (state *UnikState) Save(logger lxlog.Logger) error {
 	state.lock.Lock()
 	defer state.lock.Unlock()
 	state.Saved = time.Now()

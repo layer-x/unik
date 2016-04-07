@@ -10,7 +10,7 @@ import (
 	"github.com/layer-x/unik/pkg/daemon/state"
 )
 
-func RunUnikInstance(logger *lxlog.LxLogger, unikState *state.UnikState, creds Creds, unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {
+func RunUnikInstance(logger lxlog.Logger, unikState *state.UnikState, creds Creds, unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {
 	instanceIds := []string{}
 	unikernels, err := ListUnikernels(logger, unikState)
 	if err != nil {

@@ -179,7 +179,7 @@ func getUnikInstance(url, instanceName string) (*types.UnikInstance, error) {
 	return nil, lxerrors.New("could not find unik instance " + instanceName, nil)
 }
 
-func retryCreateAndAttachVolume(logger *lxlog.LxLogger, url, instanceName, volumeName, deviceName string, size, retries int) error {
+func retryCreateAndAttachVolume(logger lxlog.Logger, url, instanceName, volumeName, deviceName string, size, retries int) error {
 	client := unik_client.NewUnikClient(url)
 	_, err := client.CreateVolume(volumeName, size)
 	if err != nil {

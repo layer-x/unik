@@ -8,7 +8,7 @@ import (
 "github.com/layer-x/layerx-commons/lxlog"
 )
 
-func DeleteUnikInstance(logger *lxlog.LxLogger, unikInstanceId string) error {
+func DeleteUnikInstance(logger lxlog.Logger, unikInstanceId string) error {
 	unikInstance, err := GetUnikInstanceByPrefixOrName(logger, unikInstanceId)
 	if err != nil {
 		return lxerrors.New("failed to retrieve unik instance", err)

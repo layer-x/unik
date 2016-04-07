@@ -23,7 +23,7 @@ type UnikVsphereCPI struct {
 	unikState *state.UnikState
 }
 
-func NewUnikVsphereCPI(logger *lxlog.LxLogger, rawUrl, user, password string) *UnikVsphereCPI {
+func NewUnikVsphereCPI(logger lxlog.Logger, rawUrl, user, password string) *UnikVsphereCPI {
 	rawUrl = "https://" + user + ":" + password + "@" + strings.TrimSuffix(strings.TrimPrefix(strings.TrimPrefix(rawUrl, "http://"), "https://"), "/sdk") + "/sdk"
 	u, err := url.Parse(rawUrl)
 	if err != nil {
@@ -49,7 +49,7 @@ func NewUnikVsphereCPI(logger *lxlog.LxLogger, rawUrl, user, password string) *U
 	}
 }
 
-func (cpi *UnikVsphereCPI) StartInstanceDiscovery(logger *lxlog.LxLogger) {
+func (cpi *UnikVsphereCPI) StartInstanceDiscovery(logger lxlog.Logger) {
 	logger.Infof("Starting unik discovery (udp heartbeat broadcast)")
 	info := []byte("unik")
 	BROADCAST_IPv4 := net.IPv4(255, 255, 255, 255)
@@ -75,7 +75,7 @@ func (cpi *UnikVsphereCPI) StartInstanceDiscovery(logger *lxlog.LxLogger) {
 	}()
 }
 
-func (cpi *UnikVsphereCPI) ListenForBootstrap(logger *lxlog.LxLogger, port int) {
+func (cpi *UnikVsphereCPI) ListenForBootstrap(logger lxlog.Logger, port int) {
 	m := lxmartini.QuietMartini()
 	m.Get("/bootstrap", func(res http.ResponseWriter, req *http.Request) string {
 		splitAddr := strings.Split(req.RemoteAddr, ":")
@@ -109,78 +109,78 @@ func (cpi *UnikVsphereCPI) ListenForBootstrap(logger *lxlog.LxLogger, port int) 
 	go m.RunOnAddr(fmt.Sprintf(":%v", port))
 }
 
-func (cpi *UnikVsphereCPI) AttachVolume(logger *lxlog.LxLogger, volumeNameOrId, unikInstanceId, deviceName string) error {
+func (cpi *UnikVsphereCPI) AttachVolume(logger lxlog.Logger, volumeNameOrId, unikInstanceId, deviceName string) error {
 	return lxerrors.New("method not implemented", nil)
 }
 
-func (cpi *UnikVsphereCPI) BuildUnikernel(logger *lxlog.LxLogger, unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader, desiredVolumes []*types.VolumeSpec) error {
+func (cpi *UnikVsphereCPI) BuildUnikernel(logger lxlog.Logger, unikernelName, force string, uploadedTar multipart.File, handler *multipart.FileHeader, desiredVolumes []*types.VolumeSpec) error {
 	return vsphere_api.BuildUnikernel(logger, cpi.unikState, cpi.creds, unikernelName, force, uploadedTar, handler, desiredVolumes)
 }
 
-func (cpi *UnikVsphereCPI) CreateVolume(logger *lxlog.LxLogger, volumeName string, size int) (*types.Volume, error) {
+func (cpi *UnikVsphereCPI) CreateVolume(logger lxlog.Logger, volumeName string, size int) (*types.Volume, error) {
 	return nil, lxerrors.New("method not implemented", nil)
 }
 
-func (cpi *UnikVsphereCPI) DeleteUnikInstance(logger *lxlog.LxLogger, unikInstanceId string) error {
+func (cpi *UnikVsphereCPI) DeleteUnikInstance(logger lxlog.Logger, unikInstanceId string) error {
 	return vsphere_api.DeleteUnikInstance(logger, cpi.unikState, cpi.creds, unikInstanceId)
 }
 
-func (cpi *UnikVsphereCPI) DeleteArtifactsForUnikernel(logger *lxlog.LxLogger, unikernelName string) error {
+func (cpi *UnikVsphereCPI) DeleteArtifactsForUnikernel(logger lxlog.Logger, unikernelName string) error {
 	return nil
 }
 
-func (cpi *UnikVsphereCPI) DeleteUnikernel(logger *lxlog.LxLogger, unikernelId string, force bool) error {
+func (cpi *UnikVsphereCPI) DeleteUnikernel(logger lxlog.Logger, unikernelId string, force bool) error {
 	return vsphere_api.DeleteUnikernel(logger, cpi.unikState, cpi.creds, unikernelId, force)
 }
 
-func (cpi *UnikVsphereCPI) DeleteUnikernelByName(logger *lxlog.LxLogger, unikernelName string, force bool) error {
+func (cpi *UnikVsphereCPI) DeleteUnikernelByName(logger lxlog.Logger, unikernelName string, force bool) error {
 	return vsphere_api.DeleteUnikernelByName(logger, cpi.unikState, cpi.creds, unikernelName, force)
 }
 
-func (cpi *UnikVsphereCPI) DeleteVolume(logger *lxlog.LxLogger, volumeNameOrId string, force bool) error {
+func (cpi *UnikVsphereCPI) DeleteVolume(logger lxlog.Logger, volumeNameOrId string, force bool) error {
 	return lxerrors.New("method not implemented", nil)
 }
 
-func (cpi *UnikVsphereCPI) DetachVolume(logger *lxlog.LxLogger, volumeNameOrId string, force bool) error {
+func (cpi *UnikVsphereCPI) DetachVolume(logger lxlog.Logger, volumeNameOrId string, force bool) error {
 	return lxerrors.New("method not implemented", nil)
 }
 
-func (cpi *UnikVsphereCPI) GetUnikInstanceByPrefixOrName(logger *lxlog.LxLogger, unikInstanceIdPrefixOrName string) (*types.UnikInstance, error) {
+func (cpi *UnikVsphereCPI) GetUnikInstanceByPrefixOrName(logger lxlog.Logger, unikInstanceIdPrefixOrName string) (*types.UnikInstance, error) {
 	return vsphere_api.GetUnikInstanceByPrefixOrName(logger, cpi.unikState, cpi.creds, unikInstanceIdPrefixOrName)
 }
 
-func (cpi *UnikVsphereCPI) GetVolumeByIdOrName(logger *lxlog.LxLogger, volumeIdOrName string) (*types.Volume, error) {
+func (cpi *UnikVsphereCPI) GetVolumeByIdOrName(logger lxlog.Logger, volumeIdOrName string) (*types.Volume, error) {
 	return nil, lxerrors.New("method not implemented", nil)
 }
 
-func (cpi *UnikVsphereCPI) GetLogs(logger *lxlog.LxLogger, unikInstanceId string) (string, error) {
+func (cpi *UnikVsphereCPI) GetLogs(logger lxlog.Logger, unikInstanceId string) (string, error) {
 	return vsphere_api.GetLogs(logger, cpi.unikState, cpi.creds, unikInstanceId)
 }
 
-func (cpi *UnikVsphereCPI) ListUnikInstances(logger *lxlog.LxLogger) ([]*types.UnikInstance, error) {
+func (cpi *UnikVsphereCPI) ListUnikInstances(logger lxlog.Logger) ([]*types.UnikInstance, error) {
 	return vsphere_api.ListUnikInstances(logger, cpi.unikState, cpi.creds)
 }
 
-func (cpi *UnikVsphereCPI) ListUnikernels(logger *lxlog.LxLogger) ([]*types.Unikernel, error) {
+func (cpi *UnikVsphereCPI) ListUnikernels(logger lxlog.Logger) ([]*types.Unikernel, error) {
 	return vsphere_api.ListUnikernels(logger, cpi.unikState)
 }
 
-func (cpi *UnikVsphereCPI) ListVolumes(logger *lxlog.LxLogger) ([]*types.Volume, error) {
+func (cpi *UnikVsphereCPI) ListVolumes(logger lxlog.Logger) ([]*types.Volume, error) {
 	return nil, lxerrors.New("method not implemented", nil)
 }
 
-func (cpi *UnikVsphereCPI) RunUnikInstance(logger *lxlog.LxLogger, unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {
+func (cpi *UnikVsphereCPI) RunUnikInstance(logger lxlog.Logger, unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {
 	return vsphere_api.RunUnikInstance(logger, cpi.unikState, cpi.creds, unikernelName, instanceName, instances, tags, env)
 }
 
-func (cpi *UnikVsphereCPI) StreamLogs(logger *lxlog.LxLogger, unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error {
+func (cpi *UnikVsphereCPI) StreamLogs(logger lxlog.Logger, unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error {
 	return vsphere_api.StreamLogs(logger, cpi.unikState, cpi.creds, unikInstanceId, w, deleteInstanceOnDisconnect)
 }
 
-func (cpi *UnikVsphereCPI) Push(logger *lxlog.LxLogger, unikernelName string) error {
+func (cpi *UnikVsphereCPI) Push(logger lxlog.Logger, unikernelName string) error {
 	return lxerrors.New("method not implemented", nil)
 }
 
-func (cpi *UnikVsphereCPI) Pull(logger *lxlog.LxLogger, unikernelName string) error {
+func (cpi *UnikVsphereCPI) Pull(logger lxlog.Logger, unikernelName string) error {
 	return lxerrors.New("method not implemented", nil)
 }

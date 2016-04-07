@@ -10,7 +10,7 @@ import (
 
 const UNIK_BLOCK_DEVICE = "UNIK_BLOCK_DEVICE"
 
-func CreateVolume(logger *lxlog.LxLogger, volumeName string, size int) (*types.Volume, error) {
+func CreateVolume(logger lxlog.Logger, volumeName string, size int) (*types.Volume, error) {
 	_, err := GetVolumeByIdOrName(logger, volumeName)
 	if err == nil {
 		return nil, lxerrors.New("cannot create, volume "+volumeName+" already exists", nil)

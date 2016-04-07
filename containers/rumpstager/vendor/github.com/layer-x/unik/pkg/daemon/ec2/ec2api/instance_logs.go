@@ -11,7 +11,7 @@ import (
 	"github.com/layer-x/layerx-commons/lxhttpclient"
 )
 
-func GetLogs(logger *lxlog.LxLogger, unikInstanceId string) (string, error) {
+func GetLogs(logger lxlog.Logger, unikInstanceId string) (string, error) {
 	unikInstance, err := GetUnikInstanceByPrefixOrName(logger, unikInstanceId)
 	if err != nil {
 		return "", lxerrors.New("failed to retrieve unik instance", err)
@@ -33,7 +33,7 @@ func GetLogs(logger *lxlog.LxLogger, unikInstanceId string) (string, error) {
 		string(logs)), nil
 }
 
-func StreamLogs(logger *lxlog.LxLogger, unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error {
+func StreamLogs(logger lxlog.Logger, unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error {
 	if deleteInstanceOnDisconnect {
 		defer DeleteUnikInstance(logger, unikInstanceId)
 	}

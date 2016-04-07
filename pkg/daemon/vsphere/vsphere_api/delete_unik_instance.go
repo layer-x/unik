@@ -6,7 +6,7 @@ import (
 "github.com/layer-x/unik/pkg/daemon/state"
 )
 
-func DeleteUnikInstance(logger *lxlog.LxLogger, unikState *state.UnikState, creds Creds, unikInstanceIdOrPrefix string) error {
+func DeleteUnikInstance(logger lxlog.Logger, unikState *state.UnikState, creds Creds, unikInstanceIdOrPrefix string) error {
 	unikInstance, err := GetUnikInstanceByPrefixOrName(logger, unikState, creds, unikInstanceIdOrPrefix)
 	if err != nil {
 		return lxerrors.New("retrieving unik instance for prefix "+ unikInstanceIdOrPrefix, err)

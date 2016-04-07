@@ -9,7 +9,7 @@ import (
 	"github.com/layer-x/unik/pkg/daemon/ec2/unik_ec2_utils"
 )
 
-func ListVolumes(logger *lxlog.LxLogger) ([]*types.Volume, error) {
+func ListVolumes(logger lxlog.Logger) ([]*types.Volume, error) {
 	ec2Client, err := ec2_metada_client.NewEC2Client(logger)
 	if err != nil {
 		return nil, lxerrors.New("could not start ec2 client session", err)

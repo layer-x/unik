@@ -10,7 +10,7 @@ import (
 
 const UNIK_BLOCK_DEVICE = "UNIK_BLOCK_DEVICE"
 
-func CreateVolume(logger *lxlog.LxLogger, volumeName string, size int) (*types.Volume, error) {
+func CreateVolume(logger lxlog.Logger, volumeName string, size int) (*types.Volume, error) {
 	args := append([]string{
 		"run",
 		"--rm",

@@ -5,7 +5,7 @@ import (
 "github.com/layer-x/layerx-commons/lxlog"
 )
 
-func DeleteUnikernelByName(logger *lxlog.LxLogger, unikernelName string, force bool) error {
+func DeleteUnikernelByName(logger lxlog.Logger, unikernelName string, force bool) error {
 	unikernels, err := ListUnikernels(logger)
 	if err != nil {
 		return lxerrors.New("could not get unikernel list", err)

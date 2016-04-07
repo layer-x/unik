@@ -14,7 +14,7 @@ import (
 const UNIK_INSTANCE_ID = "UNIK_INSTANCE_ID"
 const UNIKERNEL_ID = "UNIKERNEL_ID"
 
-func GetUnikInstanceMetadata(logger *lxlog.LxLogger, instance *ec2.Instance) (*types.UnikInstance, error) {
+func GetUnikInstanceMetadata(logger lxlog.Logger, instance *ec2.Instance) (*types.UnikInstance, error) {
 	ec2Client, err := ec2_metada_client.NewEC2Client(logger)
 	if err != nil {
 		return nil, lxerrors.New("could not start ec2 client session", err)

@@ -9,7 +9,7 @@ import (
 )
 
 
-func AttachVolume(logger *lxlog.LxLogger, volumeNameOrId, unikInstanceId, deviceName string) error {
+func AttachVolume(logger lxlog.Logger, volumeNameOrId, unikInstanceId, deviceName string) error {
 	if deviceName == "" {
 		return lxerrors.New("device name must be specified", nil)
 	}
