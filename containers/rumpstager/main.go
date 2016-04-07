@@ -17,17 +17,6 @@ import (
 	"github.com/layer-x/unik/containers/rumpstager/utils"
 )
 
-func checkErr(err error) {
-	if err != nil {
-
-		if termutil.Isatty(os.Stdin.Fd()) {
-			fmt.Println("Error has happened. please examine. press enter to release resources")
-			bufio.NewReader(os.Stdin).ReadBytes('\n')
-		}
-		log.WithError(err).Panic("Failed in script!")
-	}
-}
-
 type volumemap map[string]model.Volume
 
 func (m volumemap) String() string {

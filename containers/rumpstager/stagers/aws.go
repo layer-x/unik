@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"sync"
 	"time"
+    "io/ioutil"
+    "os"
+    "path"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/layer-x/unik/containers/rumpstager/device"
 	"github.com/layer-x/unik/containers/rumpstager/model"
 	"github.com/layer-x/unik/containers/rumpstager/utils"
@@ -25,9 +29,10 @@ func init() {
 	var ec2svc *ec2.EC2
 
 	region, err := meta.Region()
-	if err == nil {
-		ec2svc = ec2.New(awsSession, &aws.Config{Region: aws.String(region)})
-
+	if err == nil {        
+        config :=  &aws.Config{Region: aws.String(region)}
+		ec2svc = ec2.New(awsSession, config)
+        s3svc = s3.New(awsSession, config)
 		awsStager := &AWSStager{awsSession, meta, ec2svc}
 		registerStager("aws", awsStager)
 	} else {
@@ -40,6 +45,7 @@ type AWSStager struct {
 	AWSSession *session.Session
 	meta       *ec2metadata.EC2Metadata
 	ec2svc     *ec2.EC2
+    s3svc      *s3.S3
 }
 
 const SizeInGigs = 1
@@ -114,7 +120,7 @@ func (s *AWSStager) Stage(appName, kernelPath string, volumes map[string]model.V
 	return nil
 }
 
-func (s *AWSStager) CreateDataVolume(mntPoint, deviceName, localFolder string) error {
+func (s *AWSStager) CreateDataVolume2(mntPoint, deviceName, localFolder string) error {
 	snap, err := s.createDataVolume(localFolder)
 	if err != nil {
 		return errors.New("creating data volume: "+err.Error())
@@ -133,6 +139,8 @@ func (s *AWSStager) CreateDataVolume(mntPoint, deviceName, localFolder string) e
 	}
 	return nil
 }
+
+
 
 func (s *AWSStager) createVolumes(kernelPath string, volumes map[string]model.Volume, c model.RumpConfig) (<-chan VolToDevice, error) {
 
