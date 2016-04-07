@@ -7,23 +7,23 @@ import (
 )
 
 type UnikCPI interface {
-	AttachVolume(logger *lxlog.LxLogger, volumeNameOrId, unikInstanceId, deviceName string) error
-	BuildUnikernel(logger *lxlog.LxLogger, unikernelName, force string, uploadedTar multipart.File, header *multipart.FileHeader, desiredVolumes []*types.VolumeSpec) error
-	CreateVolume(logger *lxlog.LxLogger, volumeName string, size int) (*types.Volume, error)
-	DeleteArtifactsForUnikernel(logger *lxlog.LxLogger, unikernelName string) error
-	DeleteUnikernel(logger *lxlog.LxLogger, unikernelId string, force bool) error
-	DeleteUnikernelByName(logger *lxlog.LxLogger, unikernelName string, force bool) error
-	DeleteUnikInstance(logger *lxlog.LxLogger, unikInstanceId string) error
-	DeleteVolume(logger *lxlog.LxLogger, volumeNameOrId string, force bool) error
-	DetachVolume(logger *lxlog.LxLogger, volumeNameOrId string, force bool) error
-	GetUnikInstanceByPrefixOrName(logger *lxlog.LxLogger, unikInstanceIdPrefixOrName string) (*types.UnikInstance, error)
-	GetVolumeByIdOrName(logger *lxlog.LxLogger, volumeIdOrName string) (*types.Volume, error)
-	GetLogs(logger *lxlog.LxLogger, unikInstanceId string) (string, error)
-	ListUnikInstances(logger *lxlog.LxLogger) ([]*types.UnikInstance, error)
-	ListUnikernels(logger *lxlog.LxLogger) ([]*types.Unikernel, error)
-	ListVolumes(logger *lxlog.LxLogger) ([]*types.Volume, error)
-	RunUnikInstance(logger *lxlog.LxLogger, unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error)
-	StreamLogs(logger *lxlog.LxLogger, unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error
-	Push(logger *lxlog.LxLogger, unikernelName string) error
-	Pull(logger *lxlog.LxLogger, unikernelName string) error
+	AttachVolume(logger lxlog.Logger, volumeNameOrId, unikInstanceId, deviceName string) error
+	BuildUnikernel(logger lxlog.Logger, unikernelName, force string, uploadedTar multipart.File, header *multipart.FileHeader, desiredVolumes []*types.VolumeSpec) error
+	CreateVolume(logger lxlog.Logger, volumeName string, size int) (*types.Volume, error)
+	DeleteArtifactsForUnikernel(logger lxlog.Logger, unikernelName string) error
+	DeleteUnikernel(logger lxlog.Logger, unikernelId string, force bool) error
+	DeleteUnikernelByName(logger lxlog.Logger, unikernelName string, force bool) error
+	DeleteUnikInstance(logger lxlog.Logger, unikInstanceId string) error
+	DeleteVolume(logger lxlog.Logger, volumeNameOrId string, force bool) error
+	DetachVolume(logger lxlog.Logger, volumeNameOrId string, force bool) error
+	GetUnikInstanceByPrefixOrName(logger lxlog.Logger, unikInstanceIdPrefixOrName string) (*types.UnikInstance, error)
+	GetVolumeByIdOrName(logger lxlog.Logger, volumeIdOrName string) (*types.Volume, error)
+	GetLogs(logger lxlog.Logger, unikInstanceId string) (string, error)
+	ListUnikInstances(logger lxlog.Logger) ([]*types.UnikInstance, error)
+	ListUnikernels(logger lxlog.Logger) ([]*types.Unikernel, error)
+	ListVolumes(logger lxlog.Logger) ([]*types.Volume, error)
+	RunUnikInstance(logger lxlog.Logger, unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error)
+	StreamLogs(logger lxlog.Logger, unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error
+	Push(logger lxlog.Logger, unikernelName string) error
+	Pull(logger lxlog.Logger, unikernelName string) error
 }

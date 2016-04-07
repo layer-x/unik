@@ -18,10 +18,10 @@ type VsphereClient struct {
 	c *govmomi.Client
 	f *find.Finder
 	u *url.URL
-	logger *lxlog.LxLogger
+	logger lxlog.Logger
 }
 
-func NewVsphereClient(u *url.URL, logger *lxlog.LxLogger) (*VsphereClient, error) {
+func NewVsphereClient(u *url.URL, logger lxlog.Logger) (*VsphereClient, error) {
 	c, err := govmomi.NewClient(context.TODO(), u, true)
 	if err != nil {
 		return nil, lxerrors.New("creating new govmovi client", err)

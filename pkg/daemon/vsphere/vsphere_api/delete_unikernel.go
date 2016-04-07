@@ -6,7 +6,7 @@ import (
 	"github.com/layer-x/unik/pkg/daemon/vsphere/vsphere_utils"
 )
 
-func DeleteUnikernel(logger *lxlog.LxLogger, unikState *state.UnikState, creds Creds, unikernelId string, force bool) error {
+func DeleteUnikernel(logger lxlog.Logger, unikState *state.UnikState, creds Creds, unikernelId string, force bool) error {
 	vsphereClient, err := vsphere_utils.NewVsphereClient(creds.URL, logger)
 	if err != nil {
 		return lxerrors.New("initiating vsphere client connection", err)

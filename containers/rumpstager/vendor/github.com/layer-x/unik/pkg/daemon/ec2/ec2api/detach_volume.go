@@ -9,7 +9,7 @@ import (
 )
 
 
-func DetachVolume(logger *lxlog.LxLogger, volumeNameOrId string, force bool) error {
+func DetachVolume(logger lxlog.Logger, volumeNameOrId string, force bool) error {
 	ec2Client, err := ec2_metada_client.NewEC2Client(logger)
 	if err != nil {
 		return lxerrors.New("could not start ec2 client session", err)

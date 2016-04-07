@@ -9,7 +9,7 @@ import (
 	"github.com/layer-x/unik/pkg/daemon/osv"
 )
 
-func BuildJavaUnikernel(logger *lxlog.LxLogger, unikernelName, unikernelCompilationDir string) error {
+func BuildJavaUnikernel(logger lxlog.Logger, unikernelName, unikernelCompilationDir string) error {
 	logger.WithFields(lxlog.Fields{
 		"path": unikernelCompilationDir,
 		"unikernel_name": unikernelName,

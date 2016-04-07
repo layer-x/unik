@@ -12,7 +12,7 @@ import (
 	"github.com/layer-x/unik/pkg/daemon/state"
 )
 
-func GetLogs(logger *lxlog.LxLogger, unikState *state.UnikState, creds Creds, unikInstanceId string) (string, error) {
+func GetLogs(logger lxlog.Logger, unikState *state.UnikState, creds Creds, unikInstanceId string) (string, error) {
 	unikInstance, err := GetUnikInstanceByPrefixOrName(logger, unikState, creds, unikInstanceId)
 	if err != nil {
 		return "", lxerrors.New("failed to retrieve unik instance", err)
@@ -34,7 +34,7 @@ func GetLogs(logger *lxlog.LxLogger, unikState *state.UnikState, creds Creds, un
 		string(logs)), nil
 }
 
-func StreamLogs(logger *lxlog.LxLogger, unikState *state.UnikState, creds Creds, unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error {
+func StreamLogs(logger lxlog.Logger, unikState *state.UnikState, creds Creds, unikInstanceId string, w io.Writer, deleteInstanceOnDisconnect bool) error {
 	if deleteInstanceOnDisconnect {
 		defer DeleteUnikInstance(logger, unikState, creds, unikInstanceId)
 	}

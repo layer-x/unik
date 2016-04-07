@@ -10,7 +10,7 @@ import (
 //const hubUrl = "http://www.unikhub.tk/"
 const hubUrl = "www.unikhub.tk"
 
-func Push(logger *lxlog.LxLogger, unikernelName string) error {
+func Push(logger lxlog.Logger, unikernelName string) error {
 	var unikernel *types.Unikernel
 	unikernels, err := ListUnikernels(logger)
 	if err != nil {

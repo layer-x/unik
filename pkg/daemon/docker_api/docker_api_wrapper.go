@@ -16,7 +16,7 @@ import (
 	"github.com/layer-x/unik/pkg/daemon/ec2/ec2api"
 )
 
-func AddDockerApi(logger *lxlog.LxLogger, m *martini.ClassicMartini) *martini.ClassicMartini {
+func AddDockerApi(logger lxlog.Logger, m *martini.ClassicMartini) *martini.ClassicMartini {
 	m.Get("/v1.20/containers/json", func(res http.ResponseWriter, req *http.Request) {
 		unikInstances, err := ec2api.ListUnikInstances(logger)
 		if err != nil {

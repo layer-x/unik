@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func WrapJavaApplication(logger *lxlog.LxLogger, javaWrapperDir, appSourceDir string) (string, string, string, error) {
+func WrapJavaApplication(logger lxlog.Logger, javaWrapperDir, appSourceDir string) (string, string, string, error) {
 	copyJarWrapper := exec.Command("cp", "-r", "../../containers/osvcompiler/jar-wrapper/", javaWrapperDir)
 	javaWrapperDir += "/jar-wrapper"
 	logger.LogCommand(copyJarWrapper, true)

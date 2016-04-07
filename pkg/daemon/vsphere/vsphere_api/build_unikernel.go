@@ -20,7 +20,7 @@ const (
 	unknown_type = iota
 )
 
-func BuildUnikernel(logger *lxlog.LxLogger, unikState *state.UnikState, creds Creds, unikernelName, force string, uploadedTar multipart.File, header *multipart.FileHeader, desiredVolumes []*types.VolumeSpec) error {
+func BuildUnikernel(logger lxlog.Logger, unikState *state.UnikState, creds Creds, unikernelName, force string, uploadedTar multipart.File, header *multipart.FileHeader, desiredVolumes []*types.VolumeSpec) error {
 	vsphereClient, err := vsphere_utils.NewVsphereClient(creds.URL, logger)
 	if err != nil {
 		return lxerrors.New("initiating vsphere client connection", err)

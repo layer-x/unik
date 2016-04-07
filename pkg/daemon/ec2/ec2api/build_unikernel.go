@@ -18,7 +18,7 @@ const (
 	unknown_type = iota
 )
 
-func BuildUnikernel(logger *lxlog.LxLogger, unikernelName, force string, uploadedTar multipart.File, header *multipart.FileHeader, desiredVolumes []*types.VolumeSpec) error {
+func BuildUnikernel(logger lxlog.Logger, unikernelName, force string, uploadedTar multipart.File, header *multipart.FileHeader, desiredVolumes []*types.VolumeSpec) error {
 	unikernels, err := ListUnikernels(logger)
 	if err != nil {
 		return lxerrors.New("could not retrieve list of unikernels", err)
