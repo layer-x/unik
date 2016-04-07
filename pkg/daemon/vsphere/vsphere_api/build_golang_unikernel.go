@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"fmt"
 	"io/ioutil"
-	"github.com/layer-x/unik/containers/rumpstager/model"
 	"encoding/json"
 	"strings"
+	"github.com/layer-x/unik/pkg/stager/model"
 )
 
 func BuildGolangUnikernel(logger lxlog.Logger, unikState *state.UnikState, unikernelName, unikernelId, unikernelCompilationDir, vmdkFolder string, vsphereClient *vsphere_utils.VsphereClient, desiredVolumes []*types.VolumeSpec) error {
