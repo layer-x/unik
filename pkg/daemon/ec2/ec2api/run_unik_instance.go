@@ -13,7 +13,9 @@ import (
 	"encoding/json"
 )
 
-func RunUnikInstance(logger lxlog.Logger, unikernelName, instanceName string, instances int64, persistVolumes bool, mntSnapshotMap map[string]string, tags map[string]string, env map[string]string) ([]string, error) {
+func RunUnikInstance(logger lxlog.Logger, unikernelName, instanceName string, instances int64, tags map[string]string, env map[string]string) ([]string, error) {
+	var persistVolumes bool
+	var mntSnapshotMap map[string]string
 	unikernels, err := ListUnikernels(logger)
 	instanceIds := []string{}
 	if err != nil {
