@@ -235,6 +235,7 @@ func ListParts(device BlockDevice) ([]Part, error) {
 
 		var part Part
 		partName := getDevicePart(device.Name(), partNum)
+		// part devices may or may not created the partition mappings. so deal with both options
 		if _, err := os.Stat(partName); os.IsNotExist(err) {
 			// device does not exist
 			sectorsStart, err := ToSectors(start)
