@@ -12,9 +12,9 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/andrew-d/go-termutil"
-	"github.com/layer-x/unik/containers/rumpstager/model"
-	"github.com/layer-x/unik/containers/rumpstager/stagers"
-	"github.com/layer-x/unik/containers/rumpstager/utils"
+	"github.com/layer-x/unik/pkg/stager/model"
+	"github.com/layer-x/unik/pkg/stager/stagers"
+	"github.com/layer-x/unik/pkg/stager/utils"
 )
 
 type volumemap map[string]model.Volume

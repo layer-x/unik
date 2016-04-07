@@ -9,9 +9,9 @@ import (
 	"text/template"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/layer-x/unik/containers/rumpstager/device"
-	"github.com/layer-x/unik/containers/rumpstager/model"
-	"github.com/layer-x/unik/containers/rumpstager/shell"
+	"github.com/layer-x/unik/pkg/stager/device"
+	"github.com/layer-x/unik/pkg/stager/model"
+	"github.com/layer-x/unik/pkg/stager/shell"
 )
 
 const GrubTemplate = `default=0

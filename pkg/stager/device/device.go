@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/layer-x/unik/containers/rumpstager/shell"
+	"github.com/layer-x/unik/pkg/stager/shell"
 )
 
 type DiskSize interface {

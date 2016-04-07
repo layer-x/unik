@@ -1,6 +1,6 @@
 package stagers
 
-import "github.com/layer-x/unik/containers/rumpstager/model"
+import "github.com/layer-x/unik/pkg/stager/model"
 
 type Stager interface {
 	Stage(appName, kernelPath string, volumes map[string]model.Volume, c model.RumpConfig) error

@@ -5,9 +5,9 @@ import (
 	"path"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/layer-x/unik/containers/rumpstager/device"
-	"github.com/layer-x/unik/containers/rumpstager/model"
-	"github.com/layer-x/unik/containers/rumpstager/utils"
+	"github.com/layer-x/unik/pkg/stager/device"
+	"github.com/layer-x/unik/pkg/stager/model"
+	"github.com/layer-x/unik/pkg/stager/utils"
 	"io/ioutil"
 	"errors"
 )

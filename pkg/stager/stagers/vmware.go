@@ -4,9 +4,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/layer-x/unik/containers/rumpstager/model"
+	"github.com/layer-x/unik/pkg/stager/model"
 
-	"github.com/layer-x/unik/containers/rumpstager/shell"
+	"github.com/layer-x/unik/pkg/stager/shell"
 	"errors"
 )
 
