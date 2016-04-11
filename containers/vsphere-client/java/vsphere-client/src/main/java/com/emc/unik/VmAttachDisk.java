@@ -16,13 +16,13 @@ public class VmAttachDisk {
         if (args[0].equals("VmAttachDisk")) {
             if (args.length != 7) {
                 System.err.println("Usage: java VmAttachDisk <url> " +
-                        "<username> <password> <vmname> <vmdkPath> <controllerKey>");
+                        "<username> <password> <vmname> <vmdkPath> <deviceKey>");
                 System.exit(-1);
             }
 
             String vmname = args[4];
             String vmdkPath = args[5];
-            int controllerKey = Integer.parseInt(args[6]);
+            int deviceKey = Integer.parseInt(args[6]);
 
             ServiceInstance si = new ServiceInstance(
                     new URL(args[1]), args[2], args[3], true);
@@ -37,11 +37,24 @@ public class VmAttachDisk {
                 System.exit(-1);
             }
 
+            int scsiKey = -1;
+            for (VirtualDevice vd : vm.getConfig().getHardware().getDevice()) {
+                if (vd instanceof VirtualSCSIController) {
+                    VirtualSCSIController vscsi = (VirtualSCSIController) vd;
+                    System.out.println("found scsi controller:"+vscsi.getScsiCtlrUnitNumber()+" "+vscsi.getUnitNumber()+" "+vscsi.getKey());
+                    scsiKey = vscsi.getKey();
+                }
+            }
+            if (scsiKey == -1) {
+                System.out.println("could not find scsi controller device on ");
+                System.exit(-1);
+            }
+
             VirtualMachineConfigSpec vmConfigSpec = new VirtualMachineConfigSpec();
 
             // mode: persistent|independent_persistent,independent_nonpersistent
             String diskMode = "persistent";
-            VirtualDeviceConfigSpec vdiskSpec = createExistingDiskSpec(vmdkPath, controllerKey, diskMode);
+            VirtualDeviceConfigSpec vdiskSpec = createExistingDiskSpec(vmdkPath, scsiKey, deviceKey, diskMode);
             VirtualDeviceConfigSpec[] vdiskSpecArray = {vdiskSpec};
             vmConfigSpec.setDeviceChange(vdiskSpecArray);
 
@@ -116,16 +129,16 @@ public class VmAttachDisk {
         }
     }
 
-    static VirtualDeviceConfigSpec createExistingDiskSpec(String fileName, int cKey, String diskMode) {
+    static VirtualDeviceConfigSpec createExistingDiskSpec(String fileName, int controllerKey, int deviceKey, String diskMode) {
         VirtualDeviceConfigSpec diskSpec =
                 new VirtualDeviceConfigSpec();
         diskSpec.setOperation(VirtualDeviceConfigSpecOperation.add);
         // do not set diskSpec.fileOperation!
         VirtualDisk vd = new VirtualDisk();
         vd.setCapacityInKB(-1);
-        vd.setKey(0);
-        vd.setUnitNumber(new Integer(0));
-        vd.setControllerKey(new Integer(cKey));
+        vd.setKey(deviceKey);
+        vd.setUnitNumber(new Integer(deviceKey));
+        vd.setControllerKey(new Integer(controllerKey));
         VirtualDiskFlatVer2BackingInfo diskfileBacking =
                 new VirtualDiskFlatVer2BackingInfo();
         diskfileBacking.setFileName(fileName);
