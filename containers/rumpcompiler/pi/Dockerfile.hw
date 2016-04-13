@@ -6,9 +6,11 @@ RUN cd /opt/raspberrypi-tools && \
     mv arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/lib/gcc/arm-linux-gnueabihf/4.8.3/include arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/lib/gcc/arm-linux-gnueabihf/4.8.3/not-include &&\
     chmod -R a-w  .
 
+# doing git reset --hard to revet manual fixes on prev container.
 RUN cd /opt/rumprun && \
      rm -rf ./obj && \
      git remote add  origin2 https://github.com/dave-tucker/rumprun.git && \
+     git reset --hard && \
      git fetch origin2 && \
      git checkout raspberrypi && \
      git submodule update
@@ -18,6 +20,8 @@ COPY __aeabi_idiv0.c /opt/rumprun/src-netbsd/sys/external/bsd/compiler_rt/dist/l
 COPY ldcore.S        /opt/rumprun/platform/hw/arch/arm/rpi/locore.S
 COPY machdep.c       /opt/rumprun/platform/hw/arch/arm/rpi/machdep.c
 COPY kern.ldscript       /opt/rumprun/platform/hw/arch/arm/rpi/kern.ldscript
+COPY Makefile.inc       /opt/rumprun/platform/hw/arch/arm/rpi/Makefile.inc
+COPY makepagetable.awk       /opt/rumprun/platform/hw/arch/arm/rpi/makepagetable.awk
 
 # build rump run; when it fails, manually build the internal compiler error and build again.
 RUN  cd /opt/rumprun && \

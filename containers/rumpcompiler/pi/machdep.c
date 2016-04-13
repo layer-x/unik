@@ -137,10 +137,10 @@ arm_boot(void)
 
 	bmk_memcpy((void *)0, vector_start, vector_end - vector_start);
 
-// zero the bss
-	extern char __init_bss_start[], __init_bss_end[];
+// zero the bss // can't zero bss here as our stack is part of the bss..
+//	extern char __init_bss_start[], __init_bss_end[];
 
-  bmk_memset(__init_bss_start, 0, __init_bss_end - __init_bss_start);
+//  bmk_memset(__init_bss_start, 0, __init_bss_end - __init_bss_start);
 
 	bmk_printf_init(cons_putc, NULL);
 	bmk_printf("rump kernel bare metal bootstrap (ARM)\n\n");
@@ -206,9 +206,8 @@ bmk_platform_cpu_sched_settls(struct bmk_tcb *next)
 {
 
 	bmk_cpu_arm_curtcb = next->btcb_tp;
-#ifdef notonthisarm
-	asm volatile("mcr p15, 0, %0, c13, c0, 2" :: "r"(next->btcb_tp));
-#endif
+	asm volatile("mcr p15, 0, %0, c13, c0, 3" :: "r"(next->btcb_tp));
+
 }
 
 /* timer is 1MHz, we use divisor 256 */

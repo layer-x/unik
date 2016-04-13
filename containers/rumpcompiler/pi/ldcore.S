@@ -40,6 +40,18 @@ _start:
   /* turn on debugging */
   bl enable_jtag
 
+  wait_for_debugger_loop:
+    b  wait_for_debugger_loop
+  nop
+  nop
+
+ /* zero bss */
+  ldr	r0, =__init_bss_start
+  ldr	r2, =__init_bss_end
+  mov	r1, #0
+  rsb	r2, r0, r2
+  bl	bmk_memset
+
   /* make page table */
   /* thanks: http://www.embedded-bits.co.uk/2011/mmucode/ */
   ldr r0, =identity_page_table
@@ -76,6 +88,7 @@ _start:
 	orr r0, r0, #0x13
 	msr cpsr, r0
 	ldr sp, =bootstack
+
 	bl arm_boot
 	b haltme
 

@@ -5,11 +5,12 @@
 # day (e.g. mapping text r/o), but for now we don't care.
 
 BEGIN {
-  # how many megabytes of ram
-	MEGS=512
+  # how many megabytes of ram + gpio
+	MEGS=1024
   # type for section
   # see: https://www.altera.com/content/dam/altera-www/global/en_US/pdfs/literature/third-party/archives/ddi0100e_arm_arm.pdf (B.3-7 3.3.3)
   SECTION=2
+  CACHEBUFFER=0xc
 
   # entry type. 2 = section
   TYPE = SECTION
@@ -24,10 +25,10 @@ BEGIN {
 	printf(".align 14\n");
   printf(".globl identity_page_table\n");
   printf("identity_page_table:\n");
-	for (i = 0; i < 512; i++) {
+	for (i = 0; i < MEGS; i++) {
     addr = lshift(i, 20);
 
-		printf("\t.quad 0x%08x | 0x%x\n", addr, or(lshift(ALL_ACESS, 10), TYPE));
+		printf("\t.word 0x%08x | 0x%x\n", addr, or(lshift(ALL_ACESS, 10), TYPE, CACHEBUFFER));
 	}
 
 }
