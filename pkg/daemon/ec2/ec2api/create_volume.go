@@ -11,16 +11,6 @@ import (
 const UNIK_BLOCK_DEVICE = "UNIK_BLOCK_DEVICE"
 
 func CreateVolume(logger lxlog.Logger, volumeName string, size int) (*types.Volume, error) {
-	args := append([]string{
-		"run",
-		"--rm",
-		"--privileged",
-		"-v", "/dev:/dev",
-		"-v", unikernelCompilationDir + ":/unikernel",
-		"rumpstager", "-mode", "aws", "-a", unikernelName,
-	}, volumeArgs...)
-
-
 
 	_, err := GetVolumeByIdOrName(logger, volumeName)
 	if err == nil {
