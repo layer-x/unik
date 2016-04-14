@@ -70,9 +70,9 @@ clockinit(void)
 
 static char cmdline[] = "\n"
 "{\n"
-"	cmdline: \"HELLO just dropping by\n\",\n"
-"	net :  {\n"
-"		\"if\":		\"sm0\",\n"
+"	\"cmdline\": \"HELLO just dropping by\n\",\n"
+"	\"net\" :  {\n"
+"		\"if\":		\"usmsc0\",\n"
 "		\"type\":	\"inet\",\n"
 "		\"method\":	\"static\",\n"
 "		\"addr\":	\"10.0.0.2\",\n"
@@ -201,6 +201,9 @@ arm_interrupt(unsigned long *trapregs)
 	spl0();
 }
 
+// under current compilation settings,
+// tls is read from the user read write process\thread id register.
+// so to there we write it!
 void
 bmk_platform_cpu_sched_settls(struct bmk_tcb *next)
 {

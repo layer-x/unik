@@ -44,6 +44,7 @@ _start:
     b  wait_for_debugger_loop
   nop
   nop
+ /* end of debug code */
 
  /* zero bss */
   ldr	r0, =__init_bss_start
@@ -79,11 +80,13 @@ _start:
 	msr cpsr, r0
 	ldr sp, =undefstack
 
+  /* set irq stack */
 	bic r0, r0, #0x1f
 	orr r0, r0, #0x12
 	msr cpsr, r0
 	ldr sp, =irqstack
 
+  /* set boot stack */
 	bic r0, r0, #0x1f
 	orr r0, r0, #0x13
 	msr cpsr, r0
